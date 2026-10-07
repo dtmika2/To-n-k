@@ -197,10 +197,10 @@ describe('Idle behaviour cannot depend on correctness (code review check)', () =
     }
   });
 
-  it('Game only feeds eyes touch / curious / settle / mode — never correctness', () => {
+  it('Game only feeds eyes touch / curious / settle / mode / timings — never correctness', () => {
     const src = readFileSync('src/app/Game.ts', 'utf8');
     const eyeCalls = [...src.matchAll(/\.eye\.(\w+)\(/g)].map((m) => m[1]);
-    expect(new Set(eyeCalls)).toEqual(new Set(['setTouch', 'setMode', 'setCurious']));
+    expect(new Set(eyeCalls)).toEqual(new Set(['setTouch', 'setMode', 'setCurious', 'setTimings']));
     // settle() is called by Wheel on every settle, regardless of slot
     const wheelSrc = readFileSync('src/wheel/Wheel.ts', 'utf8');
     expect(wheelSrc).toMatch(/this\.eye\.settle\(now\);/);
