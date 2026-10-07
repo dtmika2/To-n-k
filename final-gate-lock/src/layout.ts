@@ -24,8 +24,9 @@ export const WHEEL = {
   bandOuter: 70,
   irisRadius: 72,
   /** Window (wedge cutout) in the iris, degrees clockwise from 3 o'clock. */
-  windowStartDeg: 10,
-  windowEndDeg: 80,
+  /** Window rests at the bottom (90°); the other two slots sit upper-left (210°) and upper-right (330°). */
+  windowStartDeg: 55,
+  windowEndDeg: 125,
   windowInner: 24,
   windowOuter: 71,
   numeralRadius: 47,

@@ -129,7 +129,8 @@ export function irisContext(): GraphicsContext {
     const ws = WHEEL.windowStartDeg;
     const we = WHEEL.windowEndDeg;
     const wedge = wedgePoints(WHEEL.windowInner, WHEEL.windowOuter, ws, we);
-    g.circle(0, 0, R).fill(lit(0xd6b25e, 0x5a4219, C.brass)).poly(wedge).cut();
+    // Rotation-neutral fill: the plate turns, so no baked directional light (see irisShade).
+    g.circle(0, 0, R).fill(radial(0xc9a352, 0x8a6a28)).poly(wedge).cut();
     const inWindow = (deg: number) => {
       const d = ((deg % 360) + 360) % 360;
       return d >= ws - 1.5 && d <= we + 1.5;
@@ -150,14 +151,54 @@ export function irisContext(): GraphicsContext {
     arcPath(g, R - 4, (we + 2) * DEG, (ws + 358) * DEG).stroke({ width: 1.2, color: 0x3b2a0c, alpha: 0.55 });
     arcPath(g, R - 9, (we + 2) * DEG, (ws + 358) * DEG).stroke({ width: 0.8, color: 0xf2d68c, alpha: 0.25 });
     // dark collar around the pupil
-    g.circle(0, 0, 20).fill(lit(0x4d3912, 0x1c1206));
+    g.circle(0, 0, 20).fill(radial(0x2a1d0a, 0x4d3912));
     g.circle(0, 0, 20).stroke({ width: 1.2, color: 0xf2d68c, alpha: 0.35 });
-    // window bevel: shadow falling onto the disc, light catching the far edge
+    // window bevel: an even dark rim (shadow onto the disc) that reads the same at any angle
     g.poly(wedge).stroke({ width: 3, color: C.black, alpha: 0.55, alignment: 0.5 });
-    arcPath(g, WHEEL.windowOuter + 1.5, (ws + 3) * DEG, (we - 3) * DEG).stroke({ width: 1, color: 0xf2d68c, alpha: 0.4 });
+    g.poly(wedge).stroke({ width: 1, color: 0xf2d68c, alpha: 0.28, alignment: 0 });
     // outer edge
     g.circle(0, 0, R).stroke({ width: 1.5, color: C.black, alpha: 0.55 });
+  });
+}
+
+/**
+ * Fixed light over the turning iris plate: top-left highlight, bottom-right shade and bevel arcs.
+ * Drawn above the plate (and over the window, so the numbers share the same light).
+ */
+export function irisShadeContext(): GraphicsContext {
+  return once('irisShade', (g) => {
+    const R = WHEEL.irisRadius;
+    g.circle(0, 0, R).fill(
+      new FillGradient({
+        type: 'linear',
+        start: { x: 0.15, y: 0.1 },
+        end: { x: 0.85, y: 0.95 },
+        colorStops: [
+          { offset: 0, color: 'rgba(255,236,190,0.15)' },
+          { offset: 0.45, color: 'rgba(255,236,190,0)' },
+          { offset: 0.6, color: 'rgba(0,0,0,0)' },
+          { offset: 1, color: 'rgba(0,0,0,0.30)' },
+        ],
+        textureSpace: 'local',
+      }),
+    );
     bevelArcs(g, R - 1.5, 1.2, 0.35, 0.25);
+  });
+}
+
+/** Radial gradient centre → edge in local space (rotation-neutral). */
+export function radial(inner: number, outer: number): FillGradient {
+  return new FillGradient({
+    type: 'radial',
+    center: { x: 0.5, y: 0.5 },
+    innerRadius: 0,
+    outerCenter: { x: 0.5, y: 0.5 },
+    outerRadius: 0.5,
+    colorStops: [
+      { offset: 0, color: inner },
+      { offset: 1, color: outer },
+    ],
+    textureSpace: 'local',
   });
 }
 

@@ -19,7 +19,7 @@ centre of the lid's edge.
 3. Switch the operator menu to **Visual mode → sprites**. A layer without a working sprite falls back
    to its procedural drawing automatically, logged once to the console.
 
-Layer ids: `ring`, `disc`, `iris`, `pupil`, `highlight`, `lidTop`, `lidBottom`, `arrowCw`,
+Layer ids: `ring`, `disc`, `iris` (the turning plate with the window), `irisShade` (fixed light over it), `pupil`, `highlight`, `lidTop`, `lidBottom`, `arrowCw`,
 `arrowCwPressed`, `arrowCcw`, `arrowCcwPressed`, `lockRing`, `wall` (pivot = image centre, 1280×800),
 `plateLeft` / `plateRight` (drawn in absolute logical coordinates: pivot = 0,0 with a 1280×800 image),
 `core` (pivot = centre). `glow`, dust and sparks always stay procedural.

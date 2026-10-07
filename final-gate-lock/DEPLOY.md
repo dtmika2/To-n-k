@@ -58,7 +58,7 @@ second. Enter the PIN (`operator.pin` in config.json; default `1907`).
 - **Reset to Shrouded**: rolls the mist back and re-arms the lock.
 - **Force open**: runs the success sequence (for staff or a stuck group).
 - **Show solution**: shows the correct number under each wheel while the menu is open.
-- **All wheels correct − 1**: every wheel one tap (↺) from its answer; useful for testing the opening.
+- **All wheels correct − 1**: every wheel one tap (↻) from its answer; useful for testing the opening.
 - **Sound test**: plays every cue once.
 - **Master volume**, **Visual mode** (procedural / sprites), **FPS meter**, and timings in seconds:
   reset after success, asleep after idle, settled → drowsy, operator hold.

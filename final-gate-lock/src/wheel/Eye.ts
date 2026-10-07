@@ -43,8 +43,10 @@ export type EyeMode = 'shut' | 'live' | 'asleep' | 'wide' | 'peaceful';
 export type EyeLook = 'drowsy' | 'curious' | 'awake' | 'settled';
 
 export const LIDS = {
-  drowsy: { top: 0.62, bottom: 0.22 },
-  curious: { top: 0.34, bottom: 0.1 },
+  // Limits keep every window position readable: upper numbers clear the top lid up to ~0.43,
+  // the bottom number clears the bottom lid up to ~0.17.
+  drowsy: { top: 0.42, bottom: 0.12 },
+  curious: { top: 0.26, bottom: 0.08 },
   awake: { top: 0.02, bottom: 0 },
   settled: { top: 0.14, bottom: 0.04 },
   closed: { top: 1, bottom: 1 },

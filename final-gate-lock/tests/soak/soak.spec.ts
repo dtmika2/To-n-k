@@ -77,7 +77,7 @@ test(`soak: ${HOURS} simulated hours of play at ${SPEED}×`, async ({ page }) =>
         // players finally get it: all wheels one step away, then the last 10 moves
         await g(page, (x) => x.game.setCorrectMinusOne());
         for (let id = 1; id <= 10; id++) {
-          const a = await g(page, new Function('x', `return x.toClient(x.arrow(${id}, 'ccw').x, x.arrow(${id}, 'ccw').y)`) as (x: Fgl) => { x: number; y: number });
+          const a = await g(page, new Function('x', `return x.toClient(x.arrow(${id}, 'cw').x, x.arrow(${id}, 'cw').y)`) as (x: Fgl) => { x: number; y: number });
           await touch.tap(a.x, a.y);
           await page.waitForTimeout(30);
         }

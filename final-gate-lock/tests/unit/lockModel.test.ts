@@ -7,10 +7,12 @@ const model = () => new LockModel(cfg.wheels);
 
 describe('stepSlot', () => {
   it('wraps 0 ↔ 2 in both directions', () => {
-    expect(stepSlot(0, 'cw')).toBe(2);
-    expect(stepSlot(2, 'ccw')).toBe(0);
-    expect(stepSlot(1, 'cw')).toBe(0);
-    expect(stepSlot(1, 'ccw')).toBe(2);
+    expect(stepSlot(0, 'cw')).toBe(1);
+    expect(stepSlot(2, 'ccw')).toBe(1);
+    expect(stepSlot(1, 'cw')).toBe(2);
+    expect(stepSlot(2, 'cw')).toBe(0);
+    expect(stepSlot(1, 'ccw')).toBe(0);
+    expect(stepSlot(0, 'ccw')).toBe(2);
   });
   it('three steps return to the same slot', () => {
     for (const d of ['cw', 'ccw'] as const) {
@@ -35,9 +37,9 @@ describe('LockModel', () => {
   it('rotate wraps and returns the new slot', () => {
     const m = model();
     m.setSlot(1, 0);
-    expect(m.rotate(1, 'cw')).toBe(2);
+    expect(m.rotate(1, 'cw')).toBe(1);
     expect(m.rotate(1, 'ccw')).toBe(0);
-    expect(m.rotate(1, 'ccw')).toBe(1);
+    expect(m.rotate(1, 'ccw')).toBe(2);
   });
 
   it('value() reports the number in the window', () => {
@@ -79,20 +81,20 @@ describe('LockModel', () => {
     expect(m.snapshot()).toEqual(cfg.wheels.map((w: { start: number }) => w.start));
   });
 
-  it('correct-minus-one: every wheel one ccw step from correct', () => {
+  it('correct-minus-one: every wheel one cw step from correct', () => {
     const m = model();
     m.setAllCorrectMinusOne();
     expect(m.correctCount()).toBe(0);
-    for (const w of cfg.wheels) m.rotate(w.id, 'ccw');
+    for (const w of cfg.wheels) m.rotate(w.id, 'cw');
     expect(m.isSolved()).toBe(true);
   });
 
-  it('one move from solved: nine correct, last needs one ccw step', () => {
+  it('one move from solved: nine correct, last needs one cw step', () => {
     const m = model();
     m.setOneMoveFromSolved();
     expect(m.correctCount()).toBe(9);
     expect(m.isCorrect(10)).toBe(false);
-    m.rotate(10, 'ccw');
+    m.rotate(10, 'cw');
     expect(m.isSolved()).toBe(true);
   });
 

@@ -46,7 +46,7 @@ Dev page: `/wheel.html`, one large wheel for tuning the look and the feel.
 | --- | --- |
 | `?debug` | FPS / frame-time meter, hit-area outlines (arrows, discs, operator zone, seam) |
 | `?skip-intro` | Boot straight into Playable |
-| `?solve` | Start one move from solved: wheel 10 needs one ↺ tap |
+| `?solve` | Start one move from solved: wheel 10 needs one ↻ tap |
 | `?placeholderSfx` | Synthesised placeholder tones for every missing sound file |
 | `?speed=N` | Run every animation and game timer N× faster (tests) |
 | `?config=path.json` | Load an alternative config (same-origin relative path) |
@@ -131,7 +131,7 @@ review and fixed:
 ## Needs client
 
 1. **Feel on the real tablet:** drag responsiveness, arrow size, numeral legibility at arm's
-   length, and the lid "drowsy" amount (top 0.62 / bottom 0.22).
+   length, and the lid "drowsy" amount (top 0.42 / bottom 0.12).
 2. **Real sound files** (`public/sfx/*.ogg`, names in `public/sfx/README.md`), plus a level check
    with the Sound test.
 3. **Optional sprite art** (`public/assets/README.md`). Start with one wheel (ring, disc, iris,
@@ -162,7 +162,7 @@ review and fixed:
 7. **Asleep:** leave the tablet untouched for 60 s. ✔ Lids close in a ripple and the screen dims.
    Touch anywhere. ✔ It wakes instantly.
 8. **Solve:** set 9, 12, 88, 14, 5, 3, 79, 0, 6, 31 (or use operator → *Show solution*, then
-   *All wheels correct − 1* and one ↺ per wheel). ✔ On the last click: a short silence, all eyes
+   *All wheels correct − 1* and one ↻ per wheel). ✔ On the last click: a short silence, all eyes
    stare, a clunk, the wheels sink and lock, the plate splits over the gold core with dust, and
    input is ignored.
 9. **Reset:** wait. ✔ About 40 s after the plate has opened, the mist rolls back (≈ 3 s) and the

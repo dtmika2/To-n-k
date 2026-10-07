@@ -51,8 +51,8 @@ test('Playwright drives the arrows to solve the lock; state becomes Success', as
   await shot(page, 'M3-start');
 
   for (const w of cfg.wheels) {
-    // cw moves slot − 1
-    const taps = (((w.start - w.correct) % 3) + 3) % 3;
+    // cw moves slot + 1
+    const taps = (((w.correct - w.start) % 3) + 3) % 3;
     const p = await arrowClient(page, w.id, 'cw');
     for (let i = 0; i < taps; i++) {
       await touch.tap(p.x, p.y);
@@ -97,7 +97,7 @@ test('five parallel synthetic pointers turn five different wheels at once', asyn
   const after = (await snap(page)).slots;
   after.forEach((slot, i) => {
     const id = i + 1;
-    const expected = ids.includes(id) ? (before[i] + 2) % 3 : before[i]; // cw = −1
+    const expected = ids.includes(id) ? (before[i] + 1) % 3 : before[i]; // cw = +1
     expect(slot, `wheel ${id}`).toBe(expected);
   });
 });
@@ -108,10 +108,10 @@ test('no win while a wheel is still being dragged; win on settle', async ({ page
   const touch = await Touch.create(page);
   let s = await snap(page);
   expect(s.slots.filter((x, i) => x === cfg.wheels[i].correct)).toHaveLength(9);
-  // wheel 10 needs one ccw step. Drag it ccw past the correct slot and hold.
+  // wheel 10 needs one cw step. Drag it cw onto the correct slot and hold.
   const a0 = 0;
   const steps = 12;
-  const target = -(120 * Math.PI) / 180;
+  const target = (120 * Math.PI) / 180;
   for (let k = 0; k <= steps; k++) {
     const p = await wheelClient(page, 10, a0 + (target * k) / steps);
     await touch.send(k === 0 ? 'touchStart' : 'touchMove', [{ ...p, id: 1 }]);

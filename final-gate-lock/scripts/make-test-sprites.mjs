@@ -10,7 +10,7 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 const BASE = process.env.FGL_URL ?? 'http://localhost:4173';
 const OUT = 'public/assets/test-sprites';
 const LAYERS = [
-  'ring', 'disc', 'iris', 'pupil', 'highlight', 'lidTop', 'lidBottom',
+  'ring', 'disc', 'iris', 'irisShade', 'pupil', 'highlight', 'lidTop', 'lidBottom',
   'arrowCw', 'arrowCwPressed', 'arrowCcw', 'arrowCcwPressed', 'lockRing',
 ];
 
@@ -34,6 +34,14 @@ for (const id of LAYERS) {
     g.drawImage(img, 0, 0);
     const d = g.getImageData(0, 0, c.width, c.height);
     for (let i = 0; i < d.data.length; i += 4) {
+      // Pixi's extract hands back premultiplied colour; un-premultiply so semi-transparent
+      // layers (irisShade's soft highlight) keep their real brightness as a straight-alpha PNG.
+      const a = d.data[i + 3];
+      if (a > 0 && a < 255) {
+        d.data[i] = Math.min(255, (d.data[i] * 255) / a);
+        d.data[i + 1] = Math.min(255, (d.data[i + 1] * 255) / a);
+        d.data[i + 2] = Math.min(255, (d.data[i + 2] * 255) / a);
+      }
       const L = 0.299 * d.data[i] + 0.587 * d.data[i + 1] + 0.114 * d.data[i + 2];
       d.data[i] = Math.min(255, L * 0.86);
       d.data[i + 1] = Math.min(255, L * 0.98);

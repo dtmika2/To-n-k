@@ -43,7 +43,7 @@ test('performance budget: 60 fps shrouded (dense mist), playable (idle eyes + mi
   const cost = await g(page, (x) => x.diag().updateCostMs);
   const memPlayable = (await g(page, (x) => x.diag())).gpu;
   const a = await g(page, (x) => {
-    const p = x.arrow(10, 'ccw');
+    const p = x.arrow(10, 'cw');
     return x.toClient(p.x, p.y);
   });
   await touch.tap(a.x, a.y);
@@ -113,7 +113,7 @@ test('adaptive quality lowers the resolution after sustained slow frames, never 
   });
   await touch.tap(a.x, a.y);
   await page.waitForTimeout(500);
-  expect(await page.evaluate(() => (window as unknown as { __fgl: { snap(): { slots: number[] } } }).__fgl.snap().slots[0])).toBe(2);
+  expect(await page.evaluate(() => (window as unknown as { __fgl: { snap(): { slots: number[] } } }).__fgl.snap().slots[0])).toBe(1);
 });
 
 test('WebGL context loss reloads the page (kiosk self-healing)', async ({ page }) => {

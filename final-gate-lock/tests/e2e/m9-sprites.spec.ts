@@ -2,7 +2,7 @@ import { test, expect, type Page } from '@playwright/test';
 import { Touch, waitForBoot } from './helpers';
 
 const MANIFEST = 'assets/test-sprites/manifest.json';
-const WHEEL_LAYERS = ['ring', 'disc', 'iris', 'pupil', 'highlight', 'lidTop', 'lidBottom', 'arrowCw', 'arrowCcw', 'lockRing'];
+const WHEEL_LAYERS = ['ring', 'disc', 'iris', 'irisShade', 'pupil', 'highlight', 'lidTop', 'lidBottom', 'arrowCw', 'arrowCcw', 'lockRing'];
 
 type Fgl = {
   factory: { mode: string; setMode(m: string): Promise<void>; dropSprite(id: string): void; revision: number };
@@ -179,7 +179,7 @@ test('a missing sprite file at load time falls back for that layer; motion still
   await touch.tap(p.x, p.y);
   await expect.poll(() => g(page, (x) => x.game.wheels[0].atRest)).toBe(true);
   await page.waitForTimeout(300);
-  expect(await g(page, (x) => x.game.wheels[0].restSlot)).toBe((before + 2) % 3);
+  expect(await g(page, (x) => x.game.wheels[0].restSlot)).toBe((before + 1) % 3);
 });
 
 test('operator menu switches the visual mode', async ({ page }) => {

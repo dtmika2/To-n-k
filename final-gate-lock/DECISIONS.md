@@ -31,7 +31,7 @@ Format: date — question → choice (reason).
   fills during the last second", which contradicts itself. Chosen: nothing for the first 2 s, a faint
   white ring fills during the 3rd second, then the PIN pad opens.
 - 2026-10-07 — "Set all wheels to correct-minus-one" → taken literally: every wheel one slot before
-  its correct one (one counter-clockwise tap each, and the 10th tap opens the lock). The one-move-left
+  its correct one (one clockwise tap each, and the 10th tap opens the lock). The one-move-left
   case is the `?solve` dev flag.
 - 2026-10-07 — Operator timings → the menu edits the four single-value timings in seconds (reset hold,
   asleep, settled→drowsy, operator hold); blink/glance ranges stay config-only (still overridable via
@@ -61,4 +61,17 @@ Format: date — question → choice (reason).
 
 ## Deviations
 
-(none yet)
+- 2026-10-07 — **The iris plate rotates, not the numbered disc** (requested by the client after M10).
+  PLAN §1/§5 had the disc turning under a fixed window. Now the disc and its numerals are fixed and
+  always upright; the plate with the window turns (arrows and drag), and still shifts a few px with
+  the eye. Consequences:
+  - A clockwise turn moves the window onto the next clockwise slot, so `rotate(cw)` = slot + 1
+    (was − 1). "Correct − 1" and `?solve` now need one ↻ tap per wheel.
+  - The window rests at the bottom (55°–125°), and the other slots sit upper-left (210°) and
+    upper-right (330°). This replaces the sketch's lower-right start (client choice), because one of
+    three positions 120° apart always lands near the top of the eye.
+  - Drowsy lids are now top 0.42 / bottom 0.12 (was 0.62 / 0.22), which is the most the lids can
+    close while every number stays readable. Curious is 0.26 / 0.08. This is lighter than PLAN
+    §6.2's "~60% closed".
+  - The iris plate's own art is rotation-neutral (radial fill, even window rim). A new fixed layer,
+    `irisShade`, carries the top-left light, so lighting doesn't spin with the plate.
