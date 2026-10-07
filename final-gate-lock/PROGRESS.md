@@ -24,3 +24,10 @@
   Playwright: solves the lock with arrows (→ Success); five simultaneous CDP touch pointers own five
   different wheels and each turns one slot; no win while the last wheel is still held; dead-zone
   taps do nothing.
+- **M4 — Eyes alive.** All eye states from §6.2: drowsy (breathing pupil), blink (via a global
+  gate), glance, curious (neighbours within 430 px look at the touched wheel), awake (pupil tracks the
+  finger, clamped to an ellipse, pupil 1.3× iris), settled (one blink, drowsy after 2 s), and asleep
+  (lid ripple across the plate + 60% dim; any touch wakes). Verified: over 5 simulated minutes in
+  the browser (460 blinks), 0 frames with two eyes blinking; the same holds in a 60 fps unit
+  simulation. Code-review check: `Eye` and the blink gate never see correctness. A unit test enforces
+  this by checking the source, and same-seed eyes behave identically.

@@ -126,7 +126,8 @@ export class Game {
       if (e.type === 'state') {
         this.stateLog.push({ state: e.to, t: this.clock.now });
         this.enter(e.to, e.from);
-      }
+      } else if (e.type === 'asleep') this.fallAsleep();
+      else if (e.type === 'wake') this.wakeUp();
     });
 
     if (flags.debug) this.drawDebug();
@@ -262,6 +263,29 @@ export class Game {
     if (this.machine.state === 'Success') this.machine.successDone();
   }
 
+  // ------------------------------------------------------------------ asleep
+
+  /** No touch for asleepAfterIdleMs: lids close in a ripple across the plate, screen dims to 60%. */
+  private fallAsleep() {
+    const now = this.clock.now;
+    for (const w of this.wheels) {
+      // ripple left → right with a little vertical skew
+      const delay = ((w.x - 150) / 980) * 900 + ((w.y - 215) / 410) * 150;
+      w.eye.setMode('asleep', now, Math.max(0, delay));
+    }
+    this.tweens.kill('dim');
+    const from = this.layers.dim.alpha;
+    void this.tweens.to({ duration: 1800, delay: 300, ease: ease.inOutCubic, tag: 'dim', onUpdate: (k) => (this.layers.dim.alpha = from + (0.6 - from) * k) });
+  }
+
+  private wakeUp() {
+    const now = this.clock.now;
+    if (this.machine.state === 'Playable') for (const w of this.wheels) w.eye.setMode('live', now);
+    this.tweens.kill('dim');
+    const from = this.layers.dim.alpha;
+    void this.tweens.to({ duration: 350, ease: ease.outCubic, tag: 'dim', onUpdate: (k) => (this.layers.dim.alpha = from * (1 - k)) });
+  }
+
   // ------------------------------------------------------------------ frame
 
   private frame(realDt: number) {
@@ -271,6 +295,28 @@ export class Game {
     this.updateCurious();
     const now = this.clock.now;
     for (const w of this.wheels) w.update(now, dt);
+    this.monitorBlinks();
+  }
+
+  /** Diagnostics for the "no two wheels blink in the same frame" requirement. */
+  readonly blinkStats = { frames: 0, blinkFrames: 0, collisions: 0, maxSimultaneous: 0, starts: 0, multiStartFrames: 0 };
+  private lastGrants = 0;
+  private monitorBlinks() {
+    if (this.machine.state !== 'Playable') {
+      this.lastGrants = this.gate.grants;
+      return;
+    }
+    const b = this.blinkStats;
+    b.frames++;
+    let n = 0;
+    for (const w of this.wheels) if (w.eye.blinking) n++;
+    if (n > 0) b.blinkFrames++;
+    if (n > 1) b.collisions++;
+    b.maxSimultaneous = Math.max(b.maxSimultaneous, n);
+    const started = this.gate.grants - this.lastGrants;
+    this.lastGrants = this.gate.grants;
+    b.starts += started;
+    if (started > 1) b.multiStartFrames++;
   }
 
   /** Untouched eyes near a touched wheel open a bit and look toward it. */
