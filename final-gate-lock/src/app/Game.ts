@@ -23,6 +23,8 @@ import { runSuccess } from '../scene/SuccessSequence';
 import { runReset } from '../scene/ResetSequence';
 import { UnlockFx } from '../scene/Core';
 import { PlateSplit } from '../scene/PlateSplit';
+import { OperatorGesture } from '../operator/OperatorGesture';
+import type { Timings } from '../config';
 import { angleForSlot } from '../wheel/snap';
 import { WakeLock } from '../util/wakeLock';
 import { BlinkCoordinator } from '../wheel/BlinkCoordinator';
@@ -61,6 +63,10 @@ export class Game {
   readonly router: InputRouter;
   sfx: Sfx;
   private whisperTimer: number | null = null;
+  readonly gesture: OperatorGesture;
+  /** Called when the operator hold completes (App opens the PIN pad). */
+  onOperator: (() => void) | null = null;
+  private staticRevision: number;
   /** Current touch position per touched wheel (logical), for Curious neighbours. */
   private touches = new Map<Wheel, { x: number; y: number }>();
   readonly mist: Mist;
@@ -143,6 +149,16 @@ export class Game {
       this.wheels.push(w);
       wheels.addChild(w.root);
     });
+
+    // ---- operator gesture
+    this.gesture = new OperatorGesture(
+      () => this.clock.now,
+      () => this.config.timings.operatorHoldMs,
+      () => this.onOperator?.(),
+    );
+    L.ui.addChild(this.gesture.root);
+    this.operatorPress = (p) => this.gesture.press(p);
+    this.staticRevision = factory.revision;
 
     // ---- input
     this.router = new InputRouter(stage.app.canvas, (x, y) => stage.toLogical(x, y), (p) => this.onDown(p));
@@ -306,6 +322,53 @@ export class Game {
     }, 30_000 + Math.random() * 30_000);
   }
 
+  // ------------------------------------------------------------------ operator actions
+
+  operatorReset(): void {
+    this.machine.operatorReset();
+  }
+
+  operatorForceOpen(): void {
+    this.machine.forceOpen();
+  }
+
+  /** Overlay the correct number on each wheel (operator menu only). */
+  setSolutionVisible(on: boolean): void {
+    this.wheels.forEach((w) => {
+      const spec = this.model.spec(w.id);
+      w.showOverlay(on ? String(spec.slots[spec.correct]) : null);
+    });
+  }
+
+  /** Every wheel one slot before its correct one (testing the last move). */
+  setCorrectMinusOne(): void {
+    this.model.setAllCorrectMinusOne();
+    for (const w of this.wheels) w.setSlotImmediate(this.model.get(w.id));
+  }
+
+  setTimings(t: Partial<Timings>): void {
+    Object.assign(this.config.timings, t);
+    const T = this.config.timings;
+    this.machine.setTimings({ resetAfterSuccessMs: T.resetAfterSuccessMs, asleepAfterIdleMs: T.asleepAfterIdleMs });
+    for (const w of this.wheels) {
+      w.eye.setTimings({ blinkIntervalMs: T.blinkIntervalMs, glanceIntervalMs: T.glanceIntervalMs, settledToDrowsyMs: T.settledToDrowsyMs });
+    }
+    this.machine.activity(); // re-arm the idle timer with the new value
+  }
+
+  /** Visual mode changed: rebuild the non-wheel layers (wheels rebuild themselves). */
+  private rebuildStaticLayers(): void {
+    this.staticRevision = this.factory.revision;
+    const swap = (parent: Container, id: 'plateLeft' | 'plateRight' | 'wall') => {
+      for (const ch of parent.removeChildren()) ch.destroy({ children: true });
+      parent.addChild(this.factory.create(id));
+    };
+    swap(this.layers.plateLeft, 'plateLeft');
+    swap(this.layers.plateRight, 'plateRight');
+    swap(this.layers.wall.children[0] as Container, 'wall');
+    this.unlock.rebuildLayers();
+  }
+
   /** Snapshot the plate and start the split (success step 4). */
   beginSplit(): void {
     const res = this.stage.app.renderer.resolution * this.stage.scale;
@@ -384,6 +447,8 @@ export class Game {
     this.tweens.update();
     this.mist.update(dt);
     this.unlock.update(dt);
+    this.gesture.update();
+    if (this.factory.revision !== this.staticRevision) this.rebuildStaticLayers();
     this.glimmers.update(dt);
     this.updateCurious();
     const now = this.clock.now;

@@ -155,8 +155,13 @@ export function plateContext(wheels: readonly WheelPlacement[]): GraphicsContext
 }
 
 /** Two halves of the same drawing, each masked to its side. Cached as textures (static). */
+let plateCtx: { key: string; ctx: GraphicsContext } | null = null;
+
 export function buildPlateHalves(wheels: readonly WheelPlacement[]): { left: Container; right: Container } {
-  const ctx = plateContext(wheels);
+  // The drawing is static: build it once and share it between every instance of both halves.
+  const key = wheels.map((w) => `${w.x},${w.y}`).join(';');
+  if (!plateCtx || plateCtx.key !== key) plateCtx = { key, ctx: plateContext(wheels) };
+  const ctx = plateCtx.ctx;
   const half = (side: 'left' | 'right') => {
     const c = new Container({ label: `plate:${side}` });
     const body = new Graphics(ctx);

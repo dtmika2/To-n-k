@@ -104,3 +104,10 @@ Dev page: `/wheel.html` shows a single large wheel for tuning the look and the f
   and reset wind. Playwright covers: silent with no files, real file wins over placeholder, context
   resumes on tap, duck and every cue through a full success, and loops swapped correctly on reset.
   File list for the client: `public/sfx/README.md`.
+- **M8 — Operator mode.** Hold the bottom-left 120×120 zone for 3 s: nothing for 2 s, a faint ring
+  fills in the last second, and leaving the zone or lifting cancels. A DOM PIN pad follows (wrong PIN
+  closes it), then a plain high-contrast menu: Reset to Shrouded, Force open, Show solution (overlay
+  only while the menu is open), All wheels correct − 1, Sound test, Master volume, Visual mode, FPS
+  meter, timings, Close. Settings persist in localStorage (try/catch, sanitised; config.json stays
+  the default) and the menu auto-closes after 60 s without input. Playwright covers each item,
+  including persistence across a reload.

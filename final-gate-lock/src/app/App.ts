@@ -4,6 +4,8 @@ import { ARROW } from '../layout';
 import { LayerFactory } from '../render/layers';
 import { Game } from './Game';
 import { AudioManager } from '../audio/AudioManager';
+import { OperatorMenu } from '../operator/OperatorMenu';
+import { applySettings, loadSettings, saveSettings, type OperatorSettings } from '../operator/settings';
 import { Stage } from './Stage';
 import { PlateSplit } from '../scene/PlateSplit';
 import type { Container } from 'pixi.js';
@@ -15,7 +17,10 @@ function countObjects(c: Container): number {
 }
 
 /** Boot the real app: stage, layer factory, game, and test hooks on `window.__fgl`. */
-export async function startApp(config: AppConfig, flags: Flags): Promise<Game> {
+export async function startApp(baseConfig: AppConfig, flags: Flags): Promise<Game> {
+  const settings: OperatorSettings = loadSettings();
+  const config = applySettings(baseConfig, settings);
+  const persist = () => saveSettings(settings);
   // Numerals are drawn as text: make sure the bundled face is ready before building wheels.
   try {
     await document.fonts.load('700 30px Cinzel');
@@ -29,11 +34,61 @@ export async function startApp(config: AppConfig, flags: Flags): Promise<Game> {
   const audio = new AudioManager(config.audio.masterVolume, flags.placeholderSfx);
   void audio.load();
   const game = new Game(stage, config, flags, factory, audio);
+  if (settings.fps) game.stats.setVisible(true);
+
+  const menu = new OperatorMenu(config.operator.pin, {
+    resetToShrouded: () => game.operatorReset(),
+    forceOpen: () => game.operatorForceOpen(),
+    setSolutionVisible: (on) => game.setSolutionVisible(on),
+    setCorrectMinusOne: () => game.setCorrectMinusOne(),
+    soundTest: () => {
+      audio.unlock();
+      void audio.soundTest();
+    },
+    beep: () => {
+      audio.unlock();
+      audio.play('operator_beep', { volume: 0.6 });
+    },
+    getVolume: () => audio.masterVolume,
+    setVolume: (v) => {
+      audio.setMasterVolume(v);
+      settings.masterVolume = audio.masterVolume;
+      persist();
+    },
+    getVisualMode: () => factory.mode,
+    setVisualMode: async (m) => {
+      await factory.setMode(m);
+      settings.visualMode = m;
+      persist();
+    },
+    getFps: () => game.stats.visible,
+    setFps: (on) => {
+      game.stats.setVisible(on);
+      settings.fps = on;
+      persist();
+    },
+    getTimings: () => game.config.timings,
+    setTimings: (t) => {
+      game.setTimings(t);
+      settings.timings = { ...(settings.timings ?? {}), ...t };
+      persist();
+    },
+    setTimeout: (fn, ms) => game.clock.setTimeout(fn, ms),
+    clearTimeout: (h) => game.clock.clearTimeout(h),
+    status: () => {
+      const s = game.snapshot();
+      const ctx = audio.ctx?.state ?? 'none';
+      return `state ${s.state} · loops ${s.loops} · correct ${game.model.correctCount()}/10 · audio ${ctx} · ${factory.mode}`;
+    },
+  });
+  game.onOperator = () => menu.openPin();
 
   Object.assign(window, {
     __fgl: {
       game,
       audio,
+      menu,
+      factory,
       config,
       flags,
       stage,
