@@ -19,6 +19,10 @@ import { Cancelled, Seq, Tweens, ease } from '../util/tween';
 import { Glimmers, createLightPass } from '../scene/Background';
 import { Mist } from '../scene/Mist';
 import { runIntro } from '../scene/IntroSequence';
+import { runSuccess } from '../scene/SuccessSequence';
+import { runReset } from '../scene/ResetSequence';
+import { UnlockFx } from '../scene/Core';
+import { PlateSplit } from '../scene/PlateSplit';
 import { angleForSlot } from '../wheel/snap';
 import { WakeLock } from '../util/wakeLock';
 import { BlinkCoordinator } from '../wheel/BlinkCoordinator';
@@ -58,8 +62,9 @@ export class Game {
   sfx: Sfx = silentSfx;
   /** Current touch position per touched wheel (logical), for Curious neighbours. */
   private touches = new Map<Wheel, { x: number; y: number }>();
-  private flash: Graphics;
   readonly mist: Mist;
+  readonly unlock: UnlockFx;
+  readonly split = new PlateSplit();
   readonly glimmers: Glimmers;
   /** The sequence currently running (intro / success / reset), cancelled on state changes. */
   private seq: Seq | null = null;
@@ -90,19 +95,18 @@ export class Game {
     const wheels = mk('wheels');
     const plate = mk('plate');
     plate.addChild(plateLeft, plateRight, wheels, createLightPass());
-    this.flash = new Graphics().rect(0, 0, LOGICAL.width, LOGICAL.height).fill(0xffffff);
-    this.flash.alpha = 0;
-    this.flash.blendMode = 'add';
     const fx = mk('fx');
     this.glimmers = new Glimmers(this.placements);
-    fx.addChild(this.glimmers.root, this.flash);
+    this.unlock = new UnlockFx(factory);
+    fx.addChild(this.glimmers.root, this.unlock.front);
     const veil = new Graphics().rect(-200, -200, LOGICAL.width + 400, LOGICAL.height + 400).fill(0x030203);
     veil.label = 'veil';
     const dim = new Graphics().rect(-200, -200, LOGICAL.width + 400, LOGICAL.height + 400).fill(0x000000);
     dim.alpha = 0;
     this.layers = { wall: mk('wall'), core: mk('core'), plate, plateLeft, plateRight, wheels, veil, fx, mist: mk('mist'), dim, ui: mk('ui'), debug: mk('debug') };
     const L = this.layers;
-    root.addChild(L.wall, L.core, L.plate, L.veil, L.fx, L.mist, L.dim, L.ui, L.debug);
+    root.addChild(L.wall, L.core, L.plate, this.split.root, L.veil, L.fx, L.mist, L.dim, L.ui, L.debug);
+    L.core.addChild(this.unlock.core);
     const wallSlot = mk('slot:wall');
     wallSlot.position.set(LOGICAL.width / 2, LOGICAL.height / 2);
     wallSlot.addChild(factory.create('wall'));
@@ -144,6 +148,7 @@ export class Game {
     this.machine.on((e) => {
       if (e.type === 'state') {
         this.stateLog.push({ state: e.to, t: this.clock.now });
+        if (this.stateLog.length > 300) this.stateLog.splice(0, this.stateLog.length - 300);
         this.enter(e.to, e.from);
       } else if (e.type === 'asleep') this.fallAsleep();
       else if (e.type === 'wake') this.wakeUp();
@@ -269,15 +274,32 @@ export class Game {
         this.mist.setDensity(0, 1500);
         break;
       case 'Success':
-        void this.placeholderSuccess();
+        this.runSeq((seq) => runSuccess(this, seq), () => this.machine.successDone());
         break;
       case 'Open':
+        this.sfx.loop('core_hum', true, 1200);
+        this.unlock.dustRate = 6;
+        this.unlock.level = 1;
         break;
       case 'Reset':
-        this.prepareStartPositions();
-        this.machine.resetDone();
+        this.runSeq((seq) => runReset(this, seq), () => this.machine.resetDone());
         break;
     }
+  }
+
+  /** Snapshot the plate and start the split (success step 4). */
+  beginSplit(): void {
+    const res = this.stage.app.renderer.resolution * this.stage.scale;
+    this.split.begin(this.stage.app.renderer, this.layers.plate, Math.min(Math.max(res, 1), 2));
+  }
+
+  /** Off-screen restore after the reset mist has covered everything. */
+  restoreAfterUnlock(): void {
+    this.split.end(this.layers.plate);
+    this.layers.plate.position.set(0, 0);
+    this.unlock.clear();
+    for (const w of this.wheels) w.resetUnlockVisuals();
+    this.sfx.duck(false, 600);
   }
 
   /** Shrouded: mist only, faint glimmers; wheels sit (unseen) on their start slots. */
@@ -286,7 +308,9 @@ export class Game {
     for (const w of this.wheels) w.eye.setMode('shut', now);
     this.layers.veil.alpha = 1;
     this.layers.dim.alpha = 0;
-    this.glimmers.level = 1;
+    this.tweens.kill('glim');
+    const g0 = this.glimmers.level;
+    void this.tweens.to({ duration: 1500, ease: ease.inOutSine, tag: 'glim', onUpdate: (k) => (this.glimmers.level = g0 + (1 - g0) * k) });
     this.mist.setDensity(1, 1200);
     this.prepareStartPositions();
     // random visual offset per disc so the intro spin looks like a mechanism finding rest
@@ -308,12 +332,6 @@ export class Game {
         if (!(e instanceof Cancelled)) console.error(e);
       },
     );
-  }
-
-  private async placeholderSuccess() {
-    await this.tweens.to({ duration: 120, ease: ease.outQuad, onUpdate: (k) => (this.flash.alpha = 0.7 * k) });
-    await this.tweens.to({ duration: 700, ease: ease.inQuad, onUpdate: (k) => (this.flash.alpha = 0.7 * (1 - k)) });
-    if (this.machine.state === 'Success') this.machine.successDone();
   }
 
   // ------------------------------------------------------------------ asleep
@@ -346,6 +364,7 @@ export class Game {
     this.stats.push(realDt, performance.now());
     this.tweens.update();
     this.mist.update(dt);
+    this.unlock.update(dt);
     this.glimmers.update(dt);
     this.updateCurious();
     const now = this.clock.now;

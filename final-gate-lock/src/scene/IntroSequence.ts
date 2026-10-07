@@ -17,6 +17,7 @@ export async function runIntro(game: Game, seq: Seq, origin: { x: number; y: num
   const t0 = seq.now;
   const { veil } = game.layers;
 
+  game.tweens.kill('glim');
   game.sfx.play('reveal_whoosh');
   game.mist.part(origin.x, origin.y, 2000);
   const glimFrom = game.glimmers.level;

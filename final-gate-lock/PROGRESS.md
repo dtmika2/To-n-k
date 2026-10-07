@@ -87,3 +87,11 @@ Dev page: `/wheel.html` shows a single large wheel for tuning the look and the f
   arm's length). It is verified only in Chrome device emulation with synthetic touch.
 - Real sound files (`public/sfx/*.ogg`). The app runs silently without them.
 - Final sprite art (optional; the procedural look is complete on its own).
+- **M6 — Success, Open, Reset.** Full §6.4: 0.4 s ducked silence → all eyes wide and centred with a
+  teal pulse → clunk, wheels sink and brass lock collars contract onto them, eyes close peacefully →
+  the plate (with wheels, which straddle the seam) is snapshotted into a texture and its two halves
+  slide apart over a gold core with soft god rays, while dust falls from the parting edges → Open
+  holds (core hum, slow dust) → after 40 s the mist rolls back, the veil closes, and only then is
+  everything restored and the snapshot texture destroyed. Measured: success 7.08 s, hold 40.13 s,
+  reset 3.05 s. 20 full loops at 20×: display objects constant (507), 0 live snapshot textures,
+  0 motes, heap 11.9 → 12.4 MB (the state log is now capped).

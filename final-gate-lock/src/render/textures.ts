@@ -103,6 +103,34 @@ export function stoneWall(w = 1280, h = 800): Texture {
   });
 }
 
+/** Soft god rays radiating from the centre (white, tint it). */
+export function godRays(size = 1024): Texture {
+  return cached(`rays${size}`, () => {
+    const [c, g] = canvas(size, size);
+    const rng = mulberry32(5);
+    const r = size / 2;
+    g.filter = 'blur(5px)';
+    for (let i = 0; i < 34; i++) {
+      const a = (i / 34) * Math.PI * 2 + (rng() - 0.5) * 0.12;
+      const w = 0.018 + rng() * 0.05;
+      const L = r * (0.55 + rng() * 0.43);
+      const grad = g.createRadialGradient(r, r, 0, r, r, L);
+      const peak = 0.25 + rng() * 0.35;
+      grad.addColorStop(0, `rgba(255,255,255,${peak})`);
+      grad.addColorStop(0.5, `rgba(255,255,255,${peak * 0.4})`);
+      grad.addColorStop(1, 'rgba(255,255,255,0)');
+      g.fillStyle = grad;
+      g.beginPath();
+      g.moveTo(r, r);
+      g.lineTo(r + Math.cos(a - w) * L, r + Math.sin(a - w) * L);
+      g.lineTo(r + Math.cos(a + w) * L, r + Math.sin(a + w) * L);
+      g.closePath();
+      g.fill();
+    }
+    return c;
+  });
+}
+
 /** Total texture bytes created here (for the memory budget report). */
 export function proceduralTextureBytes(): number {
   let n = 0;

@@ -58,6 +58,8 @@ export class Wheel {
   private readonly slots = new Map<LayerId, Container>();
   private readonly arrowState = { cw: false, ccw: false };
   private overlay: Container | null = null;
+  /** Brass collar shown on unlock. */
+  private lockRing: Container;
 
   angle = 0;
   restSlot: number;
@@ -107,6 +109,8 @@ export class Wheel {
     this.body.addChild(this.lidMask);
     this.lids.mask = this.lidMask;
     slot('glow', this.body);
+    this.lockRing = slot('lockRing', this.body);
+    this.lockRing.visible = false;
 
     for (const dir of ['ccw', 'cw'] as const) {
       const g = new Container({ label: `arrow:${dir}` });
@@ -323,6 +327,29 @@ export class Wheel {
     c.position.set(0, WHEEL.socketRadius + 2);
     this.root.addChild(c);
     this.overlay = c;
+  }
+
+  // ---------------------------------------------------------------- unlock visuals
+
+  /** k ∈ [0, 1]: wheel sinks into the plate (scale down, darken), arrows fade out. */
+  setSink(k: number): void {
+    this.body.scale.set(1 - 0.1 * k);
+    const v = Math.round(255 * (1 - 0.32 * k));
+    this.body.tint = (v << 16) | (v << 8) | v;
+    this.arrows.alpha = 1 - k;
+  }
+
+  /** k ∈ [0, 1]: collar contracts from 1.4× onto the wheel and becomes opaque. */
+  setLock(k: number): void {
+    this.lockRing.visible = k > 0;
+    this.lockRing.scale.set(1.4 - 0.4 * k);
+    this.lockRing.alpha = Math.min(1, k * 1.6);
+  }
+
+  /** Back to the normal look (done off-screen during Reset). */
+  resetUnlockVisuals(): void {
+    this.setSink(0);
+    this.setLock(0);
   }
 
   // ---------------------------------------------------------------- frame

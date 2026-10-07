@@ -262,3 +262,29 @@ export function arrowContext(dir: 'cw' | 'ccw', pressed: boolean): GraphicsConte
     g.poly(head.map((v, i) => (i % 2 === 0 ? s * v + off : v + off))).fill({ color: 0x24180a, alpha: 0.95 });
   });
 }
+
+/** Brass locking collar that contracts onto the wheel on unlock (outer 92, inner 66). */
+export function lockRingContext(): GraphicsContext {
+  return once('lockRing', (g) => {
+    const ro = WHEEL.socketRadius + 4;
+    const ri = 66;
+    g.circle(3, 4, ro + 1).fill({ color: C.black, alpha: 0.45 }).circle(3, 4, ri).cut();
+    g.circle(0, 0, ro).fill(lit(0xd9b85f, 0x4f3a15, 0x9c7a34)).circle(0, 0, ri).cut();
+    g.circle(0, 0, ro).stroke({ width: 1.5, color: C.brassDeep, alpha: 0.9 });
+    g.circle(0, 0, ri).stroke({ width: 2.5, color: C.black, alpha: 0.6 });
+    bevelArcs(g, ro - 2, 1.4, 0.45, 0.35);
+    // six bolts / latches
+    for (let i = 0; i < 6; i++) {
+      const a = (i * 60 + 30) * DEG;
+      const r = (ro + ri) / 2;
+      const x = Math.cos(a) * r;
+      const y = Math.sin(a) * r;
+      g.circle(x + 1, y + 1.4, 5).fill({ color: C.black, alpha: 0.45 });
+      g.circle(x, y, 5).fill(lit(C.brassLight, C.brassShadow));
+      g.moveTo(x - 3, y).lineTo(x + 3, y).stroke({ width: 1.2, color: C.brassDeep, alpha: 0.9 });
+    }
+    // engraved ring
+    g.circle(0, 0, (ro + ri) / 2 + 9).stroke({ width: 0.8, color: C.brassDeep, alpha: 0.5 });
+    g.circle(0, 0, (ro + ri) / 2 - 9).stroke({ width: 0.8, color: C.brassDeep, alpha: 0.5 });
+  });
+}

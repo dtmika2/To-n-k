@@ -4,6 +4,14 @@ import { ARROW } from '../layout';
 import { LayerFactory } from '../render/layers';
 import { Game } from './Game';
 import { Stage } from './Stage';
+import { PlateSplit } from '../scene/PlateSplit';
+import type { Container } from 'pixi.js';
+
+function countObjects(c: Container): number {
+  let n = 1;
+  for (const ch of c.children) n += countObjects(ch);
+  return n;
+}
 
 /** Boot the real app: stage, layer factory, game, and test hooks on `window.__fgl`. */
 export async function startApp(config: AppConfig, flags: Flags): Promise<Game> {
@@ -28,6 +36,15 @@ export async function startApp(config: AppConfig, flags: Flags): Promise<Game> {
       stats: game.stats,
       clock: game.clock,
       snap: () => game.snapshot(),
+      /** Diagnostics for leak checks. */
+      diag: () => ({
+        objects: countObjects(stage.app.stage),
+        tweens: game.tweens.count,
+        timers: game.clock.pendingCount,
+        splitTextures: PlateSplit.live,
+        motes: game.unlock.moteCount,
+        stateLog: game.stateLog.length,
+      }),
       /** Logical centre of an arrow / wheel, for tests. */
       arrow: (id: number, dir: 'cw' | 'ccw') => {
         const w = game.wheels.find((x) => x.id === id)!;
