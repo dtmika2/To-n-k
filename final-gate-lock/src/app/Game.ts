@@ -15,7 +15,11 @@ import { silentSfx, type Sfx } from '../audio/sfx';
 import { Clock } from '../util/clock';
 import { FrameStats } from '../util/fpsMeter';
 import { mulberry32 } from '../util/random';
-import { Tweens, ease } from '../util/tween';
+import { Cancelled, Seq, Tweens, ease } from '../util/tween';
+import { Glimmers, createLightPass } from '../scene/Background';
+import { Mist } from '../scene/Mist';
+import { runIntro } from '../scene/IntroSequence';
+import { angleForSlot } from '../wheel/snap';
 import { WakeLock } from '../util/wakeLock';
 import { BlinkCoordinator } from '../wheel/BlinkCoordinator';
 import { Eye } from '../wheel/Eye';
@@ -30,6 +34,8 @@ export interface GameLayers {
   plateLeft: Container;
   plateRight: Container;
   wheels: Container;
+  /** Near-black veil over the plate: 1 = hidden (Shrouded), 0 = revealed. */
+  veil: Graphics;
   fx: Container;
   mist: Container;
   dim: Graphics;
@@ -53,6 +59,10 @@ export class Game {
   /** Current touch position per touched wheel (logical), for Curious neighbours. */
   private touches = new Map<Wheel, { x: number; y: number }>();
   private flash: Graphics;
+  readonly mist: Mist;
+  readonly glimmers: Glimmers;
+  /** The sequence currently running (intro / success / reset), cancelled on state changes. */
+  private seq: Seq | null = null;
   /** Log of state changes with game time, for tests. */
   readonly stateLog: { state: GameState; t: number }[] = [];
 
@@ -79,17 +89,26 @@ export class Game {
     const plateRight = mk('plateRight');
     const wheels = mk('wheels');
     const plate = mk('plate');
-    plate.addChild(plateLeft, plateRight, wheels);
+    plate.addChild(plateLeft, plateRight, wheels, createLightPass());
     this.flash = new Graphics().rect(0, 0, LOGICAL.width, LOGICAL.height).fill(0xffffff);
     this.flash.alpha = 0;
     this.flash.blendMode = 'add';
     const fx = mk('fx');
-    fx.addChild(this.flash);
+    this.glimmers = new Glimmers(this.placements);
+    fx.addChild(this.glimmers.root, this.flash);
+    const veil = new Graphics().rect(-200, -200, LOGICAL.width + 400, LOGICAL.height + 400).fill(0x030203);
+    veil.label = 'veil';
     const dim = new Graphics().rect(-200, -200, LOGICAL.width + 400, LOGICAL.height + 400).fill(0x000000);
     dim.alpha = 0;
-    this.layers = { wall: mk('wall'), core: mk('core'), plate, plateLeft, plateRight, wheels, fx, mist: mk('mist'), dim, ui: mk('ui'), debug: mk('debug') };
+    this.layers = { wall: mk('wall'), core: mk('core'), plate, plateLeft, plateRight, wheels, veil, fx, mist: mk('mist'), dim, ui: mk('ui'), debug: mk('debug') };
     const L = this.layers;
-    root.addChild(L.wall, L.core, L.plate, L.fx, L.mist, L.dim, L.ui, L.debug);
+    root.addChild(L.wall, L.core, L.plate, L.veil, L.fx, L.mist, L.dim, L.ui, L.debug);
+    const wallSlot = mk('slot:wall');
+    wallSlot.position.set(LOGICAL.width / 2, LOGICAL.height / 2);
+    wallSlot.addChild(factory.create('wall'));
+    L.wall.addChild(wallSlot);
+    this.mist = new Mist();
+    L.mist.addChild(this.mist.root);
 
     // plate halves: procedural drawing positioned in absolute logical coords
     const halves = () => buildPlateHalves(this.placements);
@@ -136,6 +155,7 @@ export class Game {
     if (flags.skipIntro) {
       this.prepareStartPositions();
       this.machine.skipToPlayable();
+      this.mist.setDensityNow(0);
     }
   }
 
@@ -198,7 +218,7 @@ export class Game {
   // ------------------------------------------------------------------ wheel events
 
   private onSettle(w: Wheel, slot: number, reason: SettleReason) {
-    if (reason !== 'spin') this.sfx.play('detent_click');
+    this.sfx.play('detent_click', reason === 'spin' ? { volume: 0.8 } : undefined);
     if (this.machine.state !== 'Playable') return;
     this.model.setSlot(w.id, slot);
     // Win check only when a wheel settles, and only when every wheel is at rest.
@@ -233,17 +253,20 @@ export class Game {
       this.router.cancelAll();
       this.touches.clear();
     }
+    this.seq?.cancel();
+    this.seq = null;
     switch (state) {
       case 'Shrouded':
-        for (const w of this.wheels) w.eye.setMode('shut', now);
+        this.enterShrouded();
         break;
       case 'Intro':
-        // M3 placeholder: no sequence yet
-        this.prepareStartPositions();
-        this.machine.introDone();
+        this.runSeq((seq) => runIntro(this, seq, this.introOrigin), () => this.machine.introDone());
         break;
       case 'Playable':
         for (const w of this.wheels) w.eye.setMode('live', now);
+        this.layers.veil.alpha = 0;
+        this.glimmers.level = 0;
+        this.mist.setDensity(0, 1500);
         break;
       case 'Success':
         void this.placeholderSuccess();
@@ -255,6 +278,36 @@ export class Game {
         this.machine.resetDone();
         break;
     }
+  }
+
+  /** Shrouded: mist only, faint glimmers; wheels sit (unseen) on their start slots. */
+  private enterShrouded() {
+    const now = this.clock.now;
+    for (const w of this.wheels) w.eye.setMode('shut', now);
+    this.layers.veil.alpha = 1;
+    this.layers.dim.alpha = 0;
+    this.glimmers.level = 1;
+    this.mist.setDensity(1, 1200);
+    this.prepareStartPositions();
+    // random visual offset per disc so the intro spin looks like a mechanism finding rest
+    for (const w of this.wheels) w.setAngleImmediate(angleForSlot(this.model.get(w.id)) + Math.random() * Math.PI * 2);
+  }
+
+  /** Run a cancellable sequence; `done` runs only if it completed. */
+  protected runSeq(body: (seq: Seq) => Promise<void>, done: () => void): void {
+    const seq = new Seq(this.clock, this.tweens);
+    this.seq = seq;
+    body(seq).then(
+      () => {
+        if (!seq.cancelled && this.seq === seq) {
+          this.seq = null;
+          done();
+        }
+      },
+      (e) => {
+        if (!(e instanceof Cancelled)) console.error(e);
+      },
+    );
   }
 
   private async placeholderSuccess() {
@@ -292,6 +345,8 @@ export class Game {
     const dt = this.clock.tick(realDt);
     this.stats.push(realDt, performance.now());
     this.tweens.update();
+    this.mist.update(dt);
+    this.glimmers.update(dt);
     this.updateCurious();
     const now = this.clock.now;
     for (const w of this.wheels) w.update(now, dt);

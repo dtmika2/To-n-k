@@ -76,7 +76,7 @@ export function plateContext(wheels: readonly WheelPlacement[]): GraphicsContext
 
   // brass trim
   roundedRectPath(g, x, y, w, h, r);
-  g.fill(lit(C.brassLight, C.brassShadow, C.brass));
+  g.fill(lit(0xc9a453, 0x4f3a15, 0x977532));
   roundedRectPath(g, x + 3, y + 3, w - 6, h - 6, r - 3);
   g.stroke({ width: 1.5, color: C.white, alpha: 0.25 });
   roundedRectPath(g, x, y, w, h, r);
@@ -140,7 +140,7 @@ export function plateContext(wheels: readonly WheelPlacement[]): GraphicsContext
   for (const p of wheels) {
     const R = WHEEL.socketRadius + 9;
     g.circle(p.x + 5, p.y + 7, R + 2).fill({ color: C.black, alpha: 0.45 });
-    g.circle(p.x, p.y, R).fill(lit(C.brassLight, C.brassShadow, C.brass));
+    g.circle(p.x, p.y, R).fill(lit(0xc9a453, 0x4f3a15, 0x977532));
     g.circle(p.x, p.y, R).stroke({ width: 1.5, color: C.brassDeep, alpha: 0.9 });
     for (let i = 0; i < 40; i++) {
       const a = i * 9 * DEG;
