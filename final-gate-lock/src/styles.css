@@ -1,0 +1,195 @@
+html,
+body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #050405;
+  /* Kiosk lockdown: no zoom, no selection, no pull-to-refresh, no callouts. */
+  touch-action: none;
+  overscroll-behavior: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+#stage,
+#stage canvas {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  touch-action: none;
+}
+
+/* Boot-time error screen (invalid config). The only text players could ever see. */
+.error-screen {
+  position: fixed;
+  inset: 0;
+  background: #7a0000;
+  color: #fff;
+  font: 22px/1.4 system-ui, sans-serif;
+  padding: 48px;
+  box-sizing: border-box;
+  overflow: auto;
+  z-index: 100;
+}
+.error-screen h1 {
+  margin: 0 0 16px;
+  font-size: 34px;
+}
+.error-screen li {
+  margin: 4px 0;
+}
+
+.fps-meter {
+  position: fixed;
+  top: 6px;
+  right: 8px;
+  z-index: 60;
+  font: 13px/1.2 ui-monospace, monospace;
+  color: #7fe3d4;
+  background: rgba(0, 0, 0, 0.55);
+  padding: 4px 6px;
+  border-radius: 4px;
+  pointer-events: none;
+  white-space: pre;
+}
+
+/* ---------- operator overlay (plain, high contrast; the only text in the app) ---------- */
+.op-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  background: rgba(0, 0, 0, 0.82);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font: 18px/1.3 system-ui, sans-serif;
+  color: #fff;
+  user-select: none;
+  touch-action: manipulation;
+}
+.op-box {
+  background: #111;
+  border: 2px solid #fff;
+  border-radius: 12px;
+  padding: 20px 24px;
+  max-height: 94vh;
+  overflow: auto;
+  box-sizing: border-box;
+}
+.op-box h2 {
+  margin: 0 0 12px;
+  font-size: 22px;
+}
+.op-box h3 {
+  margin: 14px 0 6px;
+  font-size: 17px;
+}
+.op-pin {
+  width: 320px;
+  text-align: center;
+}
+.op-pin-display {
+  height: 44px;
+  font-size: 34px;
+  letter-spacing: 8px;
+  border: 1px solid #666;
+  border-radius: 8px;
+  margin-bottom: 12px;
+}
+.op-keys {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.op-key,
+.op-btn,
+.op-seg-btn {
+  min-height: 56px;
+  font: inherit;
+  font-size: 20px;
+  color: #000;
+  background: #fff;
+  border: 0;
+  border-radius: 8px;
+  cursor: pointer;
+}
+.op-key:active,
+.op-btn:active,
+.op-seg-btn:active {
+  background: #bbb;
+}
+.op-ghost {
+  background: #333;
+  color: #fff;
+  width: 100%;
+}
+.op-menu {
+  width: min(760px, 94vw);
+}
+.op-status {
+  font-family: ui-monospace, monospace;
+  font-size: 15px;
+  color: #9fe;
+  margin-bottom: 12px;
+}
+.op-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.op-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 8px 0;
+}
+.op-row > span:first-child {
+  min-width: 220px;
+}
+.op-row input[type='range'] {
+  flex: 1;
+  height: 40px;
+}
+.op-row input[type='number'] {
+  width: 110px;
+  font: inherit;
+  font-size: 20px;
+  padding: 8px;
+  border-radius: 6px;
+  border: 0;
+}
+.op-value {
+  min-width: 52px;
+  text-align: right;
+}
+.op-seg {
+  display: flex;
+  gap: 8px;
+}
+.op-seg-btn {
+  padding: 0 18px;
+  background: #444;
+  color: #fff;
+}
+.op-seg-btn.on {
+  background: #fff;
+  color: #000;
+}
+.op-toggle {
+  width: 100%;
+  margin: 6px 0;
+}
+.op-close {
+  width: 100%;
+  margin-top: 14px;
+  background: #e33;
+  color: #fff;
+}

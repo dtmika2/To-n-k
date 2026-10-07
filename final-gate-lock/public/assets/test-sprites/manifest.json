@@ -1,0 +1,86 @@
+{
+  "ring": {
+    "file": "test-sprites/ring.png",
+    "width": 190,
+    "height": 192,
+    "pivotX": 89,
+    "pivotY": 89
+  },
+  "disc": {
+    "file": "test-sprites/disc.png",
+    "width": 154,
+    "height": 154,
+    "pivotX": 77,
+    "pivotY": 77
+  },
+  "iris": {
+    "file": "test-sprites/iris.png",
+    "width": 148,
+    "height": 148,
+    "pivotX": 74,
+    "pivotY": 74
+  },
+  "pupil": {
+    "file": "test-sprites/pupil.png",
+    "width": 32,
+    "height": 32,
+    "pivotX": 16,
+    "pivotY": 16
+  },
+  "highlight": {
+    "file": "test-sprites/highlight.png",
+    "width": 15,
+    "height": 16,
+    "pivotX": 9,
+    "pivotY": 9
+  },
+  "lidTop": {
+    "file": "test-sprites/lidTop.png",
+    "width": 166,
+    "height": 183,
+    "pivotX": 85,
+    "pivotY": 174
+  },
+  "lidBottom": {
+    "file": "test-sprites/lidBottom.png",
+    "width": 164,
+    "height": 177,
+    "pivotX": 83,
+    "pivotY": 3
+  },
+  "arrowCw": {
+    "file": "test-sprites/arrowCw.png",
+    "width": 41,
+    "height": 42,
+    "pivotX": 19,
+    "pivotY": 19
+  },
+  "arrowCwPressed": {
+    "file": "test-sprites/arrowCwPressed.png",
+    "width": 40,
+    "height": 41,
+    "pivotX": 18,
+    "pivotY": 18
+  },
+  "arrowCcw": {
+    "file": "test-sprites/arrowCcw.png",
+    "width": 41,
+    "height": 42,
+    "pivotX": 19,
+    "pivotY": 19
+  },
+  "arrowCcwPressed": {
+    "file": "test-sprites/arrowCcwPressed.png",
+    "width": 40,
+    "height": 41,
+    "pivotX": 18,
+    "pivotY": 18
+  },
+  "lockRing": {
+    "file": "test-sprites/lockRing.png",
+    "width": 191,
+    "height": 192,
+    "pivotX": 94,
+    "pivotY": 94
+  }
+}
