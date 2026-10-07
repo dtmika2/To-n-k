@@ -17,3 +17,10 @@
   follows the pointer angle 1:1 and snaps with flick velocity (at most one extra slot). Dev page
   `/wheel.html`. Playwright: arrows, queue, slow drag, flick, and 12 random drags all land on a
   slot. Frame time during drags: p95 7.1 ms.
+- **M3 — Ten wheels + win.** `Game` wires model, machine, wheels, input and sound. The procedural
+  plate is an oak panel with riveted brass trim, bezels, filigree and a centre seam; it is drawn once
+  and shown as two masked halves, ready for the split. The wheels sit in the 3-4-3 layout. The win
+  check runs only on settle and only when all wheels are at rest. Placeholder success = flash.
+  Playwright: solves the lock with arrows (→ Success); five simultaneous CDP touch pointers own five
+  different wheels and each turns one slot; no win while the last wheel is still held; dead-zone
+  taps do nothing.
