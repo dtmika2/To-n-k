@@ -3,31 +3,62 @@
 Any visual layer can be replaced by an image, one at a time. The motion stays in code, so a sprite
 only changes how a layer *looks*.
 
-1. Put the image in `public/assets/sprites/` (transparent PNG or WebP, authored at **2×** logical size).
-2. Add an entry to `public/assets/manifest.json`:
+## Start here: the starter set
+
+`test-sprites/` holds **every layer as its own image**, rendered from the procedural drawing at 2×
+size, plus a ready `manifest.json`. Its `README.md` lists what each file is, its pixel size and where
+it sits. Open the app with:
+
+    ?manifest=assets/test-sprites/manifest.json&sprites
+
+It looks exactly like the procedural version. Replace one file with your own art (same pixel size,
+transparent PNG) and reload: only that piece changes. Work through the set one file at a time.
+
+`npm run test-sprites` (dev server running) re-creates any missing files and keeps the ones you have
+replaced. `npm run test-sprites -- --force` regenerates the whole set and **overwrites** your files.
+
+## Going live
+
+When pieces are final, copy them to `sprites/` and list them in `public/assets/manifest.json` (the
+manifest the app uses by default). Then switch the operator menu to **Visual mode → sprites**. Any
+layer without a working sprite falls back to its procedural drawing automatically, logged once to the
+console.
 
 ```json
 {
-  "iris": { "file": "sprites/iris.webp", "width": 148, "height": 148, "pivotX": 74, "pivotY": 74 }
+  "oak": { "file": "sprites/oak.webp", "width": 1138, "height": 698, "pivotX": -71, "pivotY": -51 }
 }
 ```
 
-`width`/`height` are the **logical** size (half the pixel size). `pivotX`/`pivotY` is the point (in
-logical px from the image's top-left) that sits on the wheel centre — for the lids, that is the
-centre of the lid's edge.
+`width`/`height` are the **logical** size (half the pixel size). `pivotX`/`pivotY` is the image point,
+in logical px from its top-left, that lands on the layer's origin:
 
-3. Switch the operator menu to **Visual mode → sprites**. A layer without a working sprite falls back
-   to its procedural drawing automatically, logged once to the console.
+- **Wheel parts:** the wheel centre (for the lids, the centre of the lid's edge).
+- **Door pieces:** the canvas origin, so the pivot is minus the image's top-left position on the
+  1280×800 canvas. Copy the numbers from `test-sprites/manifest.json`.
+- **`bezel`:** the ring's centre. One image is placed under all 10 wheels.
 
-Layer ids: `ring`, `disc`, `iris` (the turning plate with the window), `irisShade` (fixed light over it), `pupil`, `highlight`, `lidTop`, `lidBottom`, `arrowCw`,
-`arrowCwPressed`, `arrowCcw`, `arrowCcwPressed`, `lockRing`, `wall` (pivot = image centre, 1280×800),
-`plateLeft` / `plateRight` (drawn in absolute logical coordinates: pivot = 0,0 with a 1280×800 image),
-`core` (pivot = centre). `glow`, dust and sparks always stay procedural.
+## Layers
 
-Rules (see docs/DESIGN.md): every layer on its own transparent background, one light direction (top
-left), pivot at the exact centre of each eye part, **no digits in sprites** (numbers are drawn in
-code), and parts stay rigid (they never deform).
+| Group | Layers |
+| --- | --- |
+| Wheel (×10) | `ring`, `disc`, `iris` (turning plate with the window), `irisShade` (fixed light over it), `pupil`, `highlight`, `lidTop`, `lidBottom`, `lockRing`, `arrowCw`, `arrowCwPressed`, `arrowCcw`, `arrowCcwPressed` |
+| Door | `plateShadow`, `oak`, `frame`, `straps`, `brackets`, `ornaments`, `bezel`, `seam` |
+| Scene | `wall`, `mistTile`, `core` |
 
-`test-sprites/` holds a generated reference set (the procedural layers in a steel tint) that proves
-pivots and masks line up: open the app with `?manifest=assets/test-sprites/manifest.json&sprites`.
-Regenerate it with `npm run test-sprites` (needs `npm run preview` running).
+The door is a stack of separate pieces, so the wood can change without touching the brass or iron.
+**Draw each piece whole**: the app splits the door into its two halves along the seam by itself.
+
+`glow`, dust and sparks always stay procedural.
+
+## Rules (see docs/DESIGN.md)
+
+- Every layer on its own transparent background, with **alpha 0** wherever it shouldn't cover
+  anything. A faint "almost transparent" background shows as a box.
+- One light direction (top left).
+- **No digits in sprites.** The numbers are drawn in code, on top of `disc`.
+- Parts stay rigid; they never deform.
+- The `iris` turns, so it must not contain a pupil or a fixed highlight; those are separate layers.
+
+**Memory:** with the full starter set loaded, GPU memory peaks at about 131 MB (budget 150 MB). The
+full-screen pieces (`wall`, `core`) are the largest. Don't author above 2×.

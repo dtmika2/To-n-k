@@ -6,7 +6,11 @@ import { Stage } from '../app/Stage';
 import { parseFlags } from '../flags';
 import { InputRouter } from '../input/InputRouter';
 import { LOGICAL } from '../layout';
-import { LayerFactory, type LayerId } from '../render/layers';
+import { LAYER_IDS, LayerFactory, type LayerId } from '../render/layers';
+// register the procedural door, wall and core layers so every layer can be exported
+import '../render/procedural/plate';
+import '../scene/Background';
+import '../scene/Core';
 import { Clock } from '../util/clock';
 import { FrameStats } from '../util/fpsMeter';
 import { mulberry32 } from '../util/random';
@@ -83,6 +87,8 @@ async function main() {
       stats,
       clock,
       factory,
+      /** Every layer that can be a sprite (glow always stays procedural). */
+      layerIds: LAYER_IDS.filter((id) => id !== 'glow'),
       /**
        * Render one procedural layer to a PNG at 2x (sprite authoring size) and report its pivot.
        * Used by scripts/make-test-sprites.mjs.

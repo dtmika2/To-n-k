@@ -69,6 +69,15 @@ export class Mist {
     this.apply();
   }
 
+  /** Swap the puff texture (visual mode change); motion and alpha are untouched. */
+  retexture(texture: (variant: number) => Texture): void {
+    this.puffs.forEach((p, i) => {
+      const size = p.size;
+      p.s.texture = texture(i % 4);
+      p.s.width = p.s.height = size;
+    });
+  }
+
   /** Move density toward `d` over roughly `ms`. */
   setDensity(d: number, ms = 1500): void {
     this.target = clamp(d, 0, 1);

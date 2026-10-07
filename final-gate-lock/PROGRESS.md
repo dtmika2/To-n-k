@@ -97,6 +97,27 @@ Flags combine, e.g. `/?skip-intro&solve&placeholderSfx`.
 - **Heavy feel** (client request): slower, weighted motion with hard stops, recoil and thuds; drag
   inertia with ratchet notches; slower eyes; a longer intro (~6.5 s) and success (~9 s); iron
   straps and aged brass; deeper sounds. All tuning lives in `src/feel.ts`.
+- **Door split into sprite layers** (client request): `plateShadow`, `oak`, `frame`, `straps`,
+  `brackets`, `ornaments`, `bezel` and `seam` replace the two plate-half images. Each piece can be
+  swapped on its own, and the app splits the door into halves itself. `mistTile` is a sprite layer
+  too (24 layers in all).
+- **Starter sprite set** in `public/assets/test-sprites/`: every layer as its own PNG, identical to
+  the procedural look, with `manifest.json` and a README listing each file's size and placement.
+  `npm run test-sprites` fills in missing files and never overwrites replaced ones (unless
+  `-- --force`). The sprite browser test now uses its own in-memory copy.
+- **Client sprites in progress** (`public/assets/sprites/`, listed in `public/assets/manifest.json`):
+  `Iris.png`, `lidTop.png`, `lidBottom.png`, `Oak.jpg` and `frame.png` are live in sprite mode
+  (`/?skip-intro&sprites`). `PlateLeft.jpg`/`PlateRight.jpg` are no longer used (the old
+  plate-half slots are gone). Open point: the new upper lid covers the top of the upper-left and
+  upper-right numbers while the eye dozes. Fix either in the art (end the rim on the starter lid's
+  curve) or by raising `lidTop`'s `pivotY` in the manifest.
+
+## Next session
+
+- Decide the `lidTop` overlap fix (art, manifest pivot or a lighter doze).
+- Keep replacing layers; the starter set's README lists the remaining ones.
+- **Push to GitHub is pending.** GitHub returned "Internal Server Error" on every push this session
+  (request ID `C901:348E8E:473BE34:43F59FC:6AC679D6`). Run `git push origin main` once it works.
 
 ## Verification (final run)
 

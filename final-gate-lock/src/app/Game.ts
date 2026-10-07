@@ -7,8 +7,9 @@ import type { AppConfig } from '../config';
 import type { Flags } from '../flags';
 import { InputRouter, type PointerHandler, type PointerInfo } from '../input/InputRouter';
 import { ARROW, CURIOUS_RADIUS, LOGICAL, OPERATOR_ZONE, PLATE, WHEEL, placeWheels, type WheelPlacement } from '../layout';
-import { LayerFactory, registerProcedural } from '../render/layers';
-import { buildPlateHalves } from '../render/procedural/plate';
+import { LayerFactory } from '../render/layers';
+import { mistPuff } from '../render/textures';
+import { buildPlateHalf } from '../render/procedural/plate';
 import { LockModel } from '../state/lockModel';
 import { Machine, type GameState } from '../state/machine';
 import { silentSfx, type Sfx } from '../audio/sfx';
@@ -120,15 +121,13 @@ export class Game {
     wallSlot.position.set(LOGICAL.width / 2, LOGICAL.height / 2);
     wallSlot.addChild(factory.create('wall'));
     L.wall.addChild(wallSlot);
-    this.mist = new Mist();
+    this.mist = new Mist(30, 9, (v) => this.mistTexture(v));
     L.mist.addChild(this.mist.root);
 
     // plate halves: procedural drawing positioned in absolute logical coords
-    const halves = () => buildPlateHalves(this.placements);
-    registerProcedural('plateLeft', () => halves().left);
-    registerProcedural('plateRight', () => halves().right);
-    plateLeft.addChild(factory.create('plateLeft'));
-    plateRight.addChild(factory.create('plateRight'));
+    // door halves: every door layer, masked to its side of the seam
+    plateLeft.addChild(buildPlateHalf('left', factory, this.placements));
+    plateRight.addChild(buildPlateHalf('right', factory, this.placements));
 
     // ---- wheels
     const t = config.timings;
@@ -357,16 +356,25 @@ export class Game {
     this.machine.activity(); // re-arm the idle timer with the new value
   }
 
+  /** Mist puff texture: the `mistTile` sprite when one is loaded, else the procedural puffs. */
+  private mistTexture(variant: number) {
+    return this.factory.texture('mistTile') ?? mistPuff(variant);
+  }
+
   /** Visual mode changed: rebuild the non-wheel layers (wheels rebuild themselves). */
   private rebuildStaticLayers(): void {
     this.staticRevision = this.factory.revision;
-    const swap = (parent: Container, id: 'plateLeft' | 'plateRight' | 'wall') => {
+    for (const [parent, side] of [
+      [this.layers.plateLeft, 'left'],
+      [this.layers.plateRight, 'right'],
+    ] as const) {
       for (const ch of parent.removeChildren()) ch.destroy({ children: true });
-      parent.addChild(this.factory.create(id));
-    };
-    swap(this.layers.plateLeft, 'plateLeft');
-    swap(this.layers.plateRight, 'plateRight');
-    swap(this.layers.wall.children[0] as Container, 'wall');
+      parent.addChild(buildPlateHalf(side, this.factory, this.placements));
+    }
+    const wallSlot = this.layers.wall.children[0] as Container;
+    for (const ch of wallSlot.removeChildren()) ch.destroy({ children: true });
+    wallSlot.addChild(this.factory.create('wall'));
+    this.mist.retexture((v) => this.mistTexture(v));
     this.unlock.rebuildLayers();
   }
 

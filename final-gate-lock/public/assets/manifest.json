@@ -1,1 +1,37 @@
-{}
+{
+  "iris": {
+    "file": "sprites/Iris.png",
+    "width": 150.98,
+    "height": 150.98,
+    "pivotX": 74.89,
+    "pivotY": 74.65
+  },
+  "lidTop": {
+    "file": "sprites/lidTop.png",
+    "width": 166,
+    "height": 183,
+    "pivotX": 85,
+    "pivotY": 174
+  },
+  "lidBottom": {
+    "file": "sprites/lidBottom.png",
+    "width": 164,
+    "height": 177,
+    "pivotX": 83,
+    "pivotY": 3
+  },
+  "oak": {
+    "file": "sprites/Oak.jpg",
+    "width": 1138,
+    "height": 698,
+    "pivotX": -71,
+    "pivotY": -51
+  },
+  "frame": {
+    "file": "sprites/frame.png",
+    "width": 1182,
+    "height": 742,
+    "pivotX": -49,
+    "pivotY": -29
+  }
+}

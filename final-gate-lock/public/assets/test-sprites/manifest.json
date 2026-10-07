@@ -83,6 +83,83 @@
     "pivotX": 19,
     "pivotY": 19
   },
+  "wall": {
+    "file": "test-sprites/wall.png",
+    "width": 1282,
+    "height": 802,
+    "pivotX": 641,
+    "pivotY": 401
+  },
+  "mistTile": {
+    "file": "test-sprites/mistTile.png",
+    "width": 258,
+    "height": 258,
+    "pivotX": 129,
+    "pivotY": 129
+  },
+  "plateShadow": {
+    "file": "test-sprites/plateShadow.png",
+    "width": 1182,
+    "height": 742,
+    "pivotX": -59,
+    "pivotY": -43
+  },
+  "oak": {
+    "file": "test-sprites/oak.png",
+    "width": 1138,
+    "height": 698,
+    "pivotX": -71,
+    "pivotY": -51
+  },
+  "frame": {
+    "file": "test-sprites/frame.png",
+    "width": 1184,
+    "height": 744,
+    "pivotX": -48,
+    "pivotY": -28
+  },
+  "straps": {
+    "file": "test-sprites/straps.png",
+    "width": 1137,
+    "height": 236,
+    "pivotX": -73,
+    "pivotY": -305
+  },
+  "brackets": {
+    "file": "test-sprites/brackets.png",
+    "width": 1134,
+    "height": 695,
+    "pivotX": -74,
+    "pivotY": -54
+  },
+  "ornaments": {
+    "file": "test-sprites/ornaments.png",
+    "width": 1076,
+    "height": 635,
+    "pivotX": -102,
+    "pivotY": -83
+  },
+  "bezel": {
+    "file": "test-sprites/bezel.png",
+    "width": 212,
+    "height": 215,
+    "pivotX": 99,
+    "pivotY": 99
+  },
+  "seam": {
+    "file": "test-sprites/seam.png",
+    "width": 7,
+    "height": 742,
+    "pivotX": -637,
+    "pivotY": -29
+  },
+  "core": {
+    "file": "test-sprites/core.png",
+    "width": 982,
+    "height": 982,
+    "pivotX": 491,
+    "pivotY": 491
+  },
   "lockRing": {
     "file": "test-sprites/lockRing.png",
     "width": 191,

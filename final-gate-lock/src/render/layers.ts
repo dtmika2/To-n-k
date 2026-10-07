@@ -7,7 +7,7 @@
 import { Assets, Container, Graphics, Sprite, Texture } from 'pixi.js';
 import type { VisualMode } from '../config';
 import { C } from './palette';
-import { radialLight } from './textures';
+import { mistPuff, radialLight } from './textures';
 import {
   arrowContext,
   discContext,
@@ -37,8 +37,15 @@ export const LAYER_IDS = [
   'arrowCcwPressed',
   'wall',
   'mistTile',
-  'plateLeft',
-  'plateRight',
+  // the door (see render/procedural/plate.ts)
+  'plateShadow',
+  'oak',
+  'frame',
+  'straps',
+  'brackets',
+  'ornaments',
+  'bezel',
+  'seam',
   'core',
   'lockRing',
 ] as const;
@@ -86,6 +93,12 @@ const builders = new Map<LayerId, Builder>([
     },
   ],
 ]);
+
+builders.set('mistTile', () => {
+  const s = new Sprite(mistPuff(0));
+  s.anchor.set(0.5);
+  return s;
+});
 
 /** Other modules (plate, background, core) register their procedural builders here. */
 export function registerProcedural(id: LayerId, build: Builder): void {
@@ -136,6 +149,11 @@ export class LayerFactory {
     this.mode = mode;
     if (mode === 'sprites') await this.loadSprites();
     else this.revision++;
+  }
+
+  /** The loaded sprite texture for a layer (sprite mode only), or null. */
+  texture(id: LayerId): Texture | null {
+    return this.hasSprite(id) ? (this.textures.get(id) ?? null) : null;
   }
 
   hasSprite(id: LayerId): boolean {

@@ -94,3 +94,12 @@ Format: date — question → choice (reason).
     rivets and corner brackets on the oak; deeper socket shadows and bevels; heavier arrow buttons
     that travel when pressed.
   - **Placeholder sounds** are lower and heavier (clunks, grinding, a slow ratchet).
+- 2026-10-07 — **Door split into separate sprite layers** (client request: replacing the wood should
+  not remove the frame). `plateLeft`/`plateRight` are replaced by `plateShadow`, `oak`, `frame`,
+  `straps`, `brackets`, `ornaments`, `bezel` (one ring, placed under all 10 wheels) and `seam`.
+  Each is drawn whole; the app masks the stack into the two halves, so the split needs nothing from
+  the artist. `mistTile` is now a real sprite layer too.
+  - `public/assets/test-sprites/` is the artist's starter set. It is untinted, so it looks identical
+    to procedural, and the generator keeps replaced files unless run with `--force`.
+  - The sprite browser test builds its own tinted copy in memory, so it never depends on that
+    folder.

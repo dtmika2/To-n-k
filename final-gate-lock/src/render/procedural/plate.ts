@@ -1,10 +1,20 @@
 /**
- * Procedural plate: dark oak panel, riveted bevelled brass trim, brass bezels around each wheel,
- * engraved filigree scrolls in the free areas, and a central seam where the halves part.
- * The full plate is drawn once; the two halves are the same drawing masked left/right.
+ * Procedural plate (the door), built from separate layers so each can be swapped for a sprite on
+ * its own (bottom → top):
+ *   plateShadow  shadow of the door on the wall
+ *   oak          the wooden panel
+ *   frame        riveted brass trim around the panel
+ *   straps       wrought-iron straps across the oak
+ *   brackets     iron corner brackets
+ *   ornaments    brass filigree scrolls
+ *   bezel        brass ring a wheel sits in (one drawing, placed under every wheel)
+ *   seam         the dark line where the door parts
+ * All but `bezel` are drawn in absolute logical coordinates on the 1280 × 800 canvas. Each door half
+ * is the full stack masked to its side, so the split works whatever the layers look like.
  */
 import { Container, Graphics, GraphicsContext } from 'pixi.js';
 import { PLATE, WHEEL, type WheelPlacement } from '../../layout';
+import { registerProcedural, type LayerFactory, type LayerId } from '../layers';
 import { C } from '../palette';
 import { mulberry32 } from '../../util/random';
 import { lit, vertical } from './wheel';
@@ -99,124 +109,174 @@ function rivet(g: GraphicsContext, x: number, y: number, r = 4.2) {
   g.circle(x - r * 0.35, y - r * 0.35, r * 0.35).fill({ color: C.white, alpha: 0.55 });
 }
 
-export function plateContext(wheels: readonly WheelPlacement[]): GraphicsContext {
-  const g = new GraphicsContext();
-  const { x, y, width: w, height: h, radius: r, border: b, seamX } = PLATE;
-  const rng = mulberry32(19);
-
-  // shadow on the wall
-  roundedRectPath(g, x + 10, y + 14, w, h, r);
-  g.fill({ color: C.black, alpha: 0.55 });
-
-  // brass trim
-  roundedRectPath(g, x, y, w, h, r);
-  g.fill(lit(0xb08e45, 0x3f2e10, 0x7e6128));
-  roundedRectPath(g, x + 3, y + 3, w - 6, h - 6, r - 3);
-  g.stroke({ width: 1.5, color: C.white, alpha: 0.25 });
-  roundedRectPath(g, x, y, w, h, r);
-  g.stroke({ width: 2, color: C.brassDeep, alpha: 0.9 });
-  // engraved double line on the trim
-  roundedRectPath(g, x + b / 2 - 2, y + b / 2 - 2, w - b + 4, h - b + 4, r - b / 2);
-  g.stroke({ width: 1, color: C.brassDeep, alpha: 0.55 });
-
-  // oak panel
-  const ix = x + b;
-  const iy = y + b;
-  const iw = w - 2 * b;
-  const ih = h - 2 * b;
-  roundedRectPath(g, ix, iy, iw, ih, r - b + 6);
-  g.fill(vertical(C.oakLight, C.oakDark));
-  // wood grain
-  for (let i = 0; i < 70; i++) {
-    const gy = iy + 6 + rng() * (ih - 12);
-    const amp = 1.5 + rng() * 4;
-    const freq = 0.004 + rng() * 0.01;
-    const ph = rng() * 10;
-    const pts: number[] = [];
-    for (let gx = ix + 4; gx <= ix + iw - 4; gx += 16) pts.push(gx, gy + Math.sin(gx * freq + ph) * amp);
-    g.poly(pts, false).stroke({ width: 0.6 + rng() * 1.4, color: rng() > 0.6 ? 0x4a3020 : C.black, alpha: 0.12 + rng() * 0.18 });
+const memo = new Map<string, GraphicsContext>();
+function once(key: string, draw: (g: GraphicsContext) => void): GraphicsContext {
+  let ctx = memo.get(key);
+  if (!ctx) {
+    ctx = new GraphicsContext();
+    draw(ctx);
+    memo.set(key, ctx);
   }
-  // inner bevel of the panel (light from top-left: shadow along top/left inner edge)
-  roundedRectPath(g, ix, iy, iw, ih, r - b + 6);
-  g.stroke({ width: 4, color: C.black, alpha: 0.5 });
-  roundedRectPath(g, ix - 1.5, iy - 1.5, iw + 3, ih + 3, r - b + 7);
-  g.stroke({ width: 1.2, color: C.brassLight, alpha: 0.5 });
-
-  // wrought-iron straps across the oak, in the gaps between the rows (drawn under the bezels)
-  for (const sy of [318, 523]) ironStrap(g, ix - 2, sy, iw + 4, 24, rng);
-  // iron corner brackets
-  for (const [cx, cy, fx, fy] of [
-    [ix, iy, 1, 1],
-    [ix + iw, iy, -1, 1],
-    [ix, iy + ih, 1, -1],
-    [ix + iw, iy + ih, -1, -1],
-  ] as const) ironBracket(g, cx, cy, fx, fy);
-
-  // rivets around the trim
-  const step = 58;
-  for (let px = x + 40; px <= x + w - 40; px += step) {
-    if (Math.abs(px - seamX) < 20) continue;
-    rivet(g, px, y + b / 2);
-    rivet(g, px, y + h - b / 2);
-  }
-  for (let py = y + 40; py <= y + h - 40; py += step) {
-    rivet(g, x + b / 2, py);
-    rivet(g, x + w - b / 2, py);
-  }
-
-  // filigree in the corners (mirrored per quadrant)
-  const corners: [number, number, number, number][] = [
-    [ix + 62, iy + 62, 1, 1],
-    [ix + iw - 62, iy + 62, -1, 1],
-    [ix + 62, iy + ih - 62, 1, -1],
-    [ix + iw - 62, iy + ih - 62, -1, -1],
-  ];
-  for (const [cx, cy, fx, fy] of corners) scroll(g, cx, cy, 20, fx, fy, 200 * DEG);
-  // small scrolls between the top/bottom wheels, close to the trim
-  for (const sx of [500, 780]) {
-    scroll(g, sx - 26, iy + 40, 11, -1, 1, 180 * DEG);
-    scroll(g, sx + 26, iy + 40, 11, 1, 1, 180 * DEG);
-    scroll(g, sx - 26, iy + ih - 40, 11, -1, -1, 180 * DEG);
-    scroll(g, sx + 26, iy + ih - 40, 11, 1, -1, 180 * DEG);
-  }
-
-  // brass bezels the wheels sit in
-  for (const p of wheels) {
-    const R = WHEEL.socketRadius + 9;
-    g.circle(p.x + 9, p.y + 12, R + 6).fill({ color: C.black, alpha: 0.3 });
-    g.circle(p.x + 5, p.y + 7, R + 2).fill({ color: C.black, alpha: 0.55 });
-    g.circle(p.x, p.y, R).fill(lit(0xb08e45, 0x3f2e10, 0x7e6128));
-    g.circle(p.x, p.y, R).stroke({ width: 1.5, color: C.brassDeep, alpha: 0.9 });
-    for (let i = 0; i < 40; i++) {
-      const a = i * 9 * DEG;
-      g.circle(p.x + Math.cos(a) * (R - 4.5), p.y + Math.sin(a) * (R - 4.5), 1.1).fill({ color: C.brassDeep, alpha: 0.6 });
-    }
-  }
-
-  // the seam where the doors part
-  g.rect(seamX - 1.5, y, 3, h).fill({ color: C.black, alpha: 0.75 });
-  g.rect(seamX + 1.5, y, 1, h).fill({ color: C.white, alpha: 0.12 });
-  return g;
+  return ctx;
 }
 
-/** Two halves of the same drawing, each masked to its side. Cached as textures (static). */
-let plateCtx: { key: string; ctx: GraphicsContext } | null = null;
+const P = PLATE;
+const inner = () => ({ ix: P.x + P.border, iy: P.y + P.border, iw: P.width - 2 * P.border, ih: P.height - 2 * P.border, ir: P.radius - P.border + 6 });
 
-export function buildPlateHalves(wheels: readonly WheelPlacement[]): { left: Container; right: Container } {
-  // The drawing is static: build it once and share it between every instance of both halves.
-  const key = wheels.map((w) => `${w.x},${w.y}`).join(';');
-  if (!plateCtx || plateCtx.key !== key) plateCtx = { key, ctx: plateContext(wheels) };
-  const ctx = plateCtx.ctx;
-  const half = (side: 'left' | 'right') => {
-    const c = new Container({ label: `plate:${side}` });
-    const body = new Graphics(ctx);
-    const pad = 40;
-    const mx = side === 'left' ? PLATE.x - pad : PLATE.seamX;
-    const mw = side === 'left' ? PLATE.seamX - mx : PLATE.x + PLATE.width + pad - PLATE.seamX;
-    const mask = new Graphics().rect(mx, PLATE.y - pad, mw, PLATE.height + pad * 2).fill(0xffffff);
-    body.mask = mask;
-    c.addChild(body, mask);
-    return c;
-  };
-  return { left: half('left'), right: half('right') };
+export function plateShadowContext(): GraphicsContext {
+  return once('plateShadow', (g) => {
+    roundedRectPath(g, P.x + 10, P.y + 14, P.width, P.height, P.radius);
+    g.fill({ color: C.black, alpha: 0.55 });
+  });
+}
+
+export function oakContext(): GraphicsContext {
+  return once('oak', (g) => {
+    const { ix, iy, iw, ih, ir } = inner();
+    const rng = mulberry32(19);
+    // extends a few px under the frame so the edge never shows a gap
+    roundedRectPath(g, ix - 4, iy - 4, iw + 8, ih + 8, ir + 4);
+    g.fill(vertical(C.oakLight, C.oakDark));
+    for (let i = 0; i < 70; i++) {
+      const gy = iy + 6 + rng() * (ih - 12);
+      const amp = 1.5 + rng() * 4;
+      const freq = 0.004 + rng() * 0.01;
+      const ph = rng() * 10;
+      const pts: number[] = [];
+      for (let gx = ix + 4; gx <= ix + iw - 4; gx += 16) pts.push(gx, gy + Math.sin(gx * freq + ph) * amp);
+      g.poly(pts, false).stroke({ width: 0.6 + rng() * 1.4, color: rng() > 0.6 ? 0x4a3020 : C.black, alpha: 0.12 + rng() * 0.18 });
+    }
+    // the frame casts a shadow onto the wood along the inner edge
+    roundedRectPath(g, ix, iy, iw, ih, ir);
+    g.stroke({ width: 6, color: C.black, alpha: 0.5, alignment: 1 });
+  });
+}
+
+export function frameContext(): GraphicsContext {
+  return once('frame', (g) => {
+    const { x, y, width: w, height: h, radius: r, border: b, seamX } = P;
+    const { ix, iy, iw, ih, ir } = inner();
+    // brass trim ring (the panel opening is cut out, so whatever is behind shows through)
+    roundedRectPath(g, x, y, w, h, r);
+    g.fill(lit(0xb08e45, 0x3f2e10, 0x7e6128));
+    roundedRectPath(g, ix, iy, iw, ih, ir);
+    g.cut();
+    roundedRectPath(g, x + 3, y + 3, w - 6, h - 6, r - 3);
+    g.stroke({ width: 1.5, color: C.white, alpha: 0.25 });
+    roundedRectPath(g, x, y, w, h, r);
+    g.stroke({ width: 2, color: C.brassDeep, alpha: 0.9 });
+    // engraved double line on the trim
+    roundedRectPath(g, x + b / 2 - 2, y + b / 2 - 2, w - b + 4, h - b + 4, r - b / 2);
+    g.stroke({ width: 1, color: C.brassDeep, alpha: 0.55 });
+    // inner lip catching the light
+    roundedRectPath(g, ix - 1.5, iy - 1.5, iw + 3, ih + 3, ir + 1);
+    g.stroke({ width: 1.2, color: C.brassLight, alpha: 0.5 });
+    // rivets around the trim
+    const step = 58;
+    for (let px = x + 40; px <= x + w - 40; px += step) {
+      if (Math.abs(px - seamX) < 20) continue;
+      rivet(g, px, y + b / 2);
+      rivet(g, px, y + h - b / 2);
+    }
+    for (let py = y + 40; py <= y + h - 40; py += step) {
+      rivet(g, x + b / 2, py);
+      rivet(g, x + w - b / 2, py);
+    }
+  });
+}
+
+export function strapsContext(): GraphicsContext {
+  return once('straps', (g) => {
+    const { ix, iw } = inner();
+    const rng = mulberry32(23);
+    // in the gaps between the rows; drawn under the bezels
+    for (const sy of [318, 523]) ironStrap(g, ix - 2, sy, iw + 4, 24, rng);
+  });
+}
+
+export function bracketsContext(): GraphicsContext {
+  return once('brackets', (g) => {
+    const { ix, iy, iw, ih } = inner();
+    for (const [cx, cy, fx, fy] of [
+      [ix, iy, 1, 1],
+      [ix + iw, iy, -1, 1],
+      [ix, iy + ih, 1, -1],
+      [ix + iw, iy + ih, -1, -1],
+    ] as const) ironBracket(g, cx, cy, fx, fy);
+  });
+}
+
+export function ornamentsContext(): GraphicsContext {
+  return once('ornaments', (g) => {
+    const { ix, iy, iw, ih } = inner();
+    for (const [cx, cy, fx, fy] of [
+      [ix + 62, iy + 62, 1, 1],
+      [ix + iw - 62, iy + 62, -1, 1],
+      [ix + 62, iy + ih - 62, 1, -1],
+      [ix + iw - 62, iy + ih - 62, -1, -1],
+    ] as const) scroll(g, cx, cy, 20, fx, fy, 200 * DEG);
+    for (const sx of [500, 780]) {
+      scroll(g, sx - 26, iy + 40, 11, -1, 1, 180 * DEG);
+      scroll(g, sx + 26, iy + 40, 11, 1, 1, 180 * DEG);
+      scroll(g, sx - 26, iy + ih - 40, 11, -1, -1, 180 * DEG);
+      scroll(g, sx + 26, iy + ih - 40, 11, 1, -1, 180 * DEG);
+    }
+  });
+}
+
+/** Brass ring a wheel sits in, centred on (0, 0); placed under every wheel. */
+export function bezelContext(): GraphicsContext {
+  return once('bezel', (g) => {
+    const R = WHEEL.socketRadius + 9;
+    g.circle(9, 12, R + 6).fill({ color: C.black, alpha: 0.3 });
+    g.circle(5, 7, R + 2).fill({ color: C.black, alpha: 0.55 });
+    g.circle(0, 0, R).fill(lit(0xb08e45, 0x3f2e10, 0x7e6128));
+    g.circle(0, 0, R).stroke({ width: 1.5, color: C.brassDeep, alpha: 0.9 });
+    for (let i = 0; i < 40; i++) {
+      const a = i * 9 * DEG;
+      g.circle(Math.cos(a) * (R - 4.5), Math.sin(a) * (R - 4.5), 1.1).fill({ color: C.brassDeep, alpha: 0.6 });
+    }
+  });
+}
+
+export function seamContext(): GraphicsContext {
+  return once('seam', (g) => {
+    g.rect(P.seamX - 1.5, P.y, 3, P.height).fill({ color: C.black, alpha: 0.75 });
+    g.rect(P.seamX + 1.5, P.y, 1, P.height).fill({ color: C.white, alpha: 0.12 });
+  });
+}
+
+/** Door layers drawn in absolute canvas coordinates, bottom → top (bezels go between ornaments and seam). */
+export const PLATE_LAYERS = ['plateShadow', 'oak', 'frame', 'straps', 'brackets', 'ornaments'] as const satisfies readonly LayerId[];
+
+registerProcedural('plateShadow', () => new Graphics(plateShadowContext()));
+registerProcedural('oak', () => new Graphics(oakContext()));
+registerProcedural('frame', () => new Graphics(frameContext()));
+registerProcedural('straps', () => new Graphics(strapsContext()));
+registerProcedural('brackets', () => new Graphics(bracketsContext()));
+registerProcedural('ornaments', () => new Graphics(ornamentsContext()));
+registerProcedural('bezel', () => new Graphics(bezelContext()));
+registerProcedural('seam', () => new Graphics(seamContext()));
+
+/**
+ * One door half: the whole layer stack, masked to its side of the seam. Built through the factory,
+ * so any layer can be a sprite.
+ */
+export function buildPlateHalf(side: 'left' | 'right', factory: LayerFactory, wheels: readonly WheelPlacement[]): Container {
+  const c = new Container({ label: `plate:${side}` });
+  const body = new Container({ label: 'plateBody' });
+  for (const id of PLATE_LAYERS) body.addChild(factory.create(id));
+  for (const p of wheels) {
+    const b = factory.create('bezel');
+    b.position.set(p.x, p.y);
+    body.addChild(b);
+  }
+  body.addChild(factory.create('seam'));
+  const pad = 40;
+  const mx = side === 'left' ? P.x - pad : P.seamX;
+  const mw = side === 'left' ? P.seamX - mx : P.x + P.width + pad - P.seamX;
+  const mask = new Graphics().rect(mx, P.y - pad, mw, P.height + pad * 2).fill(0xffffff);
+  body.mask = mask;
+  c.addChild(body, mask);
+  return c;
 }
