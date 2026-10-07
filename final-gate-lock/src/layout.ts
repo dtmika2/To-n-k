@@ -24,12 +24,12 @@ export const WHEEL = {
   bandOuter: 70,
   irisRadius: 72,
   /** Window (wedge cutout) in the iris, degrees clockwise from 3 o'clock. */
-  windowStartDeg: 13,
-  windowEndDeg: 77,
-  windowInner: 25,
-  windowOuter: 69,
-  numeralRadius: 48,
-  numeralSize: 34,
+  windowStartDeg: 10,
+  windowEndDeg: 80,
+  windowInner: 24,
+  windowOuter: 71,
+  numeralRadius: 47,
+  numeralSize: 30,
   pupilRadius: 13,
   eyeRadius: 72,
   /** Drag starts when the pointer lands inside this radius. */
