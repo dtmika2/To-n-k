@@ -28,6 +28,16 @@ State at end of 2026-10-07: everything is committed and pushed on `main`. Dev se
    upper-right numbers while dozing. Fix it in the art (end the rim on the starter lid's curve), by
    raising `lidTop`'s `pivotY` in `public/assets/manifest.json`, or with a lighter doze.
 
+5. **Final opening animation.** About 2 s after the core is revealed, it grows a bit larger and
+   flies upward, off the top of the screen.
+   - Today the core fades in at the split (4.0 s into success) and stays glowing through the 40 s
+     Open hold.
+   - Decide what the Open state shows once it's gone, e.g. the parted door with the light and dust
+     lingering. Also decide whether `core_hum` fades out with it, and whether a "fly away" sound cue
+     is needed.
+   - Adjust `FEEL.success` timings in `src/feel.ts`. Watch the m6 test's success-duration window if
+     the sequence gets longer.
+
 ## Housekeeping
 
 - `public/assets/sprites/PlateLeft.jpg` and `PlateRight.jpg` are unused (the plate-half slots are
