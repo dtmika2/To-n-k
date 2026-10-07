@@ -1,0 +1,30 @@
+{
+  "name": "final-gate-lock",
+  "version": "0.1.0",
+  "description": "Final Gate Lock — escape-room lock PWA",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview --port 4173 --strictPort",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run",
+    "test:cov": "vitest run --coverage",
+    "e2e": "playwright test",
+    "icons": "node scripts/make-icons.mjs"
+  },
+  "type": "module",
+  "dependencies": {
+    "@fontsource/cinzel": "^5.3.0",
+    "pixi.js": "^8.22.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.63.0",
+    "@types/node": "^26.6.4",
+    "@vitest/coverage-v8": "^5.0.3",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.3",
+    "vite-plugin-pwa": "^2.0.0",
+    "vitest": "^5.0.3"
+  },
+  "private": true
+}

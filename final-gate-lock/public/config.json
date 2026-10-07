@@ -1,0 +1,25 @@
+{
+  "wheels": [
+    { "id": 1,  "row": "top",    "slots": [57, 23, 9],  "correct": 2, "start": 0 },
+    { "id": 2,  "row": "top",    "slots": [12, 63, 27], "correct": 0, "start": 2 },
+    { "id": 3,  "row": "top",    "slots": [35, 88, 48], "correct": 1, "start": 0 },
+    { "id": 4,  "row": "middle", "slots": [52, 70, 14], "correct": 2, "start": 1 },
+    { "id": 5,  "row": "middle", "slots": [82, 5, 17],  "correct": 1, "start": 2 },
+    { "id": 6,  "row": "middle", "slots": [3, 93, 24],  "correct": 0, "start": 1 },
+    { "id": 7,  "row": "middle", "slots": [68, 45, 79], "correct": 2, "start": 0 },
+    { "id": 8,  "row": "bottom", "slots": [0, 91, 38],  "correct": 0, "start": 1 },
+    { "id": 9,  "row": "bottom", "slots": [74, 6, 58],  "correct": 1, "start": 0 },
+    { "id": 10, "row": "bottom", "slots": [29, 43, 31], "correct": 2, "start": 1 }
+  ],
+  "timings": {
+    "resetAfterSuccessMs": 40000,
+    "asleepAfterIdleMs": 60000,
+    "blinkIntervalMs": [4000, 9000],
+    "glanceIntervalMs": [6000, 14000],
+    "settledToDrowsyMs": 2000,
+    "operatorHoldMs": 3000
+  },
+  "operator": { "pin": "1907" },
+  "visual": { "mode": "procedural", "manifest": "assets/manifest.json" },
+  "audio": { "masterVolume": 0.9 }
+}
