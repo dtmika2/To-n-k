@@ -116,8 +116,6 @@ Flags combine, e.g. `/?skip-intro&solve&placeholderSfx`.
 
 - Decide the `lidTop` overlap fix (art, manifest pivot or a lighter doze).
 - Keep replacing layers; the starter set's README lists the remaining ones.
-- **Push to GitHub is pending.** GitHub returned "Internal Server Error" on every push this session
-  (request ID `C901:348E8E:473BE34:43F59FC:6AC679D6`). Run `git push origin main` once it works.
 
 ## Verification (final run)
 
