@@ -1,12 +1,12 @@
 /** Dev page: one large procedural wheel with arrows and drag, for tuning the look and the feel. */
 import '@fontsource/cinzel/latin-700.css';
 import '../styles.css';
-import { Container, Graphics } from 'pixi.js';
+import { Container, Graphics, Rectangle } from 'pixi.js';
 import { Stage } from '../app/Stage';
 import { parseFlags } from '../flags';
 import { InputRouter } from '../input/InputRouter';
 import { LOGICAL } from '../layout';
-import { LayerFactory } from '../render/layers';
+import { LayerFactory, type LayerId } from '../render/layers';
 import { Clock } from '../util/clock';
 import { FrameStats } from '../util/fpsMeter';
 import { mulberry32 } from '../util/random';
@@ -34,7 +34,7 @@ async function main() {
   holder.scale.set(SCALE);
   stage.root.addChild(bg, holder);
 
-  const factory = new LayerFactory(flags.visualMode ?? 'procedural', await LayerFactory.loadManifest('assets/manifest.json'));
+  const factory = new LayerFactory(flags.visualMode ?? 'procedural', await LayerFactory.loadManifest(flags.manifestUrl ?? 'assets/manifest.json'));
   if (factory.mode === 'sprites') await factory.loadSprites();
   const gate = new BlinkCoordinator();
   const log: string[] = [];
@@ -82,6 +82,26 @@ async function main() {
       log,
       stats,
       clock,
+      factory,
+      /**
+       * Render one procedural layer to a PNG at 2x (sprite authoring size) and report its pivot.
+       * Used by scripts/make-test-sprites.mjs.
+       */
+      exportLayer: (id: LayerId) => {
+        const layer = new LayerFactory('procedural').create(id);
+        const b = layer.getLocalBounds();
+        const x = Math.floor(b.x) - 1;
+        const y = Math.floor(b.y) - 1;
+        const w = Math.ceil(b.x + b.width) + 1 - x;
+        const h = Math.ceil(b.y + b.height) + 1 - y;
+        const canvas = stage.app.renderer.extract.canvas({
+          target: layer,
+          frame: new Rectangle(x, y, w, h),
+          resolution: 2,
+        }) as HTMLCanvasElement;
+        layer.destroy();
+        return { dataUrl: canvas.toDataURL('image/png'), width: w, height: h, pivotX: -x, pivotY: -y };
+      },
       /** Wheel-local → client coordinates for tests. */
       toClient: (x: number, y: number) => ({
         x: (CX + x * SCALE) * stage.scale + stage.offsetX,

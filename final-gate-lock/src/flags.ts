@@ -16,16 +16,20 @@ export interface Flags {
   speed: number;
   configUrl: string;
   visualMode: 'procedural' | 'sprites' | null;
+  /** `?manifest=path`: use another sprite manifest (e.g. assets/test-sprites/manifest.json). */
+  manifestUrl: string | null;
 }
+
+/** Only same-origin relative .json paths are accepted. */
+const safeJsonPath = (v: string | null) => (v && /^[\w./-]+\.json$/.test(v) && !v.includes('..') ? v : null);
 
 export function parseFlags(search: string): Flags {
   const p = new URLSearchParams(search);
   const speedRaw = Number(p.get('speed'));
   const speed = Number.isFinite(speedRaw) && speedRaw > 0 ? Math.min(Math.max(speedRaw, 0.1), 500) : 1;
-  const cfg = p.get('config');
-  // Only same-origin relative paths are accepted.
-  const configUrl = cfg && /^[\w./-]+\.json$/.test(cfg) && !cfg.includes('..') ? cfg : 'config.json';
+  const configUrl = safeJsonPath(p.get('config')) ?? 'config.json';
   return {
+    manifestUrl: safeJsonPath(p.get('manifest')),
     debug: p.has('debug'),
     skipIntro: p.has('skip-intro'),
     solve: p.has('solve'),

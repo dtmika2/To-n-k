@@ -28,7 +28,7 @@ export async function startApp(baseConfig: AppConfig, flags: Flags): Promise<Gam
     /* falls back to Georgia/serif */
   }
   const stage = await Stage.create(document.getElementById('stage')!);
-  const manifest = await LayerFactory.loadManifest(config.visual.manifest);
+  const manifest = await LayerFactory.loadManifest(flags.manifestUrl ?? config.visual.manifest);
   const factory = new LayerFactory(flags.visualMode ?? config.visual.mode, manifest);
   if (factory.mode === 'sprites') await factory.loadSprites();
   const audio = new AudioManager(config.audio.masterVolume, flags.placeholderSfx);

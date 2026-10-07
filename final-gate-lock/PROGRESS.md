@@ -111,3 +111,10 @@ Dev page: `/wheel.html` shows a single large wheel for tuning the look and the f
   meter, timings, Close. Settings persist in localStorage (try/catch, sanitised; config.json stays
   the default) and the menu auto-closes after 60 s without input. Playwright covers each item,
   including persistence across a reload.
+- **M9 — Sprite pipeline.** `LayerFactory` + `manifest.json` (logical size + pivot per layer), a
+  runtime mode switch (operator menu, persisted) and per-layer fallback, logged once. The test set in
+  `public/assets/test-sprites/` is generated from the procedural layers at 2× and tinted to steel.
+  With the clock frozen, procedural vs sprite screenshots match in luminance inside every eye (mean
+  |ΔL| 2.1/255 vs 14.5 with a deliberate 2 px offset). All slot transforms are identical across the
+  switch, so motion is unchanged. Dropping any single sprite (or a 404 at load) falls back for that
+  layer only. Authoring guide: `public/assets/README.md`.
