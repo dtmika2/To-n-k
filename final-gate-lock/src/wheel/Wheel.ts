@@ -1,10 +1,11 @@
 /**
- * One wheel = one eye. Owns its layers (built through the LayerFactory), the disc rotation
+ * One wheel = one eye. Owns its layers (built through the LayerFactory), the iris rotation
  * animator and the eye controller. Input arrives from WheelInput; truth is written to the lock
  * model by the owner via the onSettle hook.
  *
- * Layer stack (bottom → top): ring, disc (+numerals), iris, pupil + highlight, lids (masked), glow.
- * Only the disc rotates. Arrows sit above the wheel.
+ * Layer stack (bottom → top): ring, disc (+numerals), iris, irisShade, pupil + highlight,
+ * lids (masked), glow. The numbered disc is fixed; only the iris plate with the window rotates
+ * (and also shifts a few px with the eye). Arrows sit above the wheel.
  */
 import { Container, Graphics, Text } from 'pixi.js';
 import type { Dir } from '../state/lockModel';
@@ -48,9 +49,13 @@ export class Wheel {
   readonly root = new Container();
   /** Everything that sinks into the plate on unlock. */
   readonly body = new Container();
-  readonly discRot = new Container();
-  private readonly numerals = new Container();
+  /** Fixed numbered disc. */
+  readonly disc = new Container({ label: 'disc' });
+  private readonly numerals = new Container({ label: 'numerals' });
+  /** Eye-tracking offset of the iris (translation only). */
   private readonly irisGroup = new Container();
+  /** The rotating plate with the window. */
+  readonly irisRot = new Container({ label: 'irisRot' });
   private readonly pupilGroup = new Container();
   private readonly lids = new Container();
   private readonly lidMask = new Graphics();
@@ -94,11 +99,13 @@ export class Wheel {
     };
 
     slot('ring', this.body);
-    this.body.addChild(this.discRot);
-    slot('disc', this.discRot);
-    this.discRot.addChild(this.numerals);
+    this.body.addChild(this.disc);
+    slot('disc', this.disc);
+    this.disc.addChild(this.numerals);
     this.body.addChild(this.irisGroup);
-    slot('iris', this.irisGroup);
+    this.irisGroup.addChild(this.irisRot);
+    slot('iris', this.irisRot);
+    slot('irisShade', this.body); // fixed top-left light over the turning plate
     this.body.addChild(this.pupilGroup);
     slot('pupil', this.pupilGroup);
     slot('highlight', this.pupilGroup);
@@ -141,10 +148,10 @@ export class Wheel {
   private buildNumerals() {
     this.values.forEach((value, i) => {
       const holder = new Container({ label: `numeral${i}` });
+      // slot i sits at the window position for iris angle i·STEP; the disc never turns,
+      // so every numeral is always upright
       const a = WINDOW_CENTER + i * STEP;
       holder.position.set(Math.cos(a) * WHEEL.numeralRadius, Math.sin(a) * WHEEL.numeralRadius);
-      // upright when slot i rests in the window (disc angle = −i·STEP)
-      holder.rotation = i * STEP;
       const t = new Text({ text: String(value), style: NUMERAL_STYLE, resolution: 3 });
       t.anchor.set(0.5, 0.52);
       holder.addChild(t);
@@ -242,7 +249,7 @@ export class Wheel {
     this.angle = angleForSlot(slot);
     this.restSlot = slot;
     this.lastDetent = nearestDetent(this.angle);
-    this.discRot.rotation = this.angle;
+    this.irisRot.rotation = this.angle;
   }
 
   /** Visual-only offset (before the intro spin). */
@@ -250,7 +257,7 @@ export class Wheel {
     this.anim = null;
     this.angle = angle;
     this.lastDetent = nearestDetent(angle);
-    this.discRot.rotation = angle;
+    this.irisRot.rotation = angle;
   }
 
   private startAnim(to: number, dur: number, e: Ease, reason: SettleReason, now: number, resolve?: () => void) {
@@ -369,7 +376,7 @@ export class Wheel {
       }
       if (t >= 1) this.finishAnim(now);
     }
-    this.discRot.rotation = this.angle;
+    this.irisRot.rotation = this.angle;
     this.eye.update(now, dt);
     this.applyPose();
   }

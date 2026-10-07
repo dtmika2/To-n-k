@@ -1,6 +1,7 @@
 /**
- * Disc angle math (pure). The disc rotation ρ (radians, clockwise positive on screen) shows slot s
- * in the window when ρ ≡ −s · STEP (mod 2π). Angles are kept continuous (no wrapping) while moving.
+ * Iris angle math (pure). The numbered disc is fixed with slot s at WINDOW_CENTER + s·STEP; the iris
+ * plate (with the window) rotates by ρ (radians, clockwise positive on screen), so slot s shows in
+ * the window when ρ ≡ s · STEP (mod 2π). Angles stay continuous (no wrapping) while moving.
  */
 export const STEP = (2 * Math.PI) / 3;
 
@@ -12,7 +13,7 @@ export function nearestDetent(angle: number): number {
 }
 
 export function slotOfDetent(k: number): number {
-  return mod3(-k);
+  return mod3(k);
 }
 
 export function slotOfAngle(angle: number): number {
@@ -21,7 +22,7 @@ export function slotOfAngle(angle: number): number {
 
 /** Detent angle closest to `near` that shows `slot`. */
 export function angleForSlot(slot: number, near = 0): number {
-  const base = -slot * STEP;
+  const base = slot * STEP;
   const turns = Math.round((near - base) / (2 * Math.PI));
   return base + turns * 2 * Math.PI;
 }

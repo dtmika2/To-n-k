@@ -26,9 +26,9 @@ async function oneLoop(page: Page, touch: Touch) {
   const c = await g(page, (x) => x.toClient(640, 400));
   await touch.tap(c.x, c.y);
   await expect.poll(() => state(page), { timeout: 15_000, intervals: [50] }).toBe('Playable');
-  // ?solve: wheel 10 is one ccw step from correct
+  // ?solve: wheel 10 is one cw step from correct
   const a = await g(page, (x) => {
-    const p = x.arrow(10, 'ccw');
+    const p = x.arrow(10, 'cw');
     return x.toClient(p.x, p.y);
   });
   await touch.tap(a.x, a.y);

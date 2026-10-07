@@ -16,9 +16,16 @@
   "iris": {
     "file": "test-sprites/iris.png",
     "width": 148,
-    "height": 148,
+    "height": 149,
     "pivotX": 74,
     "pivotY": 74
+  },
+  "irisShade": {
+    "file": "test-sprites/irisShade.png",
+    "width": 146,
+    "height": 146,
+    "pivotX": 73,
+    "pivotY": 73
   },
   "pupil": {
     "file": "test-sprites/pupil.png",

@@ -7,14 +7,15 @@ type W = {
   restSlot: number;
   angle: number;
   atRest: boolean;
-  discRot: { rotation: number; children: { children: { rotation: number; children: { label: string }[] }[] }[] };
+  disc: { rotation: number; children: { children: { rotation: number; children: { label: string }[] }[] }[] };
 };
 
 async function wheel(page: Page) {
   return page.evaluate(() => {
     const w = (window as unknown as { __fgl: { wheel: W } }).__fgl.wheel;
-    const numerals = w.discRot.children[1].children;
-    const upright = numerals[w.restSlot].rotation + w.discRot.rotation;
+    // the numbered disc is fixed (only the iris plate turns), so numerals must never rotate
+    const numerals = w.disc.children[1].children;
+    const upright = numerals[w.restSlot].rotation + w.disc.rotation;
     return {
       restSlot: w.restSlot,
       angle: w.angle,
@@ -70,7 +71,7 @@ test('arrow taps rotate one slot; numerals rest upright', async ({ page }) => {
   await touch.tap(cw.x, cw.y);
   await waitRest(page);
   let w = await wheel(page);
-  expect(w.restSlot).toBe(2); // cw: slot − 1
+  expect(w.restSlot).toBe(1); // cw: window moves to the next clockwise slot
   expect(w.detentError).toBeLessThan(1e-9);
   expect(w.uprightError).toBeLessThan(1e-6);
   await touch.tap(ccw.x, ccw.y);
@@ -78,7 +79,7 @@ test('arrow taps rotate one slot; numerals rest upright', async ({ page }) => {
   await touch.tap(ccw.x, ccw.y);
   await waitRest(page);
   w = await wheel(page);
-  expect(w.restSlot).toBe(1);
+  expect(w.restSlot).toBe(2);
   expect(w.uprightError).toBeLessThan(1e-6);
   await shot(page, 'M2-wheel-after-arrows');
 });
@@ -89,8 +90,8 @@ test('rapid taps queue at most one extra step', async ({ page }) => {
   for (let i = 0; i < 4; i++) await touch.tap(cw.x, cw.y); // all within the 250 ms animation
   await waitRest(page);
   const w = await wheel(page);
-  // slot 0 → two cw steps → slot 1
-  expect(w.restSlot).toBe(1);
+  // slot 0 → two cw steps → slot 2
+  expect(w.restSlot).toBe(2);
 });
 
 test('drag follows the finger and snaps to the nearest slot', async ({ page }) => {
@@ -99,13 +100,13 @@ test('drag follows the finger and snaps to the nearest slot', async ({ page }) =
   await dragArc(page, touch, 0, (100 * Math.PI) / 180, 20, 20);
   await waitRest(page);
   let w = await wheel(page);
-  expect(w.restSlot).toBe(2);
+  expect(w.restSlot).toBe(1);
   expect(w.detentError).toBeLessThan(1e-9);
   // slow drag of −50° → back to nearest detent (no change)
   await dragArc(page, touch, 0, (-50 * Math.PI) / 180, 15, 20);
   await waitRest(page);
   w = await wheel(page);
-  expect(w.restSlot).toBe(2);
+  expect(w.restSlot).toBe(1);
 });
 
 test('a fast flick may advance one extra slot, never more', async ({ page }) => {

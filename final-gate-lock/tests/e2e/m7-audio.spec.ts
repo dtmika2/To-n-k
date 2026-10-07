@@ -87,7 +87,7 @@ test('first tap resumes the context; arrow, click, mist loop; ducking and cues t
   await page.waitForTimeout(300);
   await tapArrow(page, touch, 1, 'ccw'); // back to correct
   await page.waitForTimeout(300);
-  await tapArrow(page, touch, 10, 'ccw'); // solves
+  await tapArrow(page, touch, 10, 'cw'); // solves
   await expect.poll(() => g(page, (x) => x.snap().state)).toBe('Success');
   expect(await g(page, (x) => x.audio.isDucked)).toBe(true);
   await expect.poll(() => g(page, (x) => x.snap().state), { timeout: 10_000 }).toBe('Open');

@@ -1,10 +1,10 @@
 /**
  * Pure lock model: owns the truth about which slot each wheel rests on.
  *
- * Slot indices are 0-based and run clockwise around the disc. The window is fixed, so turning the
- * disc clockwise brings the *previous* slot (counter-clockwise neighbour) into the window:
- *   rotate(id, 'cw')  → slot - 1 (mod 3)
- *   rotate(id, 'ccw') → slot + 1 (mod 3)
+ * Slot indices are 0-based and run clockwise around the disc. The disc is fixed and the iris plate
+ * with the window turns, so turning clockwise moves the window onto the next clockwise slot:
+ *   rotate(id, 'cw')  → slot + 1 (mod 3)
+ *   rotate(id, 'ccw') → slot - 1 (mod 3)
  */
 export type Dir = 'cw' | 'ccw';
 
@@ -18,7 +18,7 @@ export interface WheelSpec {
 export const SLOT_COUNT = 3;
 
 export function stepSlot(slot: number, dir: Dir): number {
-  const d = dir === 'cw' ? -1 : 1;
+  const d = dir === 'cw' ? 1 : -1;
   return (((slot + d) % SLOT_COUNT) + SLOT_COUNT) % SLOT_COUNT;
 }
 
@@ -90,7 +90,7 @@ export class LockModel {
     return [...this.positions];
   }
 
-  /** Every wheel one slot before its correct one (one ccw step from correct). Operator test aid. */
+  /** Every wheel one slot before its correct one (one cw step from correct). Operator test aid. */
   setAllCorrectMinusOne(): void {
     this.positions = this.specs.map((s) => (s.correct + SLOT_COUNT - 1) % SLOT_COUNT);
   }
