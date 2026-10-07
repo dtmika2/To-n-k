@@ -59,8 +59,8 @@ test('no sound files at all: app runs silently, every cue reported missing', asy
   for (const list of Object.values(sources)) for (const s of list) expect(s).toBe('missing');
   const touch = await Touch.create(page);
   await tapArrow(page, touch, 1, 'cw');
-  await page.waitForTimeout(400);
-  expect(await g(page, (x) => x.audio.played)).toContain('detent_click');
+  // the click plays when the heavy step lands (~650 ms)
+  await expect.poll(() => g(page, (x) => x.audio.played)).toContain('detent_click');
   expect(errors).toEqual([]);
 });
 

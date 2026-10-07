@@ -55,8 +55,8 @@ test('success → open (40 s hold) → reset timings, and a clean restore', asyn
   const hold = t('Reset') - t('Open');
   const reset = t('Shrouded') - t('Reset');
   console.log({ success, hold, reset });
-  expect(success).toBeGreaterThan(6900);
-  expect(success).toBeLessThan(7600);
+  expect(success).toBeGreaterThan(8900);
+  expect(success).toBeLessThan(9600);
   expect(hold).toBeGreaterThan(39_900);
   expect(hold).toBeLessThan(40_800);
   expect(reset).toBeGreaterThan(2900);

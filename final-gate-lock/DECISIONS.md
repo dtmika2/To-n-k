@@ -75,3 +75,22 @@ Format: date — question → choice (reason).
     §6.2's "~60% closed".
   - The iris plate's own art is rotation-neutral (radial fill, even window rim). A new fixed layer,
     `irisShade`, carries the top-left light, so lighting doesn't spin with the plate.
+- 2026-10-07 — **Heavier feel throughout** (requested by the client: "stone and iron, not paper").
+  Every motion number now lives in `src/feel.ts`.
+  - **Arrow step** is ~650 ms with a heavy-mass curve: a slow start, then it lands still moving (a
+    hard stop), with a 1.3° recoil and a thud (the wheel dips into its socket with a ~1 px jolt).
+    PLAN §6.1 said 250 ms ease-out with overshoot.
+  - **Drag** no longer follows the finger 1:1 (§6.1). The plate trails through a critically damped
+    spring (lag ≈ 80 ms) and a notch field (sticky near each number, quicker between). On release
+    the finger's flick picks the slot (still at most one extra) and the plate carries its own
+    momentum there, in 450–800 ms.
+  - **Intro** ≈ 6.5 s (§6.3 says ~5 s): fewer, heavier turns that wind down with a hard stop.
+  - **Success** ≈ 9 s (§6.4 says ~7 s), with a 0.6 s held breath (was 0.4 s), a low whole-screen
+    jolt, collars that slam with no bounce, and a break-free shove before a slow grinding split.
+    The 40 s hold and 3 s reset are unchanged.
+  - **Eyes are slower too** (blink 280 ms, lid and look rates roughly halved, longer glances). This
+    goes against DESIGN.md's "eyes fast", at the client's request.
+  - **Look:** aged, darker brass (palette changed from PLAN §9's #B8913A); wrought-iron straps,
+    rivets and corner brackets on the oak; deeper socket shadows and bevels; heavier arrow buttons
+    that travel when pressed.
+  - **Placeholder sounds** are lower and heavier (clunks, grinding, a slow ratchet).

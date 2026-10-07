@@ -23,5 +23,8 @@ synthesised stand-ins for every missing file.
 | reset_wind | `reset_wind.ogg` | | mist rolls back |
 | operator_beep | `operator_beep.ogg` | | operator menu actions |
 
+**Direction:** heavy iron and stone. Low end, weight and grit; no light or bright ticks. The
+mechanism moves slowly and lands hard (see `src/feel.ts` for the timings the sounds play against).
+
 Loops should be seamless. Keep files short and normalised; the master volume is set in the
 operator menu.

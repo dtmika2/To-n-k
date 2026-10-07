@@ -59,6 +59,40 @@ function scroll(g: GraphicsContext, cx: number, cy: number, size: number, flipX:
   }
 }
 
+/** Hammered iron band with a bevel, scattered pitting and big domed rivets. */
+function ironStrap(g: GraphicsContext, x: number, y: number, w: number, h: number, rng: () => number) {
+  g.rect(x + 3, y - h / 2 + 5, w, h).fill({ color: C.black, alpha: 0.55 }); // cast shadow
+  g.rect(x, y - h / 2, w, h).fill(vertical(C.ironLight, C.ironDark));
+  g.rect(x, y - h / 2, w, 2).fill({ color: C.white, alpha: 0.18 });
+  g.rect(x, y + h / 2 - 2, w, 2).fill({ color: C.black, alpha: 0.6 });
+  for (let i = 0; i < 160; i++) {
+    g.circle(x + rng() * w, y - h / 2 + 3 + rng() * (h - 6), 0.6 + rng() * 1.3).fill({
+      color: rng() > 0.7 ? 0x5a3a22 : C.black,
+      alpha: 0.18 + rng() * 0.22,
+    });
+  }
+  for (let rx = x + 30; rx < x + w - 20; rx += 64) ironRivet(g, rx, y, 5.5);
+}
+
+function ironRivet(g: GraphicsContext, x: number, y: number, r: number) {
+  g.circle(x + 1.5, y + 2.2, r + 0.5).fill({ color: C.black, alpha: 0.6 });
+  g.circle(x, y, r).fill(lit(0x777b82, C.ironDark, C.iron));
+  g.circle(x - r * 0.35, y - r * 0.35, r * 0.3).fill({ color: C.white, alpha: 0.35 });
+}
+
+/** L-shaped iron bracket hugging an inner corner of the panel. */
+function ironBracket(g: GraphicsContext, cx: number, cy: number, fx: number, fy: number) {
+  const L = 74;
+  const T = 20;
+  const pts = [0, 0, L, 0, L, T, T, T, T, L, 0, L].map((v, i) => (i % 2 === 0 ? cx + v * fx : cy + v * fy));
+  g.poly(pts.map((v, i) => v + (i % 2 === 0 ? 3 : 4))).fill({ color: C.black, alpha: 0.5 });
+  g.poly(pts).fill(lit(C.ironLight, C.ironDark, C.iron));
+  g.poly(pts).stroke({ width: 1.2, color: C.black, alpha: 0.7 });
+  ironRivet(g, cx + 10 * fx, cy + 10 * fy, 5);
+  ironRivet(g, cx + (L - 12) * fx, cy + 10 * fy, 4.5);
+  ironRivet(g, cx + 10 * fx, cy + (L - 12) * fy, 4.5);
+}
+
 function rivet(g: GraphicsContext, x: number, y: number, r = 4.2) {
   g.circle(x + 1.2, y + 1.6, r).fill({ color: C.black, alpha: 0.45 });
   g.circle(x, y, r).fill(lit(C.brassLight, C.brassShadow));
@@ -76,7 +110,7 @@ export function plateContext(wheels: readonly WheelPlacement[]): GraphicsContext
 
   // brass trim
   roundedRectPath(g, x, y, w, h, r);
-  g.fill(lit(0xc9a453, 0x4f3a15, 0x977532));
+  g.fill(lit(0xb08e45, 0x3f2e10, 0x7e6128));
   roundedRectPath(g, x + 3, y + 3, w - 6, h - 6, r - 3);
   g.stroke({ width: 1.5, color: C.white, alpha: 0.25 });
   roundedRectPath(g, x, y, w, h, r);
@@ -107,6 +141,16 @@ export function plateContext(wheels: readonly WheelPlacement[]): GraphicsContext
   g.stroke({ width: 4, color: C.black, alpha: 0.5 });
   roundedRectPath(g, ix - 1.5, iy - 1.5, iw + 3, ih + 3, r - b + 7);
   g.stroke({ width: 1.2, color: C.brassLight, alpha: 0.5 });
+
+  // wrought-iron straps across the oak, in the gaps between the rows (drawn under the bezels)
+  for (const sy of [318, 523]) ironStrap(g, ix - 2, sy, iw + 4, 24, rng);
+  // iron corner brackets
+  for (const [cx, cy, fx, fy] of [
+    [ix, iy, 1, 1],
+    [ix + iw, iy, -1, 1],
+    [ix, iy + ih, 1, -1],
+    [ix + iw, iy + ih, -1, -1],
+  ] as const) ironBracket(g, cx, cy, fx, fy);
 
   // rivets around the trim
   const step = 58;
@@ -139,8 +183,9 @@ export function plateContext(wheels: readonly WheelPlacement[]): GraphicsContext
   // brass bezels the wheels sit in
   for (const p of wheels) {
     const R = WHEEL.socketRadius + 9;
-    g.circle(p.x + 5, p.y + 7, R + 2).fill({ color: C.black, alpha: 0.45 });
-    g.circle(p.x, p.y, R).fill(lit(0xc9a453, 0x4f3a15, 0x977532));
+    g.circle(p.x + 9, p.y + 12, R + 6).fill({ color: C.black, alpha: 0.3 });
+    g.circle(p.x + 5, p.y + 7, R + 2).fill({ color: C.black, alpha: 0.55 });
+    g.circle(p.x, p.y, R).fill(lit(0xb08e45, 0x3f2e10, 0x7e6128));
     g.circle(p.x, p.y, R).stroke({ width: 1.5, color: C.brassDeep, alpha: 0.9 });
     for (let i = 0; i < 40; i++) {
       const a = i * 9 * DEG;

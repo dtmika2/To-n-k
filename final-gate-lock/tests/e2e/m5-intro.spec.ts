@@ -18,7 +18,7 @@ type G = {
 };
 const g = <T>(page: Page, fn: (g: G) => T) => page.evaluate(`(${fn.toString()})(window.__fgl)`) as Promise<T>;
 
-test('Shrouded → tap → intro (~5 s, input ignored) → Playable on the start slots', async ({ page }) => {
+test('Shrouded → tap → intro (~6.5 s, input ignored) → Playable on the start slots', async ({ page }) => {
   await page.goto('/');
   await waitForBoot(page);
   expect((await g(page, (x) => x.snap())).state).toBe('Shrouded');
@@ -52,8 +52,8 @@ test('Shrouded → tap → intro (~5 s, input ignored) → Playable on the start
   const play = log.find((e) => e.state === 'Playable')!;
   const dur = play.t - intro.t;
   console.log('intro duration (game ms)', dur);
-  expect(dur).toBeGreaterThan(4800);
-  expect(dur).toBeLessThan(5600);
+  expect(dur).toBeGreaterThan(6300);
+  expect(dur).toBeLessThan(7100);
   expect(await g(page, (x) => x.game.layers.veil.alpha)).toBe(0);
   expect(await g(page, (x) => x.game.glimmers.level)).toBe(0);
   await expect.poll(() => g(page, (x) => x.game.mist.density)).toBeLessThan(0.05);

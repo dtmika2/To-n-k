@@ -41,17 +41,20 @@ export function dragHandler(w: Wheel, p: PointerInfo, hooks: WheelInputHooks): P
   if (!w.beginDrag(p.id)) return null;
   hooks.onTouchStart(w, p);
   let lastAngle = Math.atan2(p.y - w.y, p.x - w.x);
-  const samples: { t: number; a: number }[] = [{ t: p.t, a: w.angle }];
+  /** Total unwrapped change of finger angle since the press. */
+  let delta = 0;
+  const samples: { t: number; a: number }[] = [{ t: p.t, a: 0 }];
 
   const track = (q: PointerInfo) => {
     const dx = q.x - w.x;
     const dy = q.y - w.y;
     const a = Math.atan2(dy, dx);
     if (Math.hypot(dx, dy) >= WHEEL.dragDeadRadius) {
-      w.dragBy(wrapDelta(a - lastAngle));
+      delta += wrapDelta(a - lastAngle);
+      w.setDragDelta(delta);
     }
     lastAngle = a;
-    samples.push({ t: q.t, a: w.angle });
+    samples.push({ t: q.t, a: delta });
     if (samples.length > 24) samples.shift();
     hooks.onTouchMove(w, q);
   };
@@ -60,7 +63,7 @@ export function dragHandler(w: Wheel, p: PointerInfo, hooks: WheelInputHooks): P
     move: track,
     up: (q) => {
       track(q);
-      // samples are in real ms; the animator runs on game ms
+      // flick intent comes from the finger (real ms → game ms); the plate keeps its own momentum
       const v = releaseVelocity(samples) / hooks.speed();
       w.endDrag(v, hooks.now());
       hooks.onTouchEnd(w);

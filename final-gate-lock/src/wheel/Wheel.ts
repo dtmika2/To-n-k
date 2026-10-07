@@ -14,6 +14,8 @@ import type { LayerFactory, LayerId } from '../render/layers';
 import { lidBottomY, lidTopY } from '../render/procedural/wheel';
 import { C } from '../render/palette';
 import { ease, type Ease } from '../util/tween';
+import { FEEL } from '../feel';
+import { HeavySpring, notch, recoil, releaseCurve } from './heavy';
 import { Eye } from './Eye';
 import { STEP, angleForSlot, nearestDetent, normalizeAngle, slotOfAngle, snapTarget } from './snap';
 
@@ -25,14 +27,16 @@ export interface WheelHooks {
 }
 
 interface Anim {
-  from: number;
   to: number;
   start: number;
   dur: number;
-  ease: Ease;
+  /** Angle at u ∈ [0, 1] of the move. */
+  curve: (u: number) => number;
   reason: SettleReason;
   resolve?: () => void;
 }
+
+const eased = (from: number, to: number, e: Ease) => (u: number) => from + (to - from) * e(u);
 
 const DEG = Math.PI / 180;
 export const WINDOW_CENTER = ((WHEEL.windowStartDeg + WHEEL.windowEndDeg) / 2) * DEG;
@@ -73,6 +77,18 @@ export class Wheel {
   private lastDetent: number;
   /** Pointer id currently dragging this wheel. */
   owner: number | null = null;
+  /** Drag physics: the plate's mass follows the notched finger target. */
+  private spring: HeavySpring | null = null;
+  private dragStart = 0;
+  private dragOffset = 0;
+  private dragTarget = 0;
+  /** Visual-only impact effects (never change the logical angle). */
+  private recoilAt = -Infinity;
+  private recoilDir = 0;
+  private thudAt = -Infinity;
+  private sinkK = 0;
+  private arrowPress = { cw: 0, ccw: 0 };
+  private now = 0;
   private factoryRevision = -1;
 
   constructor(
@@ -192,52 +208,64 @@ export class Wheel {
     }
     const base = nearestDetent(this.angle) * STEP;
     const target = base + (dir === 'cw' ? STEP : -STEP);
-    this.startAnim(target, 250, ease.outBack, 'arrow', now);
+    this.startAnim(target, FEEL.wheel.stepMs, eased(this.angle, target, ease.heavyDetent), 'arrow', now);
     return true;
   }
 
   beginDrag(pointerId: number): boolean {
     if (this.owner !== null) return false;
     this.owner = pointerId;
-    this.anim = null; // take over from wherever the disc is
+    this.anim = null; // take over from wherever the plate is
     this.queued = null;
+    this.recoilAt = -Infinity;
     this.lastDetent = nearestDetent(this.angle);
+    this.spring = new HeavySpring(this.angle, 0, FEEL.wheel.dragOmega);
+    this.dragStart = this.angle;
+    // keep the plate where it is even if the drag starts between notches
+    this.dragOffset = this.angle - notch(this.angle, FEEL.wheel.notch);
+    this.dragTarget = this.angle;
     return true;
   }
 
-  dragBy(delta: number): void {
-    this.angle += delta;
-    const d = nearestDetent(this.angle);
-    if (d !== this.lastDetent) {
-      this.lastDetent = d;
-      this.hooks.onSlotPass(this, 'drag');
-    }
+  /** Finger moved: `delta` is the total (unwrapped) change of finger angle since the press. */
+  setDragDelta(delta: number): void {
+    if (!this.spring) return;
+    this.dragTarget = notch(this.dragStart + delta, FEEL.wheel.notch) + this.dragOffset;
   }
 
-  /** Release: snap to the nearest slot (a fast flick may add one). */
-  endDrag(velocity: number, now: number): void {
+  /**
+   * Release: the slot is chosen from where the finger left the plate (a fast flick of the finger may
+   * add one slot); the plate then carries its own momentum there and lands with a hard stop.
+   */
+  endDrag(fingerVelocity: number, now: number): void {
     if (this.owner === null) return;
     this.owner = null;
-    const target = snapTarget(this.angle, velocity);
+    const vPerMs = (this.spring?.v ?? 0) / 1000;
+    this.spring = null;
+    const target = snapTarget(this.dragTarget, fingerVelocity);
     const dist = Math.abs(target - this.angle) / STEP;
-    this.startAnim(target, 150 + 190 * Math.min(dist, 1.5), ease.outBack, 'drag', now);
+    const W = FEEL.wheel;
+    const dur = Math.min(W.snapMaxMs, W.snapMinMs + W.snapPerSlotMs * dist);
+    this.startAnim(target, dur, releaseCurve(this.angle, vPerMs, target, dur, W.arrivalSpeed), 'drag', now);
   }
 
-  /** Abort a drag without input (state change): snap straight to the nearest slot. */
+  /** Abort a drag without input (state change): drop straight into the nearest slot. */
   cancelDrag(now: number): void {
     if (this.owner === null) return;
     this.owner = null;
-    this.startAnim(nearestDetent(this.angle) * STEP, 160, ease.outCubic, 'drag', now);
+    this.spring = null;
+    const target = nearestDetent(this.angle) * STEP;
+    this.startAnim(target, FEEL.wheel.cancelMs, eased(this.angle, target, ease.heavyDetent), 'drag', now);
   }
 
-  /** Intro spin: several fast turns clockwise, decelerating onto `slot`. */
+  /** Intro spin: a few heavy turns clockwise, winding down onto `slot` with a hard stop. */
   spinTo(slot: number, durationMs: number, turns: number, now: number): Promise<void> {
     this.queued = null;
     const minTarget = this.angle + turns * 2 * Math.PI;
     let target = angleForSlot(slot, minTarget);
     if (target < minTarget) target += 2 * Math.PI;
     return new Promise((resolve) => {
-      this.startAnim(target, durationMs, ease.outCubic, 'spin', now, resolve);
+      this.startAnim(target, durationMs, eased(this.angle, target, ease.heavySpin), 'spin', now, resolve);
     });
   }
 
@@ -246,6 +274,8 @@ export class Wheel {
     this.anim = null;
     this.queued = null;
     this.owner = null;
+    this.spring = null;
+    this.recoilAt = -Infinity;
     this.angle = angleForSlot(slot);
     this.restSlot = slot;
     this.lastDetent = nearestDetent(this.angle);
@@ -255,16 +285,19 @@ export class Wheel {
   /** Visual-only offset (before the intro spin). */
   setAngleImmediate(angle: number): void {
     this.anim = null;
+    this.recoilAt = -Infinity;
     this.angle = angle;
     this.lastDetent = nearestDetent(angle);
     this.irisRot.rotation = angle;
   }
 
-  private startAnim(to: number, dur: number, e: Ease, reason: SettleReason, now: number, resolve?: () => void) {
+  private startAnim(to: number, dur: number, curve: (u: number) => number, reason: SettleReason, now: number, resolve?: () => void) {
     this.anim?.resolve?.();
-    this.anim = { from: this.angle, to, start: now, dur, ease: e, reason, resolve };
+    this.recoilAt = -Infinity;
+    this.anim = { to, start: now, dur, curve, reason, resolve };
   }
 
+  /** The plate hits the detent: settle the logic now; recoil and thud are visual afterglow. */
   private finishAnim(now: number) {
     const a = this.anim!;
     this.anim = null;
@@ -276,6 +309,10 @@ export class Wheel {
       a.resolve?.();
       return;
     }
+    const travel = a.to - a.curve(0.9);
+    this.recoilDir = travel === 0 ? 0 : -Math.sign(travel);
+    this.recoilAt = now;
+    this.thudAt = now;
     this.angle = normalizeAngle(this.angle);
     this.lastDetent = nearestDetent(this.angle);
     this.restSlot = slotOfAngle(this.angle);
@@ -340,7 +377,8 @@ export class Wheel {
 
   /** k ∈ [0, 1]: wheel sinks into the plate (scale down, darken), arrows fade out. */
   setSink(k: number): void {
-    this.body.scale.set(1 - 0.1 * k);
+    this.sinkK = k;
+    this.applyBody();
     const v = Math.round(255 * (1 - 0.32 * k));
     this.body.tint = (v << 16) | (v << 8) | v;
     this.arrows.alpha = 1 - k;
@@ -362,23 +400,70 @@ export class Wheel {
   // ---------------------------------------------------------------- frame
 
   update(now: number, dt: number): void {
+    this.now = now;
     if (this.factory.revision !== this.factoryRevision) this.rebuildLayers();
-    if (this.anim) {
+    if (this.spring) {
+      // dragging: the plate's mass follows the notched finger target
+      this.spring.step(this.dragTarget, dt / 1000);
+      this.angle = this.spring.x;
+      this.checkDetent('drag');
+    } else if (this.anim) {
       const a = this.anim;
       const t = Math.min(1, (now - a.start) / a.dur);
-      this.angle = a.from + (a.to - a.from) * a.ease(t);
-      if (a.reason === 'spin') {
-        const d = nearestDetent(this.angle);
-        if (d !== this.lastDetent) {
-          this.lastDetent = d;
-          this.hooks.onSlotPass(this, 'spin');
-        }
-      }
+      this.angle = t >= 1 ? a.to : a.curve(t);
+      if (a.reason === 'spin') this.checkDetent('spin');
       if (t >= 1) this.finishAnim(now);
     }
-    this.irisRot.rotation = this.angle;
+    this.irisRot.rotation = this.angle + this.recoilOffset(now);
+    this.applyBody();
+    this.applyArrows(dt);
     this.eye.update(now, dt);
     this.applyPose();
+  }
+
+  private checkDetent(reason: 'drag' | 'spin') {
+    const d = nearestDetent(this.angle);
+    if (d !== this.lastDetent) {
+      this.lastDetent = d;
+      this.hooks.onSlotPass(this, reason);
+    }
+  }
+
+  /** After the hard stop the plate bounces back a hair and settles (visual only). */
+  private recoilOffset(now: number): number {
+    const v = (now - this.recoilAt) / FEEL.wheel.recoilMs;
+    if (v < 0 || v >= 1) return 0;
+    return this.recoilDir * FEEL.wheel.recoilRad * recoil(v);
+  }
+
+  /** Sink (unlock) and settle thud: dip into the socket with a short jolt. */
+  private applyBody() {
+    const W = FEEL.wheel;
+    const k = (this.now - this.thudAt) / W.thudMs;
+    let dip = 0;
+    let jolt = 0;
+    if (k >= 0 && k < 1) {
+      dip = W.thudScale * Math.sin(Math.PI * Math.min(1, k * 1.6)) * (1 - k);
+      jolt = W.thudJoltPx * Math.sin(k * Math.PI * 5) * (1 - k) * (1 - k);
+    }
+    this.body.scale.set((1 - 0.1 * this.sinkK) * (1 - dip));
+    this.body.position.set(0, jolt);
+  }
+
+  /** Arrow buttons travel down when pressed and come back up slowly. */
+  private applyArrows(dt: number) {
+    const A = FEEL.arrow;
+    for (const dir of ['cw', 'ccw'] as const) {
+      const pressed = this.arrowState[dir];
+      const cur = this.arrowPress[dir];
+      // press is near-instant; release eases back over releaseMs
+      const next = pressed ? 1 : Math.max(0, cur - dt / A.releaseMs);
+      this.arrowPress[dir] = next;
+      const g = this.arrows.children[dir === 'ccw' ? 0 : 1];
+      if (!g) continue;
+      g.y = ARROW.offsetY + A.pressTravelPx * next;
+      g.scale.set(1 - (1 - A.pressScale) * next);
+    }
   }
 
   private applyPose() {

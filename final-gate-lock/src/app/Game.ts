@@ -380,6 +380,7 @@ export class Game {
   restoreAfterUnlock(): void {
     this.split.end(this.layers.plate);
     this.layers.plate.position.set(0, 0);
+    this.stage.root.pivot.set(0, 0);
     this.unlock.clear();
     for (const w of this.wheels) w.resetUnlockVisuals();
     this.sfx.duck(false, 600);

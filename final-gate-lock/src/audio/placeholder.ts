@@ -26,15 +26,32 @@ export function synthesize(cue: Cue, variant: number, sr = 44100): Synth {
   const v = variant; // 0-based, shifts pitch slightly so variants differ
   let out: Float32Array;
   switch (cue) {
-    case 'detent_click':
-    case 'arrow_tap':
-    case 'drag_tick': {
-      const len = cue === 'detent_click' ? 0.09 : 0.045;
-      const f = (cue === 'drag_tick' ? 2400 : cue === 'arrow_tap' ? 1500 : 900) * (1 + v * 0.08);
+    case 'detent_click': {
+      // iron dropping into a stone notch: a pitch-falling low thump plus a short gritty knock
+      const len = 0.22;
       out = buf(len, sr);
+      let lp = 0;
+      let phase = 0;
       for (let i = 0; i < out.length; i++) {
         const t = i / sr;
-        out[i] = (0.6 * Math.sin(TAU * f * t) + 0.4 * noise()) * decay(t, len / 5) * 0.8;
+        const f = (95 + 90 * Math.exp(-t / 0.03)) * (1 + v * 0.05);
+        phase += (TAU * f) / sr;
+        lp += 0.12 * (noise() - lp);
+        out[i] = (0.85 * Math.sin(phase) * decay(t, 0.06) + 1.6 * lp * decay(t, 0.012)) * 0.9;
+      }
+      break;
+    }
+    case 'arrow_tap':
+    case 'drag_tick': {
+      // heavy lever / ratchet tooth: low knock, no bright click
+      const len = cue === 'arrow_tap' ? 0.1 : 0.07;
+      const f = (cue === 'drag_tick' ? 520 : 300) * (1 + v * 0.06);
+      out = buf(len, sr);
+      let lp = 0;
+      for (let i = 0; i < out.length; i++) {
+        const t = i / sr;
+        lp += 0.2 * (noise() - lp);
+        out[i] = (0.55 * Math.sin(TAU * f * t) + 0.9 * lp) * decay(t, len / 6) * 0.8;
       }
       break;
     }
@@ -56,12 +73,16 @@ export function synthesize(cue: Cue, variant: number, sr = 44100): Synth {
       break;
     }
     case 'spin_ratchet': {
-      out = buf(1.2, sr);
+      // slow, heavy pawl over a big gear, slowing down
+      const len = 2.2;
+      out = buf(len, sr);
+      let lp = 0;
       for (let i = 0; i < out.length; i++) {
         const t = i / sr;
-        const rate = 28 * (1 - t / 1.4);
+        const rate = 13 * (1 - t / (len * 1.15));
         const phase = (t * rate) % 1;
-        out[i] = noise() * decay(phase, 0.03) * 0.5 * (1 - t / 1.2);
+        lp += 0.15 * (noise() - lp);
+        out[i] = (1.4 * lp + 0.4 * Math.sin(TAU * 140 * t)) * decay(phase, 0.025) * 0.55 * (1 - t / len);
       }
       break;
     }
@@ -91,20 +112,33 @@ export function synthesize(cue: Cue, variant: number, sr = 44100): Synth {
       break;
     }
     case 'lock_clunk': {
-      out = buf(0.8, sr);
+      // massive bolts slamming home: deep body, a low metallic ring, a stony crack on top
+      const len = 1.6;
+      out = buf(len, sr);
+      let lp = 0;
       for (let i = 0; i < out.length; i++) {
         const t = i / sr;
-        out[i] = (Math.sin(TAU * 55 * t) * 0.9 + noise() * 0.5 * decay(t, 0.02)) * decay(t, 0.18) * 0.9;
+        lp += 0.08 * (noise() - lp);
+        const body = Math.sin(TAU * 40 * t) * decay(t, 0.38);
+        const ring = Math.sin(TAU * 196 * t) * 0.18 * decay(t, 0.5);
+        const crack = lp * 1.2 * decay(t, 0.03);
+        out[i] = (body + ring + crack) * 0.72;
       }
       break;
     }
     case 'plate_slide': {
-      out = buf(2.8, sr);
+      // stone and iron grinding apart: low rumble, gritty scrape, uneven pressure
+      const len = 4.6;
+      out = buf(len, sr);
       let lp = 0;
+      let grit = 0;
       for (let i = 0; i < out.length; i++) {
         const t = i / sr;
-        lp += 0.03 * (noise() - lp);
-        out[i] = (lp * 3 + Math.sin(TAU * 70 * t) * 0.15) * Math.sin(Math.PI * (t / 2.8));
+        lp += 0.012 * (noise() - lp);
+        grit += 0.3 * (noise() - grit);
+        const pressure = 0.7 + 0.3 * Math.sin(TAU * 3.1 * t) * Math.sin(TAU * 0.7 * t);
+        const env = Math.min(1, t / 0.4) * Math.min(1, (len - t) / 0.8);
+        out[i] = (lp * 4 + Math.sin(TAU * 35 * t) * 0.3 + grit * 0.12 * pressure) * env * 0.8;
       }
       break;
     }

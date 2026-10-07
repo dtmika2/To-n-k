@@ -27,8 +27,8 @@ function lightPassTexture(): Texture {
   const g = c.getContext('2d')!;
   const grad = g.createRadialGradient(w * 0.32, h * 0.22, 40, w * 0.4, h * 0.35, w * 0.85);
   grad.addColorStop(0, 'rgba(0,0,0,0)');
-  grad.addColorStop(0.45, 'rgba(0,0,0,0.08)');
-  grad.addColorStop(1, 'rgba(0,0,0,0.6)');
+  grad.addColorStop(0.45, 'rgba(0,0,0,0.14)');
+  grad.addColorStop(1, 'rgba(0,0,0,0.72)');
   g.fillStyle = grad;
   g.fillRect(0, 0, w, h);
   lightTex = Texture.from(c);

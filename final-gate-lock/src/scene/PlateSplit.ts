@@ -44,12 +44,12 @@ export class PlateSplit {
     this.set(0);
   }
 
-  /** k ∈ [0, 1]: how far apart the halves are. Returns the inner edge x of each half. */
-  set(k: number): [number, number] {
+  /** k ∈ [0, 1]: how far apart the halves are; `judderY` shakes them slightly (grinding). Returns the inner edge x of each half. */
+  set(k: number, judderY = 0): [number, number] {
     const d = SPLIT_DISTANCE * k;
     if (this.halves.length === 2) {
-      this.halves[0].x = -d;
-      this.halves[1].x = d;
+      this.halves[0].position.set(-d, judderY);
+      this.halves[1].position.set(d, -judderY);
     }
     return [PLATE.seamX - d, PLATE.seamX + d];
   }

@@ -125,7 +125,7 @@ export class UnlockFx {
     for (let i = this.motes.length - 1; i >= 0; i--) {
       const m = this.motes[i];
       m.age += dt;
-      m.vy += 55 * dt;
+      m.vy += 110 * dt; // heavy grit, not fluff
       m.vx *= Math.exp(-dt * 0.8);
       m.x += m.vx * dt + Math.sin(this.t * 2 + m.size) * 6 * dt;
       m.y += m.vy * dt;
@@ -146,7 +146,7 @@ export class UnlockFx {
     const edge = fromLeft ? this.edges[0] : this.edges[1];
     const s = new Sprite(radialLight(64));
     s.anchor.set(0.5);
-    const size = randBetween(R, 3, 9);
+    const size = randBetween(R, 4, 12);
     s.width = s.height = size;
     s.tint = R() < 0.3 ? C.gold : 0xd8c8a0;
     s.blendMode = 'add';
@@ -162,6 +162,11 @@ export class UnlockFx {
     };
     this.motes.push(m);
     this.front.addChild(s);
+  }
+
+  /** A burst of dust all at once (the plate breaking free). */
+  burst(n: number): void {
+    for (let i = 0; i < n; i++) this.spawn();
   }
 
   get moteCount(): number {

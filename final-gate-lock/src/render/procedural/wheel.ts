@@ -67,8 +67,10 @@ export function ringContext(): GraphicsContext {
   return once('ring', (g) => {
     const R = WHEEL.socketRadius;
     // cast shadow (light top-left → shadow bottom-right)
-    g.circle(6, 8, R + 6).fill({ color: C.black, alpha: 0.18 });
-    g.circle(4, 5, R + 2).fill({ color: C.black, alpha: 0.4 });
+    // the wheel sits deep in the plate: wide soft shadow, tight dark contact shadow
+    g.circle(10, 13, R + 9).fill({ color: C.black, alpha: 0.28 });
+    g.circle(6, 8, R + 4).fill({ color: C.black, alpha: 0.5 });
+    g.circle(2, 3, R + 1.5).fill({ color: C.black, alpha: 0.55 });
     // stone socket
     g.circle(0, 0, R).fill(lit(C.stoneLight, C.stoneDark, C.stone));
     const rng = mulberry32(7);
@@ -96,6 +98,8 @@ export function ringContext(): GraphicsContext {
     }
     // dark gap where the disc sits
     g.circle(0, 0, WHEEL.rimInner).stroke({ width: 2, color: C.black, alpha: 0.7 });
+    // thick inner bevel: the disc sits recessed below the heavy rim
+    g.circle(0, 0, WHEEL.rimInner - 1.5).stroke({ width: 3.5, color: C.black, alpha: 0.45 });
   });
 }
 
@@ -130,7 +134,7 @@ export function irisContext(): GraphicsContext {
     const we = WHEEL.windowEndDeg;
     const wedge = wedgePoints(WHEEL.windowInner, WHEEL.windowOuter, ws, we);
     // Rotation-neutral fill: the plate turns, so no baked directional light (see irisShade).
-    g.circle(0, 0, R).fill(radial(0xc9a352, 0x8a6a28)).poly(wedge).cut();
+    g.circle(0, 0, R).fill(radial(0xb38f47, 0x6a4f20)).poly(wedge).cut();
     const inWindow = (deg: number) => {
       const d = ((deg % 360) + 360) % 360;
       return d >= ws - 1.5 && d <= we + 1.5;
@@ -235,7 +239,7 @@ export function lidTopContext(): GraphicsContext {
     const body = [...edge, R + 8, -2.4 * R, -R - 8, -2.4 * R];
     // cast shadow onto the eye just below the lid edge
     g.poly(lidEdge(1, 4), false).stroke({ width: 7, color: C.black, alpha: 0.35 });
-    g.poly(body).fill(vertical(0x4a3612, 0x9a7630));
+    g.poly(body).fill(vertical(0x3a2a0e, 0x80622a));
     for (const off of [-9, -19, -31]) {
       g.poly(lidEdge(1, off), false).stroke({ width: 1, color: 0x2e2008, alpha: 0.45 });
     }
@@ -250,7 +254,7 @@ export function lidBottomContext(): GraphicsContext {
     const R = WHEEL.eyeRadius;
     const edge = lidEdge(-1);
     const body = [...edge, R + 8, 2.4 * R, -R - 8, 2.4 * R];
-    g.poly(body).fill(vertical(0x8a6a2a, 0x3a2a0e));
+    g.poly(body).fill(vertical(0x735824, 0x2c1f0a));
     for (const off of [9, 19, 31]) {
       g.poly(lidEdge(-1, off), false).stroke({ width: 1, color: 0x2e2008, alpha: 0.45 });
     }
@@ -273,9 +277,9 @@ export function arrowContext(dir: 'cw' | 'ccw', pressed: boolean): GraphicsConte
   return once(`arrow_${dir}_${pressed ? 'p' : 'n'}`, (g) => {
     const r = 17;
     const off = pressed ? 1 : 0;
-    g.circle(2.5, 3.5, r + 1).fill({ color: C.black, alpha: pressed ? 0.3 : 0.5 });
+    g.circle(3.5, 5, r + 1.5).fill({ color: C.black, alpha: pressed ? 0.35 : 0.6 });
     g.circle(off, off, r).fill(pressed ? lit(0x9c7a30, 0x4a3612) : lit(C.brassLight, C.brassShadow, C.brass));
-    g.circle(off, off, r).stroke({ width: 1.2, color: C.brassDeep, alpha: 0.9 });
+    g.circle(off, off, r).stroke({ width: 2.4, color: C.brassDeep, alpha: 0.95 });
     g.circle(off, off, r - 3).stroke({ width: 0.8, color: pressed ? C.black : C.white, alpha: pressed ? 0.25 : 0.3 });
     // curved arrow glyph; drawn for clockwise, mirrored for counter-clockwise
     const s = dir === 'cw' ? 1 : -1;

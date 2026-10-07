@@ -11,7 +11,14 @@ export const ease = {
   inOutCubic: (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2),
   outQuart: (t: number) => 1 - Math.pow(1 - t, 4),
   inOutSine: (t: number) => -(Math.cos(Math.PI * t) - 1) / 2,
-  /** Ease-out with a small overshoot (mechanical detent). */
+  /**
+   * Heavy detent: starts slowly (mass), decelerates, and still has ~55% of its average speed when
+   * it reaches the end — a hard stop, not a soft landing. Pair with a recoil for the impact.
+   */
+  heavyDetent: (t: number) => t * t * (2.4 - 1.4 * t),
+  /** Heavy spin-down: strong deceleration that still lands with a little speed (hard stop). */
+  heavySpin: (t: number) => 0.88 * (1 - Math.pow(1 - t, 3)) + 0.12 * t,
+  /** Ease-out with a small overshoot (springy; no longer used for the mechanism). */
   outBack: (t: number, s = 1.25) => {
     const c3 = s + 1;
     return 1 + c3 * Math.pow(t - 1, 3) + s * Math.pow(t - 1, 2);

@@ -1,8 +1,8 @@
 {
   "ring": {
     "file": "test-sprites/ring.png",
-    "width": 190,
-    "height": 192,
+    "width": 197,
+    "height": 200,
     "pivotX": 89,
     "pivotY": 89
   },
@@ -57,31 +57,31 @@
   },
   "arrowCw": {
     "file": "test-sprites/arrowCw.png",
-    "width": 41,
-    "height": 42,
-    "pivotX": 19,
-    "pivotY": 19
+    "width": 44,
+    "height": 45,
+    "pivotX": 20,
+    "pivotY": 20
   },
   "arrowCwPressed": {
     "file": "test-sprites/arrowCwPressed.png",
-    "width": 40,
-    "height": 41,
-    "pivotX": 18,
-    "pivotY": 18
-  },
-  "arrowCcw": {
-    "file": "test-sprites/arrowCcw.png",
-    "width": 41,
-    "height": 42,
+    "width": 43,
+    "height": 44,
     "pivotX": 19,
     "pivotY": 19
   },
+  "arrowCcw": {
+    "file": "test-sprites/arrowCcw.png",
+    "width": 44,
+    "height": 45,
+    "pivotX": 20,
+    "pivotY": 20
+  },
   "arrowCcwPressed": {
     "file": "test-sprites/arrowCcwPressed.png",
-    "width": 40,
-    "height": 41,
-    "pivotX": 18,
-    "pivotY": 18
+    "width": 43,
+    "height": 44,
+    "pivotX": 19,
+    "pivotY": 19
   },
   "lockRing": {
     "file": "test-sprites/lockRing.png",

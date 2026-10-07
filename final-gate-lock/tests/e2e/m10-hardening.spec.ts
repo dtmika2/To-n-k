@@ -112,8 +112,10 @@ test('adaptive quality lowers the resolution after sustained slow frames, never 
     return x.toClient(p.x, p.y);
   });
   await touch.tap(a.x, a.y);
-  await page.waitForTimeout(500);
-  expect(await page.evaluate(() => (window as unknown as { __fgl: { snap(): { slots: number[] } } }).__fgl.snap().slots[0])).toBe(1);
+  // a heavy step takes ~650 ms: wait for the wheel to settle
+  await expect
+    .poll(() => page.evaluate(() => (window as unknown as { __fgl: { snap(): { slots: number[] } } }).__fgl.snap().slots[0]))
+    .toBe(1);
 });
 
 test('WebGL context loss reloads the page (kiosk self-healing)', async ({ page }) => {

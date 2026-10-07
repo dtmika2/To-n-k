@@ -42,8 +42,10 @@ test('asleep after idle: ripple of closing lids, 60% dim; any touch wakes', asyn
   // mid-ripple: left wheels closed before right ones
   await page.waitForTimeout(25);
   await expect.poll(() => g(page, (x) => x.game.layers.dim.alpha), { timeout: 10_000 }).toBeGreaterThan(0.59);
-  const lids = await g(page, (x) => x.game.wheels.map((w) => w.eye.pose.lidTop));
-  for (const l of lids) expect(l).toBeGreaterThan(0.95);
+  // heavy lids close slowly: wait for every eye to be shut
+  await expect
+    .poll(() => g(page, (x) => Math.min(...x.game.wheels.map((w) => w.eye.pose.lidTop))), { timeout: 10_000 })
+    .toBeGreaterThan(0.95);
   await shot(page, 'M4-asleep');
   const touch = await Touch.create(page);
   const p = await g(page, (x) => x.toClient(640, 790));

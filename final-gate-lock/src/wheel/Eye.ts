@@ -10,6 +10,9 @@
 import { approach, clamp, lerp } from '../util/tween';
 import { randBetween, randRange, type Rng } from '../util/random';
 import type { BlinkCoordinator } from './BlinkCoordinator';
+import { FEEL } from '../feel';
+
+const E = FEEL.eye;
 
 export interface Vec {
   x: number;
@@ -53,8 +56,8 @@ export const LIDS = {
   wide: { top: 0, bottom: 0 },
 } as const;
 
-export const BLINK_MS = 150;
-const SLOW_BLINK_MS = 560;
+export const BLINK_MS = E.blinkMs;
+const SLOW_BLINK_MS = E.slowBlinkMs;
 
 export interface EyeOpts {
   rng: Rng;
@@ -91,7 +94,7 @@ export class Eye {
     this.nextBlinkAt = randRange(o.rng, o.timings.blinkIntervalMs);
     this.nextGlanceAt = randRange(o.rng, o.timings.glanceIntervalMs);
     this.breathPhase = o.rng() * Math.PI * 2;
-    this.breathPeriod = randBetween(o.rng, 3800, 5200);
+    this.breathPeriod = randRange(o.rng, E.breathPeriodMs);
   }
 
   setTimings(t: EyeTimings): void {
@@ -115,8 +118,8 @@ export class Eye {
   /** Intro: open (from shut) with a slow blink, then settle into drowsy. */
   openSlowly(now: number): void {
     this.setMode('live', now);
-    this.awakeUntil = now + 700;
-    this.forcedBlinkAt = now + 650;
+    this.awakeUntil = now + 1200;
+    this.forcedBlinkAt = now + 1100;
   }
 
   /** Finger position relative to the eye centre, or null when released. */
@@ -124,7 +127,7 @@ export class Eye {
     if (p) this.touchPoint = { x: p.x, y: p.y };
     else if (this.touchPoint) {
       this.touchPoint = null;
-      this.awakeUntil = now + 250;
+      this.awakeUntil = now + E.awakeLingerMs;
     }
   }
 
@@ -167,9 +170,9 @@ export class Eye {
 
     // ---- lid targets
     let lids: { top: number; bottom: number } = LIDS.closed;
-    let lidRate = 10;
+    let lidRate: number = E.lidRate.settled;
     let lookTarget: Vec = { x: 0, y: 0 };
-    let lookRate = 16;
+    let lookRate: number = E.lookRate.default;
     let scale = 1;
     let glow = 0;
     const breath = Math.sin((now / this.breathPeriod) * Math.PI * 2 + this.breathPhase);
@@ -177,26 +180,26 @@ export class Eye {
     switch (mode) {
       case 'shut':
         lids = LIDS.closed;
-        lidRate = 5;
+        lidRate = E.lidRate.shut;
         scale = 0.9;
         glow = 0;
         break;
       case 'asleep':
         lids = LIDS.closed;
-        lidRate = 3.5;
+        lidRate = E.lidRate.asleep;
         scale = 0.88;
         glow = 0.05;
         break;
       case 'peaceful':
         lids = LIDS.closed;
-        lidRate = 1.6;
+        lidRate = E.lidRate.peaceful;
         scale = 0.9;
         glow = 0.12 + 0.04 * breath;
         break;
       case 'wide':
         lids = LIDS.wide;
-        lidRate = 28;
-        lookRate = 45;
+        lidRate = E.lidRate.wide;
+        lookRate = E.lookRate.wide;
         scale = 1.42;
         glow = 1;
         break;
@@ -205,33 +208,33 @@ export class Eye {
         const awake = touched || now < this.awakeUntil;
         if (awake) {
           lids = LIDS.awake;
-          lidRate = 18;
+          lidRate = E.lidRate.awake;
           scale = 1.14;
           glow = 0.7;
         } else if (now < this.settledUntil) {
           lids = LIDS.settled;
-          lidRate = 10;
+          lidRate = E.lidRate.settled;
           scale = 1.06;
           glow = 0.45;
         } else if (this.curiousPoint) {
           lids = LIDS.curious;
-          lidRate = 9;
+          lidRate = E.lidRate.curious;
           scale = 1.05;
           glow = 0.36;
         } else {
           lids = LIDS.drowsy;
-          lidRate = 2.6;
+          lidRate = E.lidRate.drowsy;
           scale = 0.97 + 0.035 * breath;
           glow = 0.2 + 0.05 * breath;
         }
 
         if (this.touchPoint) {
           lookTarget = this.toShift(this.touchPoint, 1);
-          lookRate = 26;
+          lookRate = E.lookRate.touch;
           this.glance = null;
         } else if (this.curiousPoint) {
           lookTarget = this.toShift(this.curiousPoint, 0.85);
-          lookRate = 14;
+          lookRate = E.lookRate.curious;
           this.glance = null;
         } else {
           // idle glances
@@ -242,11 +245,11 @@ export class Eye {
           if (!this.glance && now >= this.nextGlanceAt) {
             const a = R() * Math.PI * 2;
             const m = randBetween(R, 0.5, 0.95);
-            this.glance = { target: { x: Math.cos(a) * m, y: Math.sin(a) * m }, until: now + randBetween(R, 800, 1300) };
+            this.glance = { target: { x: Math.cos(a) * m, y: Math.sin(a) * m }, until: now + randRange(R, E.glanceHoldMs) };
           }
           if (this.glance) {
             lookTarget = { x: this.glance.target.x * this.o.maxShift, y: this.glance.target.y * this.o.maxShift * 0.75 };
-            lookRate = 22; // quick dart
+            lookRate = E.lookRate.glance; // slow, heavy look-around
           }
         }
 
@@ -291,8 +294,8 @@ export class Eye {
     p.iris.y = lerp(p.iris.y, lookTarget.y, kk);
     p.pupil.x = p.iris.x * this.o.depth;
     p.pupil.y = p.iris.y * this.o.depth;
-    p.pupilScale = lerp(p.pupilScale, scale, approach(mode === 'wide' ? 20 : 6, dt));
-    p.glow = lerp(p.glow, glow, approach(mode === 'wide' ? 12 : 4, dt));
+    p.pupilScale = lerp(p.pupilScale, scale, approach(mode === 'wide' ? E.scaleRateWide : E.scaleRate, dt));
+    p.glow = lerp(p.glow, glow, approach(mode === 'wide' ? E.glowRateWide : E.glowRate, dt));
     return p;
   }
 
@@ -312,8 +315,8 @@ export class Eye {
 
 /** Closure profile of a blink over t ∈ [0, 1): fast close, short hold, slightly slower open. */
 export function blinkCurve(t: number): number {
-  if (t < 0.38) return Math.sin((t / 0.38) * (Math.PI / 2));
-  if (t < 0.5) return 1;
-  const u = (t - 0.5) / 0.5;
+  if (t < 0.3) return Math.sin((t / 0.3) * (Math.PI / 2));
+  if (t < 0.45) return 1;
+  const u = (t - 0.45) / 0.55;
   return 1 - u * u * (3 - 2 * u);
 }

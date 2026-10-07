@@ -90,6 +90,14 @@ Flags combine, e.g. `/?skip-intro&solve&placeholderSfx`.
   (deduplicated, re-requested on visibility), adaptive render resolution, reload on WebGL context
   loss or a stalled loop, the 8-hour soak, and `DEPLOY.md`.
 
+## Changes after M10
+
+- **Rotating window plate** (client request): the numbered disc is fixed and the iris plate with
+  the window turns. See DECISIONS.md → Deviations.
+- **Heavy feel** (client request): slower, weighted motion with hard stops, recoil and thuds; drag
+  inertia with ratchet notches; slower eyes; a longer intro (~6.5 s) and success (~9 s); iron
+  straps and aged brass; deeper sounds. All tuning lives in `src/feel.ts`.
+
 ## Verification (final run)
 
 | Check | Result |
