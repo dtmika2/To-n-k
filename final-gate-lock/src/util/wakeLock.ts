@@ -24,9 +24,17 @@ export class WakeLock {
     return !!this.sentinel && !this.sentinel.released;
   }
 
-  async request(): Promise<void> {
+  private pending: Promise<void> | null = null;
+
+  /** Request the lock; concurrent calls share one in-flight request. */
+  request(): Promise<void> {
     this.wanted = true;
-    if (this.active) return;
+    if (this.active) return Promise.resolve();
+    if (!this.pending) this.pending = this.acquire().finally(() => (this.pending = null));
+    return this.pending;
+  }
+
+  private async acquire(): Promise<void> {
     const wl = (navigator as Navigator & { wakeLock?: { request(t: 'screen'): Promise<WakeLockSentinelLike> } })
       .wakeLock;
     if (!wl) return;

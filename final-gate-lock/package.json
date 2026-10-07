@@ -12,7 +12,8 @@
     "e2e": "playwright test",
     "icons": "node scripts/make-icons.mjs",
     "verify": "npm run typecheck && npm test && npm run build",
-    "test-sprites": "node scripts/make-test-sprites.mjs"
+    "test-sprites": "node scripts/make-test-sprites.mjs",
+    "soak": "playwright test --config playwright.soak.config.ts"
   },
   "type": "module",
   "dependencies": {

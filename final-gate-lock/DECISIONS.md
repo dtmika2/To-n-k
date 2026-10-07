@@ -42,6 +42,22 @@ Format: date — question → choice (reason).
 - 2026-10-07 — Plate split → wheels 2 and 9 sit on the seam, so the plate (with wheels, after they
   have sunk and locked) is snapshotted into a texture and the two halves are masked sprites of it.
   The texture is destroyed on reset (verified over 20 loops).
+- 2026-10-07 — Window wedge 10°–80° (r 24–71) instead of exactly 15°–75° → the plan says "around",
+  and a two-digit numeral held upright inside a 60° wedge clipped at its corners. Numerals are 30
+  logical px (60 device px on the tablet), sitting on a dark enamel band for contrast.
+- 2026-10-07 — Lid curvature means fully-closed lids must overlap past the centre line (closure 1 = lid
+  edge 0.35 R past centre) so no gap shows at the sides; drowsy = top 0.62 / bottom 0.22, which keeps
+  the number readable while dozing.
+- 2026-10-07 — Plate fade-in uses a near-black veil over the plate instead of plate alpha: container
+  alpha in Pixi applies per child, which made the stacked eye layers see-through mid-fade.
+- 2026-10-07 — Test sprite set ships in `public/assets/test-sprites/` (≈ 200 KB, precached) but is only
+  used with `?manifest=assets/test-sprites/manifest.json`; the real `assets/manifest.json` starts
+  empty as the plan says, so "sprites" mode with no client art = procedural fallback everywhere.
+- 2026-10-07 — Hardening extras not in the plan: adaptive render resolution (2 → 1 in 0.25 steps
+  after 3 consecutive 2 s windows averaging > 19 ms), reload on WebGL context loss, reload if the
+  render loop stalls 15 s while visible, wake lock re-requested on any touch, state log capped.
+- 2026-10-07 — Soak test runs on the game clock at 100× (8 simulated hours ≈ 6 real minutes) via
+  `npm run soak`; a real 8-hour wall-clock run belongs on the tablet (Needs client).
 
 ## Deviations
 

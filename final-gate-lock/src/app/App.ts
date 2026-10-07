@@ -7,6 +7,7 @@ import { AudioManager } from '../audio/AudioManager';
 import { OperatorMenu } from '../operator/OperatorMenu';
 import { applySettings, loadSettings, saveSettings, type OperatorSettings } from '../operator/settings';
 import { Stage } from './Stage';
+import { textureMemoryMB } from '../util/gpuMemory';
 import { PlateSplit } from '../scene/PlateSplit';
 import type { Container } from 'pixi.js';
 
@@ -82,6 +83,7 @@ export async function startApp(baseConfig: AppConfig, flags: Flags): Promise<Gam
     },
   });
   game.onOperator = () => menu.openPin();
+  installWatchdogs(stage, game);
 
   Object.assign(window, {
     __fgl: {
@@ -103,6 +105,11 @@ export async function startApp(baseConfig: AppConfig, flags: Flags): Promise<Gam
         splitTextures: PlateSplit.live,
         motes: game.unlock.moteCount,
         stateLog: game.stateLog.length,
+        gpu: textureMemoryMB(stage.app.renderer),
+        resolution: stage.app.renderer.resolution,
+        updateCostMs: game.updateCost,
+        wakeLocks: game.wake.acquired,
+        wakeActive: game.wake.active,
       }),
       /** Logical centre of an arrow / wheel, for tests. */
       arrow: (id: number, dir: 'cw' | 'ccw') => {
@@ -117,4 +124,26 @@ export async function startApp(baseConfig: AppConfig, flags: Flags): Promise<Gam
     },
   });
   return game;
+}
+
+/**
+ * Kiosk self-healing: the lock runs unattended for whole days.
+ * - WebGL context lost → reload (Pixi can't always restore procedural textures).
+ * - The ticker stalls for 15 s while the page is visible → reload.
+ * - Unhandled errors are logged (never shown to players).
+ */
+function installWatchdogs(stage: Stage, game: Game) {
+  const reload = (why: string) => {
+    console.error('[watchdog] reloading:', why);
+    setTimeout(() => location.reload(), 1000);
+  };
+  stage.app.canvas.addEventListener('webglcontextlost', (e) => {
+    e.preventDefault();
+    reload('webgl context lost');
+  });
+  setInterval(() => {
+    if (document.visibilityState === 'visible' && performance.now() - game.lastFrameAt > 15_000) reload('ticker stalled');
+  }, 5000);
+  window.addEventListener('error', (e) => console.error('[error]', e.message));
+  window.addEventListener('unhandledrejection', (e) => console.error('[unhandledrejection]', e.reason));
 }

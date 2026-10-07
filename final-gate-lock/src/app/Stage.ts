@@ -46,6 +46,12 @@ export class Stage {
     this.root.position.set(this.offsetX, this.offsetY);
   }
 
+  /** Change the render resolution (adaptive quality). */
+  setResolution(r: number): void {
+    this.app.renderer.resize(window.innerWidth, window.innerHeight, r);
+    this.layout();
+  }
+
   /** Convert client (CSS px) coordinates to logical canvas coordinates. */
   toLogical(clientX: number, clientY: number): { x: number; y: number } {
     const rect = this.app.canvas.getBoundingClientRect();

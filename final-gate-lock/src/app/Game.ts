@@ -218,6 +218,7 @@ export class Game {
 
   private onDown(p: PointerInfo): PointerHandler | null {
     this.sfx.unlock(); // Chrome may suspend the context again; resuming is cheap
+    if (!this.wake.active) void this.wake.request();
     if (this.inOperatorZone(p)) return this.operatorPress?.(p) ?? null;
     switch (this.machine.state) {
       case 'Shrouded':
@@ -442,8 +443,10 @@ export class Game {
   // ------------------------------------------------------------------ frame
 
   private frame(realDt: number) {
+    const t0 = performance.now();
     const dt = this.clock.tick(realDt);
-    this.stats.push(realDt, performance.now());
+    this.stats.push(realDt, t0);
+    this.adaptQuality(realDt);
     this.tweens.update();
     this.mist.update(dt);
     this.unlock.update(dt);
@@ -454,6 +457,34 @@ export class Game {
     const now = this.clock.now;
     for (const w of this.wheels) w.update(now, dt);
     this.monitorBlinks();
+    this.lastFrameAt = performance.now();
+    this.updateCost = this.updateCost * 0.95 + (this.lastFrameAt - t0) * 0.05;
+  }
+
+  /** performance.now() of the last completed frame (watchdog). */
+  lastFrameAt = performance.now();
+  /** Smoothed JS cost of one game update (ms). */
+  updateCost = 0;
+  /** Adaptive quality: lowers the render resolution if frames are consistently slow. */
+  readonly quality = { minResolution: 1, slowWindows: 0, windowMs: 0, windowFrames: 0, windowTotal: 0, changes: 0 };
+  private adaptQuality(realDt: number) {
+    const q = this.quality;
+    if (document.visibilityState !== 'visible') return;
+    q.windowMs += realDt;
+    q.windowFrames++;
+    q.windowTotal += realDt;
+    if (q.windowMs < 2000) return;
+    const avg = q.windowTotal / q.windowFrames;
+    q.windowMs = q.windowFrames = q.windowTotal = 0;
+    q.slowWindows = avg > 19 ? q.slowWindows + 1 : 0;
+    const res = this.stage.app.renderer.resolution;
+    if (q.slowWindows >= 3 && res > q.minResolution) {
+      q.slowWindows = 0;
+      q.changes++;
+      const next = Math.max(q.minResolution, res - 0.25);
+      console.warn(`[quality] average frame ${avg.toFixed(1)} ms → resolution ${res} → ${next}`);
+      this.stage.setResolution(next);
+    }
   }
 
   /** Diagnostics for the "no two wheels blink in the same frame" requirement. */
