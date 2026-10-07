@@ -95,3 +95,12 @@ Dev page: `/wheel.html` shows a single large wheel for tuning the look and the f
   everything restored and the snapshot texture destroyed. Measured: success 7.08 s, hold 40.13 s,
   reset 3.05 s. 20 full loops at 20×: display objects constant (507), 0 live snapshot textures,
   0 motes, heap 11.9 → 12.4 MB (the state log is now capped).
+- **M7 — Audio.** `AudioManager` (Web Audio): decodes all cues at boot and resumes the context on the
+  first tap (and on every press, in case Chrome suspended it). Ambience and effects run on separate
+  buses; ducking at success affects only the ambience. Variants never repeat back to back, and each
+  cue has a voice limit. Missing or undecodable file → silent (warned once), or a synthesised
+  placeholder with `?placeholderSfx`. All 16 cues are wired: mist loop, whoosh, eye opens, ratchet,
+  clicks, ticks, blinks (≤ 1 per 2 s), whispers every 30–60 s, stinger, clunk, slide, dust, core hum
+  and reset wind. Playwright covers: silent with no files, real file wins over placeholder, context
+  resumes on tap, duck and every cue through a full success, and loops swapped correctly on reset.
+  File list for the client: `public/sfx/README.md`.

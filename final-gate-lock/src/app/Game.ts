@@ -59,7 +59,8 @@ export class Game {
   readonly wake = new WakeLock();
   readonly layers: GameLayers;
   readonly router: InputRouter;
-  sfx: Sfx = silentSfx;
+  sfx: Sfx;
+  private whisperTimer: number | null = null;
   /** Current touch position per touched wheel (logical), for Curious neighbours. */
   private touches = new Map<Wheel, { x: number; y: number }>();
   readonly mist: Mist;
@@ -76,7 +77,9 @@ export class Game {
     readonly config: AppConfig,
     readonly flags: Flags,
     readonly factory: LayerFactory,
+    sfx: Sfx = silentSfx,
   ) {
+    this.sfx = sfx;
     this.clock.speed = flags.speed;
     this.tweens = new Tweens(this.clock);
     this.machine = new Machine(
@@ -198,6 +201,7 @@ export class Game {
   operatorPress: ((p: PointerInfo) => PointerHandler | null) | null = null;
 
   private onDown(p: PointerInfo): PointerHandler | null {
+    this.sfx.unlock(); // Chrome may suspend the context again; resuming is cheap
     if (this.inOperatorZone(p)) return this.operatorPress?.(p) ?? null;
     switch (this.machine.state) {
       case 'Shrouded':
@@ -263,6 +267,7 @@ export class Game {
     switch (state) {
       case 'Shrouded':
         this.enterShrouded();
+        this.sfx.loop('mist_loop', true, 1500);
         break;
       case 'Intro':
         this.runSeq((seq) => runIntro(this, seq, this.introOrigin), () => this.machine.introDone());
@@ -272,8 +277,11 @@ export class Game {
         this.layers.veil.alpha = 0;
         this.glimmers.level = 0;
         this.mist.setDensity(0, 1500);
+        this.sfx.loop('mist_loop', true, 1500);
+        this.scheduleWhisper();
         break;
       case 'Success':
+        this.sfx.loop('mist_loop', false, 300);
         this.runSeq((seq) => runSuccess(this, seq), () => this.machine.successDone());
         break;
       case 'Open':
@@ -285,6 +293,17 @@ export class Game {
         this.runSeq((seq) => runReset(this, seq), () => this.machine.resetDone());
         break;
     }
+  }
+
+  /** idle_whisper at a random moment every 30–60 s while Playable. */
+  private scheduleWhisper() {
+    if (this.whisperTimer !== null) this.clock.clearTimeout(this.whisperTimer);
+    this.whisperTimer = this.clock.setTimeout(() => {
+      this.whisperTimer = null;
+      if (this.machine.state !== 'Playable') return;
+      this.sfx.play('idle_whisper', { volume: 0.5 });
+      this.scheduleWhisper();
+    }, 30_000 + Math.random() * 30_000);
   }
 
   /** Snapshot the plate and start the split (success step 4). */

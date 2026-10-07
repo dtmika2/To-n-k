@@ -3,6 +3,7 @@ import type { Flags } from '../flags';
 import { ARROW } from '../layout';
 import { LayerFactory } from '../render/layers';
 import { Game } from './Game';
+import { AudioManager } from '../audio/AudioManager';
 import { Stage } from './Stage';
 import { PlateSplit } from '../scene/PlateSplit';
 import type { Container } from 'pixi.js';
@@ -25,11 +26,14 @@ export async function startApp(config: AppConfig, flags: Flags): Promise<Game> {
   const manifest = await LayerFactory.loadManifest(config.visual.manifest);
   const factory = new LayerFactory(flags.visualMode ?? config.visual.mode, manifest);
   if (factory.mode === 'sprites') await factory.loadSprites();
-  const game = new Game(stage, config, flags, factory);
+  const audio = new AudioManager(config.audio.masterVolume, flags.placeholderSfx);
+  void audio.load();
+  const game = new Game(stage, config, flags, factory, audio);
 
   Object.assign(window, {
     __fgl: {
       game,
+      audio,
       config,
       flags,
       stage,
