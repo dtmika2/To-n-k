@@ -259,7 +259,7 @@ Input is blocked from step 1 until Shrouded.
 
 `AudioManager` decodes all files at boot (allowed before a gesture), resumes the context on the first
 tap. Missing or undecodable files → that cue is silent, warn once. Variants are picked randomly without
-immediate repeats. Files: `public/sfx/<name>.ogg` (variants `<name>_1.ogg`, `<name>_2.ogg`…).
+immediate repeats. Files: `public/sfx/<name>.mp3` (variants `<name>_1.mp3`, `<name>_2.mp3`…; `.ogg` also accepted).
 
 | Cue | Trigger | Loop | Variants |
 | --- | --- | --- | --- |

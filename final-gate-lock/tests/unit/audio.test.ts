@@ -37,14 +37,14 @@ describe('placeholder synthesis', () => {
 });
 
 describe('file name convention', () => {
-  it('single-variant cues try <name>.ogg then <name>_1.ogg', () => {
-    expect(fileNames('mist_loop', 1)).toEqual([['mist_loop.ogg', 'mist_loop_1.ogg']]);
+  it('single-variant cues try <name> then <name>_1, mp3 before ogg', () => {
+    expect(fileNames('mist_loop', 1)).toEqual([['mist_loop.mp3', 'mist_loop_1.mp3', 'mist_loop.ogg', 'mist_loop_1.ogg']]);
   });
-  it('multi-variant cues use <name>_N.ogg (first also accepts <name>.ogg)', () => {
+  it('multi-variant cues use <name>_N (first also accepts <name>), mp3 before ogg', () => {
     expect(fileNames('detent_click', 3)).toEqual([
-      ['detent_click_1.ogg', 'detent_click.ogg'],
-      ['detent_click_2.ogg'],
-      ['detent_click_3.ogg'],
+      ['detent_click_1.mp3', 'detent_click.mp3', 'detent_click_1.ogg', 'detent_click.ogg'],
+      ['detent_click_2.mp3', 'detent_click_2.ogg'],
+      ['detent_click_3.mp3', 'detent_click_3.ogg'],
     ]);
   });
 });

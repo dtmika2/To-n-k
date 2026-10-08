@@ -188,8 +188,14 @@ export function synthesize(cue: Cue, variant: number, sr = 44100): Synth {
   return { samples: out, sampleRate: sr };
 }
 
-/** Candidate file names for a cue (PLAN §7): `<name>.ogg` or `<name>_1.ogg`, `<name>_2.ogg`, … */
+/** Accepted sound formats, in the order they are tried. MP3 decodes everywhere (incl. older iPad Safari). */
+export const SFX_EXTS = ['mp3', 'ogg'] as const;
+
+/** Candidate file names for a cue (PLAN §7): `<name>.mp3` or `<name>_1.mp3`, `<name>_2.mp3`, … (`.ogg` also accepted) */
 export function fileNames(cue: Cue, variants: number): string[][] {
-  if (variants <= 1) return [[`${cue}.ogg`, `${cue}_1.ogg`]];
-  return Array.from({ length: variants }, (_, i) => [`${cue}_${i + 1}.ogg`, ...(i === 0 ? [`${cue}.ogg`] : [])]);
+  const stems =
+    variants <= 1
+      ? [[cue, `${cue}_1`]]
+      : Array.from({ length: variants }, (_, i) => [`${cue}_${i + 1}`, ...(i === 0 ? [cue] : [])]);
+  return stems.map((names) => SFX_EXTS.flatMap((ext) => names.map((n) => `${n}.${ext}`)));
 }

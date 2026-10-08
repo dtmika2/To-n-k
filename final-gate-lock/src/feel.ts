@@ -65,6 +65,9 @@ export const FEEL = {
     joltPx: 7,
     collarMs: 750,
     collarStaggerMs: 70,
+    /** lock_clunk repeats once per socket, each after a small random gap */
+    clunkCount: 8,
+    clunkGapMs: [40, 110] as const,
     eyesCloseAt: 2400,
     splitAt: 4000,
     breakFreePx: 6,

@@ -10,7 +10,7 @@ export const CUES = {
   eye_blink: { loop: false, variants: 3 },
   idle_whisper: { loop: false, variants: 4 },
   success_stinger: { loop: false, variants: 1 },
-  lock_clunk: { loop: false, variants: 1 },
+  lock_clunk: { loop: false, variants: 2 },
   plate_slide: { loop: false, variants: 1 },
   dust_fall: { loop: false, variants: 1 },
   core_hum: { loop: true, variants: 1 },

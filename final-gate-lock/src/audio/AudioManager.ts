@@ -18,7 +18,7 @@ interface LoopState {
 }
 
 /** Max simultaneous voices per cue (rapid ticks shouldn't pile up). */
-const MAX_VOICES: Partial<Record<Cue, number>> = { drag_tick: 4, detent_click: 6, arrow_tap: 4, eye_blink: 1, spin_ratchet: 4 };
+const MAX_VOICES: Partial<Record<Cue, number>> = { drag_tick: 4, detent_click: 6, arrow_tap: 4, eye_blink: 1, spin_ratchet: 4, lock_clunk: 8 };
 
 export class AudioManager implements Sfx {
   readonly ctx: Ctx | null;

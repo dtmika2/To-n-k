@@ -47,7 +47,11 @@ export async function runSuccess(game: Game, seq: Seq): Promise<void> {
   await at(S.clunkAt);
 
   // 3. clunk: one low jolt through the whole door, wheels sink, collars slam shut
-  game.sfx.play('lock_clunk');
+  // one clunk per socket, a ragged volley rather than a single hit
+  for (let i = 0, t = 0; i < S.clunkCount; i++) {
+    seq.after(t, () => game.sfx.play('lock_clunk'));
+    t += S.clunkGapMs[0] + Math.random() * (S.clunkGapMs[1] - S.clunkGapMs[0]);
+  }
   seq.fire({
     duration: S.sinkMs,
     ease: ease.inCubic, // accelerates into a hard stop
