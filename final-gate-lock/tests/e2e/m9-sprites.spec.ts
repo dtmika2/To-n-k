@@ -7,7 +7,7 @@ import { test, expect, type Page, type Browser } from '@playwright/test';
 import { Touch, waitForBoot } from './helpers';
 
 const MANIFEST = 'assets/__ci__/manifest.json';
-const WHEEL_LAYERS = ['ring', 'disc', 'iris', 'irisShade', 'pupil', 'highlight', 'lidTop', 'lidBottom', 'arrowCw', 'arrowCcw', 'lockRing'];
+const WHEEL_LAYERS = ['ring', 'disc', 'iris', 'irisShade', 'pupil', 'highlight', 'lidTop', 'lidBottom', 'rim', 'arrowCw', 'arrowCcw', 'lockRing'];
 const DOOR_LAYERS = ['plateShadow', 'oak', 'frame', 'straps', 'brackets', 'ornaments', 'bezel', 'seam'];
 
 // no service worker: requests must reach the test's routes

@@ -41,14 +41,16 @@ describe('Eye', () => {
     expect(e.pose.iris.x).toBeGreaterThan(4);
     expect(e.pose.iris.x).toBeLessThanOrEqual(5.0001);
     expect(e.pose.pupil.x / e.pose.iris.x).toBeCloseTo(1.3);
-    expect(e.pose.glow).toBeGreaterThan(0.5);
+    // the active eye glows a touch brighter than at rest, but never flares
+    expect(e.pose.glow).toBeGreaterThan(0.25);
+    expect(e.pose.glow).toBeLessThan(0.35);
     expect(e.look).toBe('awake');
     // vertical movement is clamped to the flatter ellipse axis
     e.setTouch({ x: 0, y: -300 }, 2600);
     run(e, 2600, 600);
     expect(e.pose.iris.y).toBeGreaterThanOrEqual(-3.751);
     e.setTouch(null, 3200);
-    expect(e.stateLabel(3300)).toMatch(/awake|blink/);
+    expect(e.stateLabel(3300)).toBe('awake');
     run(e, 3200, 4000);
     expect(e.pose.lidTop).toBeGreaterThan(0.4);
   });
@@ -66,7 +68,7 @@ describe('Eye', () => {
     expect(e.look).toBe('drowsy');
   });
 
-  it('settled: one blink soon, then back to drowsy after settledToDrowsyMs', () => {
+  it('settled: holds still (no blink), then back to drowsy after settledToDrowsyMs', () => {
     const gate = new BlinkCoordinator();
     const e = mkEye(3, gate);
     e.setMode('live', 0);
@@ -74,10 +76,31 @@ describe('Eye', () => {
     const before = gate.grants;
     e.settle(1000);
     expect(e.stateLabel(1001)).toBe('settled');
-    run(e, 1000, 400);
-    expect(gate.grants).toBe(before + 1);
-    run(e, 1400, 2500);
+    run(e, 1000, 1900);
+    expect(gate.grants).toBe(before);
+    run(e, 2900, 1000);
     expect(e.stateLabel(3900)).toMatch(/drowsy|glance|blink/);
+  });
+
+  it('the eye in use never blinks or flares: touched for 20 s, then calm for a moment after', () => {
+    const gate = new BlinkCoordinator();
+    const e = mkEye(4, gate);
+    e.setMode('live', 0);
+    run(e, 0, 1000);
+    const before = gate.grants;
+    e.setTouch({ x: 40, y: 10 }, 1000);
+    let maxGlow = 0;
+    for (let t = 1000; t < 21_000; t += 16) {
+      e.update(t, 16);
+      expect(e.blinking).toBe(false);
+      maxGlow = Math.max(maxGlow, e.pose.glow);
+    }
+    expect(gate.grants).toBe(before);
+    expect(maxGlow).toBeLessThan(0.35);
+    // lifted: still no blink through the awake linger and the calm period after it
+    e.setTouch(null, 21_000);
+    run(e, 21_000, 1600);
+    expect(gate.grants).toBe(before);
   });
 
   it('glances happen within the configured interval and return', () => {
@@ -167,12 +190,12 @@ describe('Blink coordination across 10 eyes', () => {
       }
       if (n > 1) collisions++;
       if (n > 0) blinkFrames++;
-      // occasional settles (players moving wheels) also blink through the gate
+      // occasional settles (players moving wheels): the settled eye holds still for a while
       if (Math.floor(t / 997) !== Math.floor((t - dt) / 997)) eyes[Math.floor(t / 997) % 10].settle(t);
     }
     expect(collisions).toBe(0);
     expect(blinkFrames).toBeGreaterThan(100);
-    // every eye blinked at a believable rate (≈ one per 4–9 s → 33–75 per 5 min, plus settles)
+    // every eye blinked at a believable rate (≈ one per 4–9 s → 33–75 per 5 min, minus settled spells)
     expect(gate.grants).toBeGreaterThan(10 * 25);
     // grants never overlap
     const log = gate.log;

@@ -18,7 +18,7 @@ const FORCE = process.argv.includes('--force');
 
 /** What each layer is, for the README (kept in step with src/render/layers.ts). */
 const ABOUT = {
-  ring: ['wheel', 'stone socket + brass rim around each wheel (fixed)'],
+  ring: ['wheel', 'stone socket around each wheel, with its shadow (fixed; below the disc)'],
   disc: ['wheel', 'numbered disc, without digits (fixed; numbers are drawn in code)'],
   iris: ['wheel', 'turning plate with the window cut out (transparent wedge)'],
   irisShade: ['wheel', 'fixed light/shade over the turning plate (semi-transparent)'],
@@ -26,6 +26,7 @@ const ABOUT = {
   highlight: ['wheel', 'glint on the pupil'],
   lidTop: ['wheel', 'upper eyelid; pivot = centre of its lower edge'],
   lidBottom: ['wheel', 'lower eyelid; pivot = centre of its upper edge'],
+  rim: ['wheel', 'brass rim around the eye (fixed; above the iris, which slides under it)'],
   lockRing: ['wheel', 'brass collar that slams onto the wheel on unlock'],
   arrowCw: ['wheel', 'clockwise arrow button'],
   arrowCwPressed: ['wheel', 'clockwise arrow button, pressed'],

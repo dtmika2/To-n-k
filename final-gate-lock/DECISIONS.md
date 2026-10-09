@@ -103,3 +103,26 @@ Format: date — question → choice (reason).
     to procedural, and the generator keeps replaced files unless run with `--force`.
   - The sprite browser test builds its own tinted copy in memory, so it never depends on that
     folder.
+- 2026-10-09 — **Iris slides under the rim.** The old `ring` layer is split: `ring` is now only the
+  stone socket (below the disc), and a new `rim` layer (brass rim) sits above the iris, irisShade,
+  pupil and lids. When the eye follows a finger or glances, the iris slides under the rim instead of
+  drawing over it. `rim` has a starter sprite (172×172 logical, pivot 86, 86).
+- 2026-10-09 — **The active eye never flashes.** The client asked that the eye a player is using
+  should not flash. Both candidates are calmed, not just one: (1) glow targets are now close to the
+  resting glow (awake 0.3, settled 0.28, curious 0.26; was 0.7 / 0.45 / 0.36), and (2) no blinks
+  while the eye is touched, in its awake linger or its settled spell, nor for 1.2 s after. The
+  settle blink is gone (it fired right after every move). Numbers are in `FEEL.eye`.
+- 2026-10-09 — **Arrows only on the wheel in use.** All arrows are hidden at rest. Touching a wheel
+  (disc or arrow area) brings its arrows up (140 ms). They fade out (700 ms) 4 s after the last
+  touch, or as soon as another wheel is touched. Several wheels touched at once each keep their
+  arrows. **Taps on a hidden arrow still turn the wheel** (and bring the arrows up): no invisible
+  dead zones, the ≥ 56 px hit areas and multi-touch are unchanged, and a player who has seen the
+  arrows once can use them on any wheel. Numbers are in `FEEL.arrow`.
+- 2026-10-09 — **Final opening: the core flies away.** At 8.0 s into Success (about 2 s after the
+  core is fully clear of the parting halves) it swells to 1.3× and rises, accelerating, off the top
+  of the screen, fading over the last part of the climb (1.8 s). Success is now ≈ 10 s (was 9).
+  - **Open state:** the parted door, with a dimmer gold light and slow dust lingering in the doorway.
+  - **Sound:** `core_hum` now starts when the core appears (the split) and fades out with the flight;
+    Open is quiet. The "held breath" duck is released at the split. It was never released before
+    Open, so the hum was ducked to silence. The flight reuses `reveal_whoosh` at 0.8× rate. A
+    dedicated `core_fly` sound can replace it if the client supplies one.

@@ -193,6 +193,8 @@ export class Game {
     speed: () => this.clock.speed,
     onArrow: () => this.sfx.play('arrow_tap'),
     onTouchStart: (w, p) => {
+      // arrows only on the wheel in use: the others' fade out (unless a finger is still on them)
+      for (const o of this.wheels) if (o !== w && !this.touches.has(o)) o.dismissArrows();
       this.touches.set(w, { x: p.x, y: p.y });
       w.eye.setTouch({ x: p.x - w.x, y: p.y - w.y }, this.clock.now);
     },
@@ -301,7 +303,8 @@ export class Game {
         this.runSeq((seq) => runSuccess(this, seq), () => this.machine.successDone());
         break;
       case 'Open':
-        this.sfx.loop('core_hum', true, 1200);
+        // the core has flown (it stays gone even if Open is entered early): light and dust linger
+        this.unlock.fly = 1;
         this.unlock.dustRate = 6;
         this.unlock.level = 1;
         break;

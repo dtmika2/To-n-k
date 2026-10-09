@@ -136,3 +136,30 @@ test('operator corner and dead zone: taps there never move wheels', async ({ pag
   expect((await snap(page)).slots).toEqual(before);
   await shot(page, 'M3-debug-hit-areas');
 });
+
+test('arrows show only on the wheel in use and fade out after the last touch', async ({ page }) => {
+  await page.goto('/?skip-intro&speed=4');
+  expect(await waitForBoot(page)).toBe('ok');
+  const touch = await Touch.create(page);
+  const alphas = () =>
+    page.evaluate(() =>
+      (window as unknown as { __fgl: { game: { wheels: { arrows: { alpha: number } }[] } } }).__fgl.game.wheels.map((w) => w.arrows.alpha),
+    );
+  // at rest: every wheel's arrows are hidden
+  expect((await alphas()).every((a) => a === 0)).toBe(true);
+  // touching wheel 1's disc brings up its arrows only
+  const d1 = await wheelClient(page, 1, Math.PI / 2);
+  await touch.tap(d1.x, d1.y);
+  await expect.poll(async () => (await alphas())[0]).toBe(1);
+  expect((await alphas()).slice(1).every((a) => a === 0)).toBe(true);
+  // a tap on wheel 2's (hidden) arrow turns it and hands the arrows over
+  const before = (await snap(page)).slots[1];
+  const a2 = await arrowClient(page, 2, 'cw');
+  await touch.tap(a2.x, a2.y);
+  await waitAllRest(page);
+  expect((await snap(page)).slots[1]).toBe((before + 1) % 3);
+  await expect.poll(async () => (await alphas())[0]).toBe(0);
+  expect((await alphas())[1]).toBe(1);
+  // left alone, wheel 2's arrows fade out too (4 s game time = 1 s at speed 4)
+  await expect.poll(async () => (await alphas())[1], { timeout: 5000 }).toBe(0);
+});

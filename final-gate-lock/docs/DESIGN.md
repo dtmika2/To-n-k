@@ -33,8 +33,8 @@ and slightly unpredictably. That contrast carries the "illusion" theme without a
 
 ## The wheel is the eye
 
-Layer stack, top to base: glow → eyelids → pupil + highlight → iris plate with wedge cutout →
-**number disc** → socket and ring.
+Layer stack, top to base: glow → brass rim → eyelids → pupil + highlight → iris plate with wedge cutout →
+**number disc** → stone socket. The rim sits above the iris, so the iris slides under it when the eye moves.
 
 Only the number disc turns when a player spins the wheel. The eye parts sit above it and never turn
 with it, so the pupil can follow a finger while the disc spins underneath. The iris plate is opaque
@@ -82,7 +82,7 @@ burst, falling dust), and even those start as procedural particles.
 | --- | --- | --- |
 | Wall and mist | Dark gradient with noise, drifting particles | `wall.webp`, `mist_tile.webp` |
 | Plate | Oak panel with bevelled brass trim, two halves | `plate_left.webp`, `plate_right.webp` |
-| Socket and ring | Stone ring with brass rim | `ring.webp` (shared) |
+| Socket and rim | Stone socket (`ring`, below the disc) and brass rim (`rim`, above the iris and lids) | `ring.webp`, `rim.webp` (shared) |
 | Number disc | Brass disc with engraved edge | `disc.webp` (blank) |
 | Iris plate | Radial pattern with a wedge hole | `iris.webp` |
 | Pupil and highlight | Dark circle, small white glint | `pupil.webp`, `highlight.webp` |

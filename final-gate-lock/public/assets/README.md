@@ -42,7 +42,7 @@ in logical px from its top-left, that lands on the layer's origin:
 
 | Group | Layers |
 | --- | --- |
-| Wheel (×10) | `ring`, `disc`, `iris` (turning plate with the window), `irisShade` (fixed light over it), `pupil`, `highlight`, `lidTop`, `lidBottom`, `lockRing`, `arrowCw`, `arrowCwPressed`, `arrowCcw`, `arrowCcwPressed` |
+| Wheel (×10) | `ring` (stone socket, below the disc), `disc`, `iris` (turning plate with the window), `irisShade` (fixed light over it), `pupil`, `highlight`, `lidTop`, `lidBottom`, `rim` (brass rim, above the iris so it slides under), `lockRing`, `arrowCw`, `arrowCwPressed`, `arrowCcw`, `arrowCcwPressed` |
 | Door | `plateShadow`, `oak`, `frame`, `straps`, `brackets`, `ornaments`, `bezel`, `seam` |
 | Scene | `wall`, `mistTile`, `core` |
 

@@ -18,6 +18,7 @@ import {
   lidTopContext,
   lockRingContext,
   pupilContext,
+  rimContext,
   ringContext,
 } from './procedural/wheel';
 
@@ -30,6 +31,7 @@ export const LAYER_IDS = [
   'highlight',
   'lidTop',
   'lidBottom',
+  'rim',
   'glow',
   'arrowCw',
   'arrowCwPressed',
@@ -76,6 +78,7 @@ const builders = new Map<LayerId, Builder>([
   ['highlight', () => new Graphics(highlightContext())],
   ['lidTop', () => new Graphics(lidTopContext())],
   ['lidBottom', () => new Graphics(lidBottomContext())],
+  ['rim', () => new Graphics(rimContext())],
   ['lockRing', () => new Graphics(lockRingContext())],
   ['arrowCw', () => new Graphics(arrowContext('cw', false))],
   ['arrowCwPressed', () => new Graphics(arrowContext('cw', true))],

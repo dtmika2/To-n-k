@@ -107,10 +107,14 @@ Flags combine, e.g. `/?skip-intro&solve&placeholderSfx`.
   `-- --force`). The sprite browser test now uses its own in-memory copy.
 - **Client sprites in progress** (`public/assets/sprites/`, listed in `public/assets/manifest.json`):
   `Iris.png`, `lidTop.png`, `lidBottom.png`, `Oak.jpg` and `frame.png` are live in sprite mode
-  (`/?skip-intro&sprites`). `PlateLeft.jpg`/`PlateRight.jpg` are no longer used (the old
-  plate-half slots are gone). Open point: the new upper lid covers the top of the upper-left and
+  (`/?skip-intro&sprites`). Open point: the new upper lid covers the top of the upper-left and
   upper-right numbers while the eye dozes. Fix either in the art (end the rim on the starter lid's
   curve) or by raising `lidTop`'s `pivotY` in the manifest.
+
+- **2026-10-09 pickup** (see DECISIONS.md): the iris slides under a new `rim` layer; the active eye
+  no longer flares or blinks; arrows show only on the wheel in use; the core swells and flies off
+  the top at the end of Success (≈ 10 s now), and `core_hum` plays while it is visible. The unused
+  `PlateLeft.jpg`/`PlateRight.jpg` were deleted.
 
 ## Next session
 

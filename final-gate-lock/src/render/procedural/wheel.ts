@@ -63,6 +63,7 @@ function once(key: string, draw: (ctx: GraphicsContext) => void): GraphicsContex
   return ctx;
 }
 
+/** Stone socket (with its cast shadow) the eye sits in; the brass rim is a separate layer above. */
 export function ringContext(): GraphicsContext {
   return once('ring', (g) => {
     const R = WHEEL.socketRadius;
@@ -83,6 +84,15 @@ export function ringContext(): GraphicsContext {
       });
     }
     bevelArcs(g, R - 1, 1.5, 0.18, 0.35);
+  });
+}
+
+/**
+ * Brass rim around the eye, drawn above the iris and lids so the shifting iris slides *under* it
+ * (the socket stays below the disc).
+ */
+export function rimContext(): GraphicsContext {
+  return once('rim', (g) => {
     // brass rim
     g.circle(0, 0, WHEEL.rimOuter).fill(lit(C.brassLight, C.brassShadow, C.brass)).circle(0, 0, WHEEL.rimInner).cut();
     g.circle(0, 0, WHEEL.rimOuter).stroke({ width: 1.2, color: C.brassDeep, alpha: 0.9 });

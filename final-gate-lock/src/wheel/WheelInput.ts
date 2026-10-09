@@ -22,23 +22,20 @@ export interface WheelInputHooks {
 
 export function arrowHandler(w: Wheel, dir: Dir, p: PointerInfo, hooks: WheelInputHooks): PointerHandler {
   w.setArrowPressed(dir, true);
+  w.holdArrows(true, hooks.now());
   hooks.onTouchStart(w, p);
   if (w.step(dir, hooks.now())) hooks.onArrow(w, dir);
-  return {
-    move: (q) => hooks.onTouchMove(w, q),
-    up: () => {
-      w.setArrowPressed(dir, false);
-      hooks.onTouchEnd(w);
-    },
-    cancel: () => {
-      w.setArrowPressed(dir, false);
-      hooks.onTouchEnd(w);
-    },
+  const release = () => {
+    w.setArrowPressed(dir, false);
+    w.holdArrows(false, hooks.now());
+    hooks.onTouchEnd(w);
   };
+  return { move: (q) => hooks.onTouchMove(w, q), up: release, cancel: release };
 }
 
 export function dragHandler(w: Wheel, p: PointerInfo, hooks: WheelInputHooks): PointerHandler | null {
   if (!w.beginDrag(p.id)) return null;
+  w.holdArrows(true, hooks.now());
   hooks.onTouchStart(w, p);
   let lastAngle = Math.atan2(p.y - w.y, p.x - w.x);
   /** Total unwrapped change of finger angle since the press. */
@@ -66,10 +63,12 @@ export function dragHandler(w: Wheel, p: PointerInfo, hooks: WheelInputHooks): P
       // flick intent comes from the finger (real ms → game ms); the plate keeps its own momentum
       const v = releaseVelocity(samples) / hooks.speed();
       w.endDrag(v, hooks.now());
+      w.holdArrows(false, hooks.now());
       hooks.onTouchEnd(w);
     },
     cancel: () => {
       w.cancelDrag(hooks.now());
+      w.holdArrows(false, hooks.now());
       hooks.onTouchEnd(w);
     },
   };

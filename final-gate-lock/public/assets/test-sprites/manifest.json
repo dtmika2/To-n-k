@@ -55,6 +55,13 @@
     "pivotX": 83,
     "pivotY": 3
   },
+  "rim": {
+    "file": "test-sprites/rim.png",
+    "width": 172,
+    "height": 172,
+    "pivotX": 86,
+    "pivotY": 86
+  },
   "arrowCw": {
     "file": "test-sprites/arrowCw.png",
     "width": 44,

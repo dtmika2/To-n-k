@@ -90,13 +90,16 @@ test('first tap resumes the context; arrow, click, mist loop; ducking and cues t
   await tapArrow(page, touch, 10, 'cw'); // solves
   await expect.poll(() => g(page, (x) => x.snap().state)).toBe('Success');
   expect(await g(page, (x) => x.audio.isDucked)).toBe(true);
+  // the core hums while it is revealed, then the hum leaves with it
+  await expect.poll(() => g(page, (x) => x.audio.activeLoops), { timeout: 10_000, intervals: [50] }).toContain('core_hum');
+  expect(await g(page, (x) => x.audio.isDucked)).toBe(false);
   await expect.poll(() => g(page, (x) => x.snap().state), { timeout: 10_000 }).toBe('Open');
   const played = await g(page, (x) => x.audio.played);
-  for (const cue of ['arrow_tap', 'detent_click', 'success_stinger', 'lock_clunk', 'plate_slide', 'dust_fall']) {
+  for (const cue of ['arrow_tap', 'detent_click', 'success_stinger', 'lock_clunk', 'plate_slide', 'dust_fall', 'reveal_whoosh']) {
     expect(played, cue).toContain(cue);
   }
   expect(played.indexOf('success_stinger')).toBeGreaterThan(played.lastIndexOf('arrow_tap'));
-  await expect.poll(() => g(page, (x) => x.audio.activeLoops)).toContain('core_hum');
+  await expect.poll(() => g(page, (x) => x.audio.activeLoops)).not.toContain('core_hum');
   expect(await g(page, (x) => x.audio.activeLoops)).not.toContain('mist_loop');
   // after reset: hum off, mist back, un-ducked
   await expect.poll(() => g(page, (x) => x.snap().state), { timeout: 20_000 }).toBe('Shrouded');

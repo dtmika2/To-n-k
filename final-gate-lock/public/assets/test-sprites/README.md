@@ -18,7 +18,7 @@ a time with your own art and only that piece changes.
 
 | File | Group | What it is | Pixels (2×) | Placement |
 | --- | --- | --- | --- | --- |
-| `ring.png` | wheel | stone socket + brass rim around each wheel (fixed) | 394×400 | pivot (89, 89) from its top-left |
+| `ring.png` | wheel | stone socket around each wheel, with its shadow (fixed; below the disc) | 394×400 | pivot (89, 89) from its top-left |
 | `disc.png` | wheel | numbered disc, without digits (fixed; numbers are drawn in code) | 308×308 | pivot (77, 77) from its top-left |
 | `iris.png` | wheel | turning plate with the window cut out (transparent wedge) | 296×298 | pivot (74, 74) from its top-left |
 | `irisShade.png` | wheel | fixed light/shade over the turning plate (semi-transparent) | 292×292 | pivot (73, 73) from its top-left |
@@ -26,6 +26,7 @@ a time with your own art and only that piece changes.
 | `highlight.png` | wheel | glint on the pupil | 30×32 | pivot (9, 9) from its top-left |
 | `lidTop.png` | wheel | upper eyelid; pivot = centre of its lower edge | 332×366 | pivot (85, 174) from its top-left |
 | `lidBottom.png` | wheel | lower eyelid; pivot = centre of its upper edge | 328×354 | pivot (83, 3) from its top-left |
+| `rim.png` | wheel | brass rim around the eye (fixed; above the iris, which slides under it) | 344×344 | pivot (86, 86) from its top-left |
 | `arrowCw.png` | wheel | clockwise arrow button | 88×90 | pivot (20, 20) from its top-left |
 | `arrowCwPressed.png` | wheel | clockwise arrow button, pressed | 86×88 | pivot (19, 19) from its top-left |
 | `arrowCcw.png` | wheel | counter-clockwise arrow button | 88×90 | pivot (20, 20) from its top-left |

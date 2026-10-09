@@ -1,13 +1,14 @@
 /**
- * Success (~9 s; PLAN §6.4, lengthened for weight — see DECISIONS.md):
+ * Success (~10 s; PLAN §6.4, lengthened for weight and the core's flight — see DECISIONS.md):
  *   0.0 s      last wheel settled correct → 0.6 s held breath (ambience ducked)
  *   0.6 s      all eyes open wide, pupils drift to centre, a slow teal pulse across the plate
  *   1.4 s      heavy clunk: one low jolt through the whole door, wheels sink into the plate,
  *              brass collars slam shut one after another
  *   2.4 s      eyes close peacefully
  *   4.0 s      the plate breaks free (a short shove apart, a burst of dust), a breath, then the
- *              halves grind slowly apart over the gold core while dust keeps falling
- *   9.0 s      → Open (halves apart, core glowing, eyes closed, core hum)
+ *              halves grind slowly apart over the gold core (core hum rises) while dust keeps falling
+ *   8.0 s      the core swells a little and flies up off the top of the screen (whoosh, hum fades)
+ *  10.0 s      → Open (halves apart, the light and dust lingering in the doorway, eyes closed)
  */
 import type { Game } from '../app/Game';
 import { FEEL } from '../feel';
@@ -82,6 +83,9 @@ export async function runSuccess(game: Game, seq: Seq): Promise<void> {
   game.beginSplit();
   game.sfx.play('plate_slide');
   game.sfx.play('dust_fall');
+  // the held breath ends as the core appears: its hum rises on the ambience bus
+  game.sfx.duck(false, 1500);
+  game.sfx.loop('core_hum', true, 1500);
   const k0 = S.breakFreePx / SPLIT_DISTANCE;
   game.unlock.burst(90);
   await seq.tween({ duration: S.breakFreeMs, ease: ease.outCubic, onUpdate: (k) => (game.unlock.edges = game.split.set(k0 * k)) });
@@ -99,5 +103,11 @@ export async function runSuccess(game: Game, seq: Seq): Promise<void> {
     },
   });
   seq.after(S.slideMs, () => (game.unlock.dustRate = 14));
+  await at(S.coreFlyAt);
+
+  // 5. the core swells and flies up and away; its light lingers in the doorway
+  game.sfx.play('reveal_whoosh', { rate: 0.8 });
+  game.sfx.loop('core_hum', false, S.coreFlyMs);
+  seq.fire({ duration: S.coreFlyMs, ease: ease.linear, onUpdate: (k) => (game.unlock.fly = k) });
   await at(SUCCESS_MS);
 }

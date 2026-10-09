@@ -3,9 +3,10 @@
  * animator and the eye controller. Input arrives from WheelInput; truth is written to the lock
  * model by the owner via the onSettle hook.
  *
- * Layer stack (bottom → top): ring, disc (+numerals), iris, irisShade, pupil + highlight,
- * lids (masked), glow. The numbered disc is fixed; only the iris plate with the window rotates
- * (and also shifts a few px with the eye). Arrows sit above the wheel.
+ * Layer stack (bottom → top): ring (socket), disc (+numerals), iris, irisShade, pupil + highlight,
+ * lids (masked), rim, glow. The rim sits above the iris so the shifting iris slides under it. The numbered disc is fixed; only the iris plate with the window rotates
+ * (and also shifts a few px with the eye). Arrows sit above the wheel and show only while it is
+ * in use (see FEEL.arrow).
  */
 import { Container, Graphics, Text } from 'pixi.js';
 import type { Dir } from '../state/lockModel';
@@ -88,6 +89,12 @@ export class Wheel {
   private thudAt = -Infinity;
   private sinkK = 0;
   private arrowPress = { cw: 0, ccw: 0 };
+  /** Pointers currently on this wheel (disc or arrows). */
+  private holds = 0;
+  /** Arrows stay up until this time after the last touch. */
+  private arrowsUntil = -Infinity;
+  /** 0 hidden … 1 shown. */
+  private arrowShow = 0;
   private now = 0;
   private factoryRevision = -1;
 
@@ -131,6 +138,7 @@ export class Wheel {
     this.lidMask.circle(0, 0, WHEEL.eyeRadius).fill(0xffffff);
     this.body.addChild(this.lidMask);
     this.lids.mask = this.lidMask;
+    slot('rim', this.body);
     slot('glow', this.body);
     this.lockRing = slot('lockRing', this.body);
     this.lockRing.visible = false;
@@ -323,6 +331,21 @@ export class Wheel {
 
   // ---------------------------------------------------------------- arrows
 
+  /** A pointer landed on (true) or left (false) this wheel: shows its arrows while in use. */
+  holdArrows(on: boolean, now: number): void {
+    this.holds = on ? this.holds + 1 : Math.max(0, this.holds - 1);
+    if (!on && this.holds === 0) this.arrowsUntil = now + FEEL.arrow.hideAfterMs;
+  }
+
+  /** Another wheel took over: fade these arrows out now (unless a finger is still on this wheel). */
+  dismissArrows(): void {
+    this.arrowsUntil = -Infinity;
+  }
+
+  get arrowsShown(): boolean {
+    return this.holds > 0 || this.now < this.arrowsUntil;
+  }
+
   setArrowPressed(dir: Dir, pressed: boolean): void {
     this.arrowState[dir] = pressed;
     this.updateArrowVisuals();
@@ -381,7 +404,11 @@ export class Wheel {
     this.applyBody();
     const v = Math.round(255 * (1 - 0.32 * k));
     this.body.tint = (v << 16) | (v << 8) | v;
-    this.arrows.alpha = 1 - k;
+    this.applyArrowAlpha();
+  }
+
+  private applyArrowAlpha() {
+    this.arrows.alpha = this.arrowShow * (1 - this.sinkK);
   }
 
   /** k ∈ [0, 1]: collar contracts from 1.4× onto the wheel and becomes opaque. */
@@ -393,6 +420,9 @@ export class Wheel {
 
   /** Back to the normal look (done off-screen during Reset). */
   resetUnlockVisuals(): void {
+    this.holds = 0;
+    this.arrowsUntil = -Infinity;
+    this.arrowShow = 0;
     this.setSink(0);
     this.setLock(0);
   }
@@ -453,6 +483,10 @@ export class Wheel {
   /** Arrow buttons travel down when pressed and come back up slowly. */
   private applyArrows(dt: number) {
     const A = FEEL.arrow;
+    this.arrowShow = this.arrowsShown
+      ? Math.min(1, this.arrowShow + dt / A.fadeInMs)
+      : Math.max(0, this.arrowShow - dt / A.fadeOutMs);
+    this.applyArrowAlpha();
     for (const dir of ['cw', 'ccw'] as const) {
       const pressed = this.arrowState[dir];
       const cur = this.arrowPress[dir];

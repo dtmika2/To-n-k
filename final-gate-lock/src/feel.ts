@@ -33,6 +33,14 @@ export const FEEL = {
     pressTravelPx: 2.5,
     pressScale: 0.94,
     releaseMs: 180,
+    /**
+     * Arrows show only on the wheel in use: touching a wheel (disc or arrow area) brings its
+     * arrows up; they fade out this long after the last touch, or as soon as another wheel is
+     * touched. Taps on a hidden arrow still turn the wheel (and bring the arrows up).
+     */
+    hideAfterMs: 4000,
+    fadeInMs: 140,
+    fadeOutMs: 700,
   },
   eye: {
     blinkMs: 280,
@@ -48,6 +56,13 @@ export const FEEL = {
     glowRateWide: 6,
     /** After a finger lifts, the eye stays awake this long. */
     awakeLingerMs: 500,
+    /**
+     * Glow targets. The active eye stays close to the resting glow so touching a wheel never makes
+     * it flash (drowsy breathes around 0.2).
+     */
+    glow: { awake: 0.3, settled: 0.28, curious: 0.26 },
+    /** No blinks while an eye is in use, nor for this long after (it holds still for the player). */
+    calmAfterUseMs: 1200,
   },
   intro: {
     totalMs: 6500,
@@ -57,7 +72,7 @@ export const FEEL = {
     spinMs: [2600, 3100] as const,
   },
   success: {
-    totalMs: 9000,
+    totalMs: 10_000,
     breathMs: 600,
     eyesWideAt: 600,
     clunkAt: 1400,
@@ -74,5 +89,11 @@ export const FEEL = {
     breakFreeMs: 120,
     splitPauseMs: 250,
     slideMs: 4400,
+    /**
+     * Final flight: about 2 s after the core is fully clear of the parting halves (~6 s) it swells a
+     * little and flies up off the top of the screen (done by coreFlyAt + coreFlyMs, before Open).
+     */
+    coreFlyAt: 8000,
+    coreFlyMs: 1800,
   },
 } as const;

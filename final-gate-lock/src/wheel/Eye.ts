@@ -136,10 +136,14 @@ export class Eye {
     this.curiousPoint = p ? { x: p.x, y: p.y } : null;
   }
 
-  /** Wheel just clicked into a slot: one blink, back to drowsy after settledToDrowsyMs. */
+  /** Wheel just clicked into a slot: stays calmly open, back to drowsy after settledToDrowsyMs. */
   settle(now: number): void {
     this.settledUntil = now + this.o.timings.settledToDrowsyMs;
-    this.nextBlinkAt = Math.min(this.nextBlinkAt, now + 90);
+  }
+
+  /** Touched, or just used (awake linger / settled): the eye holds still — no blinks, no glow flare. */
+  private inUse(now: number): boolean {
+    return !!this.touchPoint || now < this.awakeUntil || now < this.settledUntil;
   }
 
   get look(): EyeLook {
@@ -210,17 +214,17 @@ export class Eye {
           lids = LIDS.awake;
           lidRate = E.lidRate.awake;
           scale = 1.14;
-          glow = 0.7;
+          glow = E.glow.awake;
         } else if (now < this.settledUntil) {
           lids = LIDS.settled;
           lidRate = E.lidRate.settled;
           scale = 1.06;
-          glow = 0.45;
+          glow = E.glow.settled;
         } else if (this.curiousPoint) {
           lids = LIDS.curious;
           lidRate = E.lidRate.curious;
           scale = 1.05;
-          glow = 0.36;
+          glow = E.glow.curious;
         } else {
           lids = LIDS.drowsy;
           lidRate = E.lidRate.drowsy;
@@ -253,7 +257,9 @@ export class Eye {
           }
         }
 
-        // blinks (gated globally so no two eyes blink in the same frame)
+        // blinks (gated globally so no two eyes blink in the same frame); never while in use, and
+        // not right after either, so the eye a player is working with never flickers
+        if (this.inUse(now)) this.nextBlinkAt = Math.max(this.nextBlinkAt, now + E.calmAfterUseMs);
         if (this.forcedBlinkAt !== null && now >= this.forcedBlinkAt) {
           this.forcedBlinkAt = null;
           this.blink = { start: now, dur: SLOW_BLINK_MS };

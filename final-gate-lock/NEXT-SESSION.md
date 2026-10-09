@@ -1,46 +1,20 @@
 # Pick up from here (next session)
 
-State at end of 2026-10-07: everything is committed and pushed on `main`. Dev server:
+State at 2026-10-09: work is on `main`. Dev server:
 `npm run dev`; links are in `docs/DEV-URLS.md`. Full history and decisions are in `PROGRESS.md` and
 `DECISIONS.md`.
 
 ## To do
 
-1. **Iris sits below the ring frame.** The iris plate (with the window) must be layered *under* the
-   ring frame around the eye. When the eye moves (follows a finger, glances), the iris should slide
-   inside the ring, not over it.
-   - Today the stack is `ring` → `disc` → `iris`, so the shifted iris draws over the rim.
-   - Likely fix: split the ring into the socket (below the disc) and a rim (above the iris and lids),
-     or mask the iris to the ring's opening.
-   - A new rim layer also needs a starter sprite and a manifest entry.
-2. **No flashing on the active eye.** The eye a player is touching or using should not flash.
-   - Candidates: the glow flaring up when it wakes (awake glow 0.7), and it still blinking while
-     touched.
-   - Confirm with the client which one they mean (probably both), then calm the awake state.
-3. **Arrows only on the active eye.** Show the ↺ / ↻ buttons only above the wheel being interacted
-   with, and hide them on dozing (drowsy) wheels.
-   - Decide how a player first brings them up, e.g. touching the wheel shows its arrows and they
-     fade out a few seconds after the last touch.
-   - Decide whether the hidden arrows still respond to taps. If not, the only way to turn a resting
-     wheel is to drag it.
-   - The plan's arrow hit areas (≥ 56 px) and multi-touch must keep working.
-4. **Upper-lid sprite overlap.** The client's `lidTop.png` covers the top of the upper-left and
+Items 1–3 and 5 from the 2026-10-07 list are done (2026-10-09, see DECISIONS.md). Still open:
+
+1. **Upper-lid sprite overlap.** The client's `lidTop.png` covers the top of the upper-left and
    upper-right numbers while dozing. Fix it in the art (end the rim on the starter lid's curve), by
    raising `lidTop`'s `pivotY` in `public/assets/manifest.json`, or with a lighter doze.
-
-5. **Final opening animation.** About 2 s after the core is revealed, it grows a bit larger and
-   flies upward, off the top of the screen.
-   - Today the core fades in at the split (4.0 s into success) and stays glowing through the 40 s
-     Open hold.
-   - Decide what the Open state shows once it's gone, e.g. the parted door with the light and dust
-     lingering. Also decide whether `core_hum` fades out with it, and whether a "fly away" sound cue
-     is needed.
-   - Adjust `FEEL.success` timings in `src/feel.ts`. Watch the m6 test's success-duration window if
-     the sequence gets longer.
+2. **Confirm with the client:** the active eye now neither flares nor blinks (both candidates
+   calmed), and taps on hidden arrows still turn the wheel. Both are easy to change in `FEEL`.
 
 ## Housekeeping
 
-- `public/assets/sprites/PlateLeft.jpg` and `PlateRight.jpg` are unused (the plate-half slots are
-  gone) and can be deleted.
 - Remaining layers to replace are listed in `public/assets/test-sprites/README.md`.
 - Each change: `npm run verify` and `npm run e2e` before committing (work directly on `main`).
