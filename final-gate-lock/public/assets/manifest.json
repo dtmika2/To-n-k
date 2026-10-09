@@ -1,10 +1,31 @@
 {
+  "ring": {
+    "file": "sprites/ring.png",
+    "width": 197,
+    "height": 200,
+    "pivotX": 89,
+    "pivotY": 89
+  },
+  "disc": {
+    "file": "sprites/disc.png",
+    "width": 154,
+    "height": 154,
+    "pivotX": 77,
+    "pivotY": 77
+  },
   "iris": {
     "file": "sprites/Iris.png",
     "width": 150.98,
     "height": 150.98,
     "pivotX": 74.89,
     "pivotY": 74.65
+  },
+  "pupil": {
+    "file": "sprites/pupil.png",
+    "width": 32,
+    "height": 32,
+    "pivotX": 16,
+    "pivotY": 16
   },
   "lidTop": {
     "file": "sprites/lidTop.png",
@@ -20,6 +41,20 @@
     "pivotX": 83,
     "pivotY": 3
   },
+  "rim": {
+    "file": "sprites/rim.png",
+    "width": 172,
+    "height": 172,
+    "pivotX": 86,
+    "pivotY": 86
+  },
+  "wall": {
+    "file": "sprites/wall.png",
+    "width": 1282,
+    "height": 802,
+    "pivotX": 641,
+    "pivotY": 401
+  },
   "oak": {
     "file": "sprites/Oak.jpg",
     "width": 1138,
@@ -33,5 +68,26 @@
     "height": 742,
     "pivotX": -49,
     "pivotY": -29
+  },
+  "straps": {
+    "file": "sprites/straps.png",
+    "width": 1137,
+    "height": 236,
+    "pivotX": -73,
+    "pivotY": -305
+  },
+  "core": {
+    "file": "sprites/core.png",
+    "width": 982,
+    "height": 982,
+    "pivotX": 491,
+    "pivotY": 491
+  },
+  "lockRing": {
+    "file": "sprites/lockRing.png",
+    "width": 191,
+    "height": 192,
+    "pivotX": 94,
+    "pivotY": 94
   }
 }

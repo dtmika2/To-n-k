@@ -22,12 +22,12 @@ export interface WheelInputHooks {
 
 export function arrowHandler(w: Wheel, dir: Dir, p: PointerInfo, hooks: WheelInputHooks): PointerHandler {
   w.setArrowPressed(dir, true);
-  w.holdArrows(true, hooks.now());
+  w.holdArrows(true);
   hooks.onTouchStart(w, p);
   if (w.step(dir, hooks.now())) hooks.onArrow(w, dir);
   const release = () => {
     w.setArrowPressed(dir, false);
-    w.holdArrows(false, hooks.now());
+    w.holdArrows(false);
     hooks.onTouchEnd(w);
   };
   return { move: (q) => hooks.onTouchMove(w, q), up: release, cancel: release };
@@ -35,7 +35,7 @@ export function arrowHandler(w: Wheel, dir: Dir, p: PointerInfo, hooks: WheelInp
 
 export function dragHandler(w: Wheel, p: PointerInfo, hooks: WheelInputHooks): PointerHandler | null {
   if (!w.beginDrag(p.id)) return null;
-  w.holdArrows(true, hooks.now());
+  w.holdArrows(true);
   hooks.onTouchStart(w, p);
   let lastAngle = Math.atan2(p.y - w.y, p.x - w.x);
   /** Total unwrapped change of finger angle since the press. */
@@ -63,24 +63,25 @@ export function dragHandler(w: Wheel, p: PointerInfo, hooks: WheelInputHooks): P
       // flick intent comes from the finger (real ms → game ms); the plate keeps its own momentum
       const v = releaseVelocity(samples) / hooks.speed();
       w.endDrag(v, hooks.now());
-      w.holdArrows(false, hooks.now());
+      w.holdArrows(false);
       hooks.onTouchEnd(w);
     },
     cancel: () => {
       w.cancelDrag(hooks.now());
-      w.holdArrows(false, hooks.now());
+      w.holdArrows(false);
       hooks.onTouchEnd(w);
     },
   };
 }
 
-/** Find what a press at (x, y) hits: arrows first (they sit above), then discs. */
+/** Find what a press at (x, y) hits: visible arrows first (they sit above), then discs. */
 export function routeWheelPress(
   wheels: readonly Wheel[],
   p: PointerInfo,
   hooks: WheelInputHooks,
 ): PointerHandler | null {
   for (const w of wheels) {
+    if (!w.arrowsLive) continue; // hidden arrows aren't there
     const dir = w.hitArrow(p.x, p.y);
     if (dir) return arrowHandler(w, dir, p, hooks);
   }

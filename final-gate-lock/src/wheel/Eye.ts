@@ -74,6 +74,8 @@ export class Eye {
   readonly pose: EyePose = { lidTop: 1, lidBottom: 1, iris: { x: 0, y: 0 }, pupil: { x: 0, y: 0 }, pupilScale: 1, glow: 0 };
 
   private touchPoint: Vec | null = null;
+  /** The active wheel's eye (last one used) stays awake until another wheel takes over. */
+  private active = false;
   private curiousPoint: Vec | null = null;
   private settledUntil = -Infinity;
   private awakeUntil = -Infinity;
@@ -131,6 +133,12 @@ export class Eye {
     }
   }
 
+  /** This is (or stops being) the active wheel's eye. */
+  setActive(on: boolean, now: number): void {
+    if (this.active && !on) this.awakeUntil = Math.max(this.awakeUntil, now + E.awakeLingerMs);
+    this.active = on;
+  }
+
   /** Point (relative to this eye) of a neighbour being touched, or null. */
   setCurious(p: Vec | null): void {
     this.curiousPoint = p ? { x: p.x, y: p.y } : null;
@@ -143,11 +151,11 @@ export class Eye {
 
   /** Touched, or just used (awake linger / settled): the eye holds still — no blinks, no glow flare. */
   private inUse(now: number): boolean {
-    return !!this.touchPoint || now < this.awakeUntil || now < this.settledUntil;
+    return !!this.touchPoint || this.active || now < this.awakeUntil || now < this.settledUntil;
   }
 
   get look(): EyeLook {
-    if (this.touchPoint) return 'awake';
+    if (this.touchPoint || this.active) return 'awake';
     if (this.curiousPoint) return 'curious';
     return 'drowsy';
   }
@@ -160,7 +168,7 @@ export class Eye {
   stateLabel(now: number): string {
     if (this.mode !== 'live') return this.mode;
     if (this.blink) return 'blink';
-    if (this.touchPoint || now < this.awakeUntil) return 'awake';
+    if (this.touchPoint || this.active || now < this.awakeUntil) return 'awake';
     if (now < this.settledUntil) return 'settled';
     if (this.curiousPoint) return 'curious';
     if (this.glance) return 'glance';
@@ -209,7 +217,7 @@ export class Eye {
         break;
       case 'live': {
         const touched = !!this.touchPoint;
-        const awake = touched || now < this.awakeUntil;
+        const awake = touched || this.active || now < this.awakeUntil;
         if (awake) {
           lids = LIDS.awake;
           lidRate = E.lidRate.awake;

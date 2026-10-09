@@ -11,8 +11,9 @@ Items 1–3 and 5 from the 2026-10-07 list are done (2026-10-09, see DECISIONS.m
 1. **Upper-lid sprite overlap.** The client's `lidTop.png` covers the top of the upper-left and
    upper-right numbers while dozing. Fix it in the art (end the rim on the starter lid's curve), by
    raising `lidTop`'s `pivotY` in `public/assets/manifest.json`, or with a lighter doze.
-2. **Confirm with the client:** the active eye now neither flares nor blinks (both candidates
-   calmed), and taps on hidden arrows still turn the wheel. Both are easy to change in `FEEL`.
+2. **Run `npm run e2e`.** It wasn't run after the active-wheel change. Arrow taps now need the
+   wheel to be active; the `arrow()` test hook activates the wheel for you. The m3 arrow test was
+   rewritten for the new rules.
 
 ## Housekeeping
 

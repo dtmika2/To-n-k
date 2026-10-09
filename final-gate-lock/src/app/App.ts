@@ -1,6 +1,7 @@
 import type { AppConfig } from '../config';
 import type { Flags } from '../flags';
 import { ARROW } from '../layout';
+import { FEEL } from '../feel';
 import { LayerFactory } from '../render/layers';
 import { Game } from './Game';
 import { AudioManager } from '../audio/AudioManager';
@@ -111,9 +112,16 @@ export async function startApp(baseConfig: AppConfig, flags: Flags): Promise<Gam
         wakeLocks: game.wake.acquired,
         wakeActive: game.wake.active,
       }),
-      /** Logical centre of an arrow / wheel, for tests. */
-      arrow: (id: number, dir: 'cw' | 'ccw') => {
+      /**
+       * Logical centre of an arrow, for tests. Arrows only take taps on the active wheel, so this
+       * also makes wheel `id` active (as touching it would) unless `activate` is false.
+       */
+      arrow: (id: number, dir: 'cw' | 'ccw', activate = true) => {
         const w = game.wheels.find((x) => x.id === id)!;
+        if (activate && game.state === 'Playable') {
+          game.activate(w);
+          w.update(game.clock.now, FEEL.arrow.fadeInMs); // arrows visible (and live) right away
+        }
         return { x: w.x + (dir === 'cw' ? ARROW.offsetX : -ARROW.offsetX), y: w.y + ARROW.offsetY };
       },
       wheelPos: (id: number) => {

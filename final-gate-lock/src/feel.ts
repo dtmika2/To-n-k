@@ -34,11 +34,9 @@ export const FEEL = {
     pressScale: 0.94,
     releaseMs: 180,
     /**
-     * Arrows show only on the wheel in use: touching a wheel (disc or arrow area) brings its
-     * arrows up; they fade out this long after the last touch, or as soon as another wheel is
-     * touched. Taps on a hidden arrow still turn the wheel (and bring the arrows up).
+     * Arrows show only on the active wheel (the last one touched; the first wheel when play starts)
+     * and on any wheel a finger is still on. Hidden arrows don't take taps.
      */
-    hideAfterMs: 4000,
     fadeInMs: 140,
     fadeOutMs: 700,
   },
@@ -56,11 +54,8 @@ export const FEEL = {
     glowRateWide: 6,
     /** After a finger lifts, the eye stays awake this long. */
     awakeLingerMs: 500,
-    /**
-     * Glow targets. The active eye stays close to the resting glow so touching a wheel never makes
-     * it flash (drowsy breathes around 0.2).
-     */
-    glow: { awake: 0.3, settled: 0.28, curious: 0.26 },
+    /** Glow targets (drowsy breathes around 0.2). */
+    glow: { awake: 0.7, settled: 0.45, curious: 0.36 },
     /** No blinks while an eye is in use, nor for this long after (it holds still for the player). */
     calmAfterUseMs: 1200,
   },

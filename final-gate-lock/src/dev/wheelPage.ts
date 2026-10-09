@@ -57,6 +57,7 @@ async function main() {
   });
   holder.addChild(wheel.root);
   eye.setMode('live', 0);
+  wheel.setActive(true, 0); // the only wheel is always the active one
 
   // Map logical → wheel-local (the holder is scaled 3×).
   const toLocal = (cx: number, cy: number) => {

@@ -193,8 +193,7 @@ export class Game {
     speed: () => this.clock.speed,
     onArrow: () => this.sfx.play('arrow_tap'),
     onTouchStart: (w, p) => {
-      // arrows only on the wheel in use: the others' fade out (unless a finger is still on them)
-      for (const o of this.wheels) if (o !== w && !this.touches.has(o)) o.dismissArrows();
+      this.activate(w);
       this.touches.set(w, { x: p.x, y: p.y });
       w.eye.setTouch({ x: p.x - w.x, y: p.y - w.y }, this.clock.now);
     },
@@ -292,6 +291,8 @@ export class Game {
         break;
       case 'Playable':
         for (const w of this.wheels) w.eye.setMode('live', now);
+        // there is always one active wheel: the first one until a player picks another
+        if (!this.wheels.some((w) => w.isActive)) this.activate(this.wheels[0]);
         this.layers.veil.alpha = 0;
         this.glimmers.level = 0;
         this.mist.setDensity(0, 1500);
@@ -312,6 +313,14 @@ export class Game {
         this.runSeq((seq) => runReset(this, seq), () => this.machine.resetDone());
         break;
     }
+  }
+
+  /** The last wheel touched becomes the active one (arrows up, eye awake); only one at a time. */
+  activate(w: Wheel): void {
+    if (w.isActive) return;
+    const now = this.clock.now;
+    for (const o of this.wheels) if (o !== w && o.isActive) o.setActive(false, now);
+    w.setActive(true, now);
   }
 
   /** idle_whisper at a random moment every 30–60 s while Playable. */

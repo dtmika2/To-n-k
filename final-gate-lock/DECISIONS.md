@@ -107,17 +107,16 @@ Format: date — question → choice (reason).
   stone socket (below the disc), and a new `rim` layer (brass rim) sits above the iris, irisShade,
   pupil and lids. When the eye follows a finger or glances, the iris slides under the rim instead of
   drawing over it. `rim` has a starter sprite (172×172 logical, pivot 86, 86).
-- 2026-10-09 — **The active eye never flashes.** The client asked that the eye a player is using
-  should not flash. Both candidates are calmed, not just one: (1) glow targets are now close to the
-  resting glow (awake 0.3, settled 0.28, curious 0.26; was 0.7 / 0.45 / 0.36), and (2) no blinks
-  while the eye is touched, in its awake linger or its settled spell, nor for 1.2 s after. The
-  settle blink is gone (it fired right after every move). Numbers are in `FEEL.eye`.
-- 2026-10-09 — **Arrows only on the wheel in use.** All arrows are hidden at rest. Touching a wheel
-  (disc or arrow area) brings its arrows up (140 ms). They fade out (700 ms) 4 s after the last
-  touch, or as soon as another wheel is touched. Several wheels touched at once each keep their
-  arrows. **Taps on a hidden arrow still turn the wheel** (and bring the arrows up): no invisible
-  dead zones, the ≥ 56 px hit areas and multi-touch are unchanged, and a player who has seen the
-  arrows once can use them on any wheel. Numbers are in `FEEL.arrow`.
+- 2026-10-09 — **The active eye doesn't blink.** The client asked that the eye a player is using
+  should not flash. It no longer blinks while it is touched, while it is the active wheel, or while
+  it is settling after a move, nor for 1.2 s after (the settle blink is gone). The awake glow (0.7)
+  stays: the client confirmed that the glow is wanted.
+- 2026-10-09 — **One active wheel at a time** (client request). When play starts, the first wheel
+  is active. Touching a wheel (disc or visible arrow) makes it the active one. There is always
+  exactly one active wheel: the last one touched, with no timeout. The active wheel shows its
+  arrows and its eye stays awake. Every other wheel's arrows are hidden (fade 700 ms), except on a
+  wheel a finger is still on. **Hidden arrows take no taps**: they aren't there, so a dozing wheel
+  is picked by touching its disc first. Numbers are in `FEEL.arrow`.
 - 2026-10-09 — **Final opening: the core flies away.** At 8.0 s into Success (about 2 s after the
   core is fully clear of the parting halves) it swells to 1.3× and rises, accelerating, off the top
   of the screen, fading over the last part of the climb (1.8 s). Success is now ≈ 10 s (was 9).

@@ -41,9 +41,7 @@ describe('Eye', () => {
     expect(e.pose.iris.x).toBeGreaterThan(4);
     expect(e.pose.iris.x).toBeLessThanOrEqual(5.0001);
     expect(e.pose.pupil.x / e.pose.iris.x).toBeCloseTo(1.3);
-    // the active eye glows a touch brighter than at rest, but never flares
-    expect(e.pose.glow).toBeGreaterThan(0.25);
-    expect(e.pose.glow).toBeLessThan(0.35);
+    expect(e.pose.glow).toBeGreaterThan(0.5);
     expect(e.look).toBe('awake');
     // vertical movement is clamped to the flatter ellipse axis
     e.setTouch({ x: 0, y: -300 }, 2600);
@@ -53,6 +51,22 @@ describe('Eye', () => {
     expect(e.stateLabel(3300)).toBe('awake');
     run(e, 3200, 4000);
     expect(e.pose.lidTop).toBeGreaterThan(0.4);
+  });
+
+  it('the active eye stays awake (no blinks) without a finger, until another wheel takes over', () => {
+    const gate = new BlinkCoordinator();
+    const e = mkEye(6, gate);
+    e.setMode('live', 0);
+    e.setActive(true, 0);
+    run(e, 0, 30_000);
+    expect(e.look).toBe('awake');
+    expect(e.pose.lidTop).toBeLessThan(0.08);
+    expect(e.pose.glow).toBeGreaterThan(0.5);
+    expect(gate.grants).toBe(0);
+    e.setActive(false, 30_000);
+    run(e, 30_000, 6000);
+    expect(e.look).toBe('drowsy');
+    expect(e.pose.lidTop).toBeGreaterThan(0.3);
   });
 
   it('curious: opens a bit and looks toward the touched neighbour', () => {
@@ -82,21 +96,18 @@ describe('Eye', () => {
     expect(e.stateLabel(3900)).toMatch(/drowsy|glance|blink/);
   });
 
-  it('the eye in use never blinks or flares: touched for 20 s, then calm for a moment after', () => {
+  it('the eye in use never blinks: touched for 20 s, then calm for a moment after', () => {
     const gate = new BlinkCoordinator();
     const e = mkEye(4, gate);
     e.setMode('live', 0);
     run(e, 0, 1000);
     const before = gate.grants;
     e.setTouch({ x: 40, y: 10 }, 1000);
-    let maxGlow = 0;
     for (let t = 1000; t < 21_000; t += 16) {
       e.update(t, 16);
       expect(e.blinking).toBe(false);
-      maxGlow = Math.max(maxGlow, e.pose.glow);
     }
     expect(gate.grants).toBe(before);
-    expect(maxGlow).toBeLessThan(0.35);
     // lifted: still no blink through the awake linger and the calm period after it
     e.setTouch(null, 21_000);
     run(e, 21_000, 1600);

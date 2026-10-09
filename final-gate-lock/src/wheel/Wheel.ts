@@ -6,7 +6,7 @@
  * Layer stack (bottom → top): ring (socket), disc (+numerals), iris, irisShade, pupil + highlight,
  * lids (masked), rim, glow. The rim sits above the iris so the shifting iris slides under it. The numbered disc is fixed; only the iris plate with the window rotates
  * (and also shifts a few px with the eye). Arrows sit above the wheel and show only while it is
- * in use (see FEEL.arrow).
+ * the active wheel or held (see FEEL.arrow); hidden arrows take no taps.
  */
 import { Container, Graphics, Text } from 'pixi.js';
 import type { Dir } from '../state/lockModel';
@@ -91,8 +91,8 @@ export class Wheel {
   private arrowPress = { cw: 0, ccw: 0 };
   /** Pointers currently on this wheel (disc or arrows). */
   private holds = 0;
-  /** Arrows stay up until this time after the last touch. */
-  private arrowsUntil = -Infinity;
+  /** The active wheel (last one used): its arrows stay up and its eye stays awake. */
+  private active = false;
   /** 0 hidden … 1 shown. */
   private arrowShow = 0;
   private now = 0;
@@ -331,19 +331,28 @@ export class Wheel {
 
   // ---------------------------------------------------------------- arrows
 
-  /** A pointer landed on (true) or left (false) this wheel: shows its arrows while in use. */
-  holdArrows(on: boolean, now: number): void {
+  /** A pointer landed on (true) or left (false) this wheel: its arrows stay up while held. */
+  holdArrows(on: boolean): void {
     this.holds = on ? this.holds + 1 : Math.max(0, this.holds - 1);
-    if (!on && this.holds === 0) this.arrowsUntil = now + FEEL.arrow.hideAfterMs;
   }
 
-  /** Another wheel took over: fade these arrows out now (unless a finger is still on this wheel). */
-  dismissArrows(): void {
-    this.arrowsUntil = -Infinity;
+  /** Make this the active wheel (or not): arrows up, eye awake. */
+  setActive(on: boolean, now: number): void {
+    this.active = on;
+    this.eye.setActive(on, now);
+  }
+
+  get isActive(): boolean {
+    return this.active;
   }
 
   get arrowsShown(): boolean {
-    return this.holds > 0 || this.now < this.arrowsUntil;
+    return this.holds > 0 || this.active;
+  }
+
+  /** Arrows take taps only while they can be seen. */
+  get arrowsLive(): boolean {
+    return this.arrowShow > 0 && this.sinkK === 0;
   }
 
   setArrowPressed(dir: Dir, pressed: boolean): void {
@@ -421,7 +430,7 @@ export class Wheel {
   /** Back to the normal look (done off-screen during Reset). */
   resetUnlockVisuals(): void {
     this.holds = 0;
-    this.arrowsUntil = -Infinity;
+    this.setActive(false, this.now);
     this.arrowShow = 0;
     this.setSink(0);
     this.setLock(0);

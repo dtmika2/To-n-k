@@ -137,29 +137,47 @@ test('operator corner and dead zone: taps there never move wheels', async ({ pag
   await shot(page, 'M3-debug-hit-areas');
 });
 
-test('arrows show only on the wheel in use and fade out after the last touch', async ({ page }) => {
+test('one active wheel at a time: its arrows show and take taps; hidden arrows do nothing', async ({ page }) => {
   await page.goto('/?skip-intro&speed=4');
   expect(await waitForBoot(page)).toBe('ok');
   const touch = await Touch.create(page);
-  const alphas = () =>
+  type W = { arrows: { alpha: number }; isActive: boolean; eye: { look: string } };
+  const wheels = () =>
     page.evaluate(() =>
-      (window as unknown as { __fgl: { game: { wheels: { arrows: { alpha: number } }[] } } }).__fgl.game.wheels.map((w) => w.arrows.alpha),
+      (window as unknown as { __fgl: { game: { wheels: W[] } } }).__fgl.game.wheels.map((w) => ({ a: w.arrows.alpha, active: w.isActive, look: w.eye.look })),
     );
-  // at rest: every wheel's arrows are hidden
-  expect((await alphas()).every((a) => a === 0)).toBe(true);
-  // touching wheel 1's disc brings up its arrows only
-  const d1 = await wheelClient(page, 1, Math.PI / 2);
-  await touch.tap(d1.x, d1.y);
-  await expect.poll(async () => (await alphas())[0]).toBe(1);
-  expect((await alphas()).slice(1).every((a) => a === 0)).toBe(true);
-  // a tap on wheel 2's (hidden) arrow turns it and hands the arrows over
+  const hiddenArrow = (id: number) =>
+    page.evaluate((i) => {
+      const g = (window as unknown as { __fgl: { arrow(id: number, d: string, activate: boolean): { x: number; y: number }; toClient(x: number, y: number): { x: number; y: number } } }).__fgl;
+      const a = g.arrow(i, 'cw', false);
+      return g.toClient(a.x, a.y);
+    }, id);
+  const id2 = cfg.wheels[1].id;
+  // at the start the first wheel is active: arrows up, eye awake; every other wheel's arrows hidden
+  await expect.poll(async () => (await wheels())[0].a).toBe(1);
+  let w = await wheels();
+  expect(w[0].active && w[0].look === 'awake').toBe(true);
+  expect(w.slice(1).every((x) => x.a === 0 && !x.active)).toBe(true);
+  // a tap where wheel 2's hidden arrow would be does nothing
   const before = (await snap(page)).slots[1];
-  const a2 = await arrowClient(page, 2, 'cw');
+  const a2 = await hiddenArrow(id2);
+  await touch.tap(a2.x, a2.y);
+  await page.waitForTimeout(400);
+  expect((await snap(page)).slots[1]).toBe(before);
+  expect((await wheels())[0].active).toBe(true);
+  // touching wheel 2's disc makes it the active one; wheel 1 hands over
+  const d2 = await wheelClient(page, id2, Math.PI / 2);
+  await touch.tap(d2.x, d2.y);
+  await waitAllRest(page);
+  await expect.poll(async () => (await wheels())[0].a).toBe(0);
+  w = await wheels();
+  expect(w[1].active && w[1].a === 1).toBe(true);
+  expect(w.filter((x) => x.active)).toHaveLength(1);
+  // now its arrow turns it, and it stays active long after (no timeout)
   await touch.tap(a2.x, a2.y);
   await waitAllRest(page);
   expect((await snap(page)).slots[1]).toBe((before + 1) % 3);
-  await expect.poll(async () => (await alphas())[0]).toBe(0);
-  expect((await alphas())[1]).toBe(1);
-  // left alone, wheel 2's arrows fade out too (4 s game time = 1 s at speed 4)
-  await expect.poll(async () => (await alphas())[1], { timeout: 5000 }).toBe(0);
+  await page.waitForTimeout(2500);
+  w = await wheels();
+  expect(w[1].active && w[1].a === 1 && w[1].look === 'awake').toBe(true);
 });

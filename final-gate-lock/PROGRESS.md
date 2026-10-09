@@ -112,7 +112,8 @@ Flags combine, e.g. `/?skip-intro&solve&placeholderSfx`.
   curve) or by raising `lidTop`'s `pivotY` in the manifest.
 
 - **2026-10-09 pickup** (see DECISIONS.md): the iris slides under a new `rim` layer; the active eye
-  no longer flares or blinks; arrows show only on the wheel in use; the core swells and flies off
+  no longer blinks; one wheel is always active (the first at start, then the last touched) and
+  only it shows arrows; the core swells and flies off
   the top at the end of Success (≈ 10 s now), and `core_hum` plays while it is visible. The unused
   `PlateLeft.jpg`/`PlateRight.jpg` were deleted.
 
