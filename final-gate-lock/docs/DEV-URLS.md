@@ -12,7 +12,7 @@ npm run dev
 | --- | --- |
 | http://localhost:5173/ | The real experience: mist first, tap anywhere to start the intro |
 | http://localhost:5173/?skip-intro | Straight to the playable wheels |
-| http://localhost:5173/?skip-intro&solve | One move from solved: tap ↻ on the bottom-right wheel to see the opening |
+| http://localhost:5173/?skip-intro&solve | One move from solved: touch the bottom-right wheel to make it active, then tap its ↻ to see the opening |
 | http://localhost:5173/?placeholderSfx | Stand-in sounds (click once first so the browser allows audio) |
 | http://localhost:5173/?debug | FPS meter and touch-area outlines |
 | http://localhost:5173/wheel.html | A single large wheel |
