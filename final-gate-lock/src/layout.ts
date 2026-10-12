@@ -47,6 +47,12 @@ export const ARROW = {
   /** Square hit area per arrow; plan requires ≥ 56. */
   hit: 60,
   iconRadius: 15,
+  /** Number badge beside each arrow (outer side): what that arrow will show in the window. */
+  badgeOffsetX: 88,
+  badgeOffsetY: -92,
+  badgeRadius: 20,
+  /** Badges are tappable too (circle hit radius). */
+  badgeHit: 28,
 } as const;
 
 export const ROWS: Record<Row, { y: number; xs: number[] }> = {

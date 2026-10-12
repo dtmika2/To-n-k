@@ -7,9 +7,12 @@
  * lids (masked), rim, glow. The rim sits above the iris so the shifting iris slides under it. The numbered disc is fixed; only the iris plate with the window rotates
  * (and also shifts a few px with the eye). Arrows sit above the wheel and show only while it is
  * the active wheel or held (see FEEL.arrow); hidden arrows take no taps.
+ *
+ * The start slot is never the solution (config rule), so it shows a blank symbol instead of a number.
+ * Beside each arrow sits a badge with what that arrow will bring into the window.
  */
 import { Container, Graphics, Text } from 'pixi.js';
-import type { Dir } from '../state/lockModel';
+import { stepSlot, type Dir } from '../state/lockModel';
 import { ARROW, WHEEL } from '../layout';
 import type { LayerFactory, LayerId } from '../render/layers';
 import { lidBottomY, lidTopY } from '../render/procedural/wheel';
@@ -50,6 +53,43 @@ export const NUMERAL_STYLE = {
   dropShadow: { color: 0x000000, alpha: 0.85, angle: Math.PI / 4, distance: 1.6, blur: 1 },
 };
 
+/** Four-pointed star that stands in for the dud start number. `r` = tip radius. */
+function blankGlyph(r: number): Graphics {
+  const pts: number[] = [];
+  for (let i = 0; i < 8; i++) {
+    const a = (i * Math.PI) / 4 - Math.PI / 2;
+    const d = i % 2 === 0 ? r : r * 0.32;
+    pts.push(Math.cos(a) * d, Math.sin(a) * d);
+  }
+  const g = new Graphics();
+  g.poly(pts.map((v) => v + 1.4)).fill({ color: 0x000000, alpha: 0.7 });
+  g.poly(pts).fill(C.parchment);
+  g.label = 'blank';
+  return g;
+}
+
+/** A number (with the 6/9 underline) or, for the blank slot, the star. */
+function slotGlyph(value: number | null, size: number): Container {
+  const c = new Container();
+  if (value === null) {
+    c.addChild(blankGlyph(size * 0.5));
+    return c;
+  }
+  const t = new Text({ text: String(value), style: { ...NUMERAL_STYLE, fontSize: size }, resolution: 3 });
+  t.anchor.set(0.5, 0.52);
+  c.addChild(t);
+  if (value === 6 || value === 9) {
+    // underline so 6 and 9 can't be confused
+    const w = size * 0.47;
+    const u = new Graphics()
+      .roundRect(-w / 2, size * 0.38, w, size * 0.087, size * 0.043)
+      .fill(C.parchment);
+    u.label = 'mark69';
+    c.addChild(u);
+  }
+  return c;
+}
+
 export class Wheel {
   readonly root = new Container();
   /** Everything that sinks into the plate on unlock. */
@@ -67,6 +107,11 @@ export class Wheel {
   readonly arrows = new Container();
   private readonly slots = new Map<LayerId, Container>();
   private readonly arrowState = { cw: false, ccw: false };
+  /** Badges beside the arrows and the slot each one currently shows. */
+  private readonly badges = { cw: new Container({ label: 'badge:cw' }), ccw: new Container({ label: 'badge:ccw' }) };
+  private readonly badgeSlot = { cw: -1, ccw: -1 };
+  /** The dud start slot: drawn as a blank symbol. */
+  readonly blankSlot: number;
   private overlay: Container | null = null;
   /** Brass collar shown on unlock. */
   private lockRing: Container;
@@ -111,6 +156,7 @@ export class Wheel {
     this.root.label = `wheel${id}`;
     this.root.position.set(x, y);
     this.restSlot = startSlot;
+    this.blankSlot = startSlot;
     this.angle = angleForSlot(startSlot);
     this.lastDetent = nearestDetent(this.angle);
 
@@ -150,6 +196,20 @@ export class Wheel {
       slot(dir === 'cw' ? 'arrowCw' : 'arrowCcw', g);
       slot(dir === 'cw' ? 'arrowCwPressed' : 'arrowCcwPressed', g);
     }
+    // badges come after both arrows (applyArrows addresses the arrows by index 0 / 1)
+    for (const dir of ['ccw', 'cw'] as const) {
+      const b = this.badges[dir];
+      b.position.set(dir === 'cw' ? ARROW.badgeOffsetX : -ARROW.badgeOffsetX, ARROW.badgeOffsetY);
+      const R = ARROW.badgeRadius;
+      const plate = new Graphics();
+      plate.circle(3, 4, R + 1.5).fill({ color: C.black, alpha: 0.55 });
+      plate.circle(0, 0, R).fill(C.enamel);
+      plate.circle(0, 0, R).stroke({ width: 3, color: C.brass });
+      plate.circle(0, 0, R + 1.5).stroke({ width: 1, color: C.brassDeep, alpha: 0.9 });
+      plate.circle(0, 0, R - 2.5).stroke({ width: 0.8, color: C.brassLight, alpha: 0.4 });
+      b.addChild(plate);
+      this.arrows.addChild(b);
+    }
 
     this.root.addChild(this.body, this.arrows);
     this.buildNumerals();
@@ -169,26 +229,47 @@ export class Wheel {
     this.updateArrowVisuals();
   }
 
+  /** The number at `slot`, or null for the blank slot. */
+  private slotValue(slot: number): number | null {
+    return slot === this.blankSlot ? null : this.values[slot];
+  }
+
   private buildNumerals() {
-    this.values.forEach((value, i) => {
-      const holder = new Container({ label: `numeral${i}` });
+    this.values.forEach((_, i) => {
       // slot i sits at the window position for iris angle i·STEP; the disc never turns,
       // so every numeral is always upright
+      const holder = slotGlyph(this.slotValue(i), WHEEL.numeralSize);
+      holder.label = `numeral${i}`;
       const a = WINDOW_CENTER + i * STEP;
       holder.position.set(Math.cos(a) * WHEEL.numeralRadius, Math.sin(a) * WHEEL.numeralRadius);
-      const t = new Text({ text: String(value), style: NUMERAL_STYLE, resolution: 3 });
-      t.anchor.set(0.5, 0.52);
-      holder.addChild(t);
-      if (value === 6 || value === 9) {
-        // underline so 6 and 9 can't be confused
-        const u = new Graphics()
-          .roundRect(-7, WHEEL.numeralSize * 0.38, 14, 2.6, 1.3)
-          .fill(C.parchment);
-        u.label = 'mark69';
-        holder.addChild(u);
-      }
       this.numerals.addChild(holder);
     });
+  }
+
+  /** Each badge shows what its arrow brings into the window from where the plate is headed. */
+  private updateBadges(dt: number) {
+    let from = slotOfAngle(this.anim ? this.anim.to : this.angle);
+    if (this.queued) from = stepSlot(from, this.queued);
+    const k = dt / FEEL.arrow.badgeFadeMs;
+    for (const dir of ['cw', 'ccw'] as const) {
+      const b = this.badges[dir];
+      const to = stepSlot(from, dir);
+      if (to !== this.badgeSlot[dir]) {
+        const first = this.badgeSlot[dir] < 0;
+        this.badgeSlot[dir] = to;
+        const g = slotGlyph(this.slotValue(to), 19);
+        g.alpha = first ? 1 : 0;
+        b.addChild(g);
+      }
+      // child 0 is the plate; the last child is the current glyph, any between are fading out
+      const glyphs = b.children.slice(1);
+      const cur = glyphs.pop()!;
+      for (const old of glyphs) {
+        old.alpha -= k;
+        if (old.alpha <= 0) old.destroy({ children: true });
+      }
+      if (glyphs.every((g) => g.destroyed)) cur.alpha = Math.min(1, cur.alpha + k);
+    }
   }
 
   // ---------------------------------------------------------------- rotation
@@ -372,6 +453,9 @@ export class Wheel {
   hitArrow(px: number, py: number): Dir | null {
     const lx = px - this.x;
     const ly = py - this.y - ARROW.offsetY;
+    const by = py - this.y - ARROW.badgeOffsetY;
+    if (Math.hypot(lx - ARROW.badgeOffsetX, by) <= ARROW.badgeHit) return 'cw';
+    if (Math.hypot(lx + ARROW.badgeOffsetX, by) <= ARROW.badgeHit) return 'ccw';
     const h = ARROW.hit / 2;
     if (Math.abs(ly) > h) return null;
     if (Math.abs(lx - ARROW.offsetX) <= h) return 'cw';
@@ -456,6 +540,7 @@ export class Wheel {
     this.irisRot.rotation = this.angle + this.recoilOffset(now);
     this.applyBody();
     this.applyArrows(dt);
+    this.updateBadges(dt);
     this.eye.update(now, dt);
     this.applyPose();
   }

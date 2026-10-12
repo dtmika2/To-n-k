@@ -39,6 +39,8 @@ export const FEEL = {
      */
     fadeInMs: 140,
     fadeOutMs: 700,
+    /** Badge number change: the old glyph fades out, then the new one fades in. */
+    badgeFadeMs: 130,
   },
   eye: {
     blinkMs: 280,
