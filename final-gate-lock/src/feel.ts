@@ -41,6 +41,8 @@ export const FEEL = {
     fadeOutMs: 700,
     /** Badge number change: the old glyph fades out, then the new one fades in. */
     badgeFadeMs: 130,
+    /** Touching a wheel wakes the next one (config order) after this delay: arrows up, eye awake. */
+    nextWakeDelayMs: 1500,
   },
   eye: {
     blinkMs: 280,

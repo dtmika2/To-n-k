@@ -28,6 +28,7 @@ import { OperatorGesture } from '../operator/OperatorGesture';
 import type { Timings } from '../config';
 import { angleForSlot } from '../wheel/snap';
 import { WakeLock } from '../util/wakeLock';
+import { FEEL } from '../feel';
 import { BlinkCoordinator } from '../wheel/BlinkCoordinator';
 import { Eye } from '../wheel/Eye';
 import { Wheel, type SettleReason } from '../wheel/Wheel';
@@ -64,6 +65,11 @@ export class Game {
   readonly router: InputRouter;
   sfx: Sfx;
   private whisperTimer: number | null = null;
+  /** The wheel last touched (or the first one when play starts). */
+  private lead: Wheel | null = null;
+  /** The wheel after the lead, woken (or about to be) because the lead was touched. */
+  private follower: Wheel | null = null;
+  private followerTimer: number | null = null;
   readonly gesture: OperatorGesture;
   /** Called when the operator hold completes (App opens the PIN pad). */
   onOperator: (() => void) | null = null;
@@ -193,7 +199,7 @@ export class Game {
     speed: () => this.clock.speed,
     onArrow: () => this.sfx.play('arrow_tap'),
     onTouchStart: (w, p) => {
-      this.activate(w);
+      this.activate(w, true);
       this.touches.set(w, { x: p.x, y: p.y });
       w.eye.setTouch({ x: p.x - w.x, y: p.y - w.y }, this.clock.now);
     },
@@ -292,7 +298,10 @@ export class Game {
       case 'Playable':
         for (const w of this.wheels) w.eye.setMode('live', now);
         // there is always one active wheel: the first one until a player picks another
-        if (!this.wheels.some((w) => w.isActive)) this.activate(this.wheels[0]);
+        if (!this.wheels.some((w) => w.isActive)) {
+          this.lead = null;
+          this.activate(this.wheels[0]);
+        }
         this.layers.veil.alpha = 0;
         this.glimmers.level = 0;
         this.mist.setDensity(0, 1500);
@@ -315,12 +324,30 @@ export class Game {
     }
   }
 
-  /** The last wheel touched becomes the active one (arrows up, eye awake); only one at a time. */
-  activate(w: Wheel): void {
-    if (w.isActive) return;
+  /**
+   * The last wheel touched becomes the lead (arrows up, eye awake). With `wakeNext` (a real touch),
+   * the next wheel in config order wakes too after FEEL.arrow.nextWakeDelayMs; every other wheel
+   * goes back to sleep.
+   */
+  activate(w: Wheel, wakeNext = false): void {
     const now = this.clock.now;
-    for (const o of this.wheels) if (o !== w && o.isActive) o.setActive(false, now);
-    w.setActive(true, now);
+    if (this.lead !== w) {
+      this.lead = w;
+      this.follower = null;
+      if (this.followerTimer !== null) this.clock.clearTimeout(this.followerTimer);
+      this.followerTimer = null;
+      for (const o of this.wheels) if (o !== w && o.isActive) o.setActive(false, now);
+    }
+    if (!w.isActive) w.setActive(true, now);
+    const next = this.wheels[this.wheels.indexOf(w) + 1];
+    if (!wakeNext || !next || this.follower) return;
+    this.follower = next;
+    this.followerTimer = this.clock.setTimeout(() => {
+      this.followerTimer = null;
+      if (this.lead === w && this.follower === next && this.machine.state === 'Playable') {
+        next.setActive(true, this.clock.now);
+      }
+    }, FEEL.arrow.nextWakeDelayMs);
   }
 
   /** idle_whisper at a random moment every 30–60 s while Playable. */
