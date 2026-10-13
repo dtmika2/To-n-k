@@ -53,7 +53,7 @@ stalls, and lowers its render resolution automatically if frames are consistentl
 ## 4. Operator menu
 
 Hold the **bottom-left corner** (about 2 × 2 cm) for **3 seconds**. A faint ring fills during the last
-second. Enter the PIN (`operator.pin` in config.json; default `1907`).
+second. Enter the PIN (`operator.pin` in config.json; default `0000`).
 
 - **Reset to Shrouded**: rolls the mist back and re-arms the lock.
 - **Force open**: runs the success sequence (for staff or a stuck group).

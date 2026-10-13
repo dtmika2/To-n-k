@@ -279,7 +279,7 @@ test('operator menu switches the visual mode', async ({ page }) => {
   await touch.send('touchStart', [{ ...c, id: 3 }]);
   await page.waitForTimeout(3300);
   await touch.send('touchEnd', []);
-  for (const d of '1907') await page.getByTestId(`op-key-${d}`).click();
+  for (const d of '0000') await page.getByTestId(`op-key-${d}`).click();
   await page.getByTestId('op-key-OK').click();
   await page.getByTestId('op-mode-sprites').click();
   await expect.poll(async () => (await layerLabels(page)).iris).toBe('iris:sprite');

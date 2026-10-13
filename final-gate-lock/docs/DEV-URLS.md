@@ -23,7 +23,7 @@ Flags can be combined, e.g. `/?skip-intro&solve&placeholderSfx`. Other flags (`?
 `?config=…`, `?manifest=…`, `?sprites`, `?procedural`) are listed in `PROGRESS.md`.
 
 With a mouse, click the arrows or drag a wheel. The operator menu is a 3-second hold in the
-bottom-left corner; the PIN is `1907`.
+bottom-left corner; the PIN is `0000`.
 
 To test the installable, offline version instead, run `npm run build` and then `npm run preview`,
 and open http://localhost:4173/.

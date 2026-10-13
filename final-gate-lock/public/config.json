@@ -19,7 +19,7 @@
     "settledToDrowsyMs": 2000,
     "operatorHoldMs": 3000
   },
-  "operator": { "pin": "1907" },
+  "operator": { "pin": "0000" },
   "visual": { "mode": "procedural", "manifest": "assets/manifest.json" },
   "audio": { "masterVolume": 0.9 }
 }
