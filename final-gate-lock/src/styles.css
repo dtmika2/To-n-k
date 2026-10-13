@@ -193,3 +193,9 @@ body {
   background: #e33;
   color: #fff;
 }
+
+.op-version {
+  margin: -6px 0 10px;
+  font: 12px ui-monospace, monospace;
+  opacity: 0.55;
+}

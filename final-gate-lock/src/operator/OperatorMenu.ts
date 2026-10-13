@@ -28,6 +28,13 @@ export interface OperatorActions {
 
 export const AUTO_CLOSE_MS = 60_000;
 
+/** "Version 0.1.0 · build 57 · 610732d · 2026-10-13" (filled in by vite.config.ts at build time). */
+export function versionLabel(): string {
+  if (typeof __BUILD__ === 'undefined') return 'Version unknown';
+  const b = __BUILD__;
+  return [`Version ${b.version}`, b.build && `build ${b.build}`, b.commit, b.date].filter(Boolean).join(' · ');
+}
+
 const TIMING_FIELDS: { key: keyof Timings; label: string }[] = [
   { key: 'resetAfterSuccessMs', label: 'Reset after success (s)' },
   { key: 'resetAfterIdleMs', label: 'Reset after idle (s)' },
@@ -206,7 +213,7 @@ export class OperatorMenu {
     const modeRow = el('div', { class: 'op-row' });
     modeRow.append(el('span', {}, 'Visual mode'), mode);
 
-    box.append(el('h2', {}, 'Final Gate Lock — operator'), status, actions, volRow, modeRow, fps, el('h3', {}, 'Timings'), timings, close);
+    box.append(el('h2', {}, 'Final Gate Lock — operator'), el('div', { class: 'op-version', 'data-testid': 'op-version' }, versionLabel()), status, actions, volRow, modeRow, fps, el('h3', {}, 'Timings'), timings, close);
     ov.appendChild(box);
   }
 

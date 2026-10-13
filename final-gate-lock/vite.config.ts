@@ -1,9 +1,28 @@
+import { execSync } from 'node:child_process';
+import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { defineConfig } from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
 
+const git = (args: string) => {
+  try {
+    return execSync(`git ${args}`, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim();
+  } catch {
+    return '';
+  }
+};
+
+/** Shown in the operator menu: package version, build number (commit count), commit and build date. */
+const BUILD = {
+  version: (JSON.parse(readFileSync(resolve(__dirname, 'package.json'), 'utf8')) as { version: string }).version,
+  build: git('rev-list --count HEAD'),
+  commit: git('rev-parse --short HEAD'),
+  date: new Date().toISOString().slice(0, 10),
+};
+
 // BASE_PATH: where the site is served from, e.g. /To-n-k/ on GitHub Pages (default: the root)
 export default defineConfig({
+  define: { __BUILD__: JSON.stringify(BUILD) },
   base: process.env.BASE_PATH ?? '/',
   build: {
     target: 'es2022',
