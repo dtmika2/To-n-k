@@ -2,8 +2,9 @@ import { resolve } from 'node:path';
 import { defineConfig } from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
 
+// BASE_PATH: where the site is served from, e.g. /To-n-k/ on GitHub Pages (default: the root)
 export default defineConfig({
-  base: '/',
+  base: process.env.BASE_PATH ?? '/',
   build: {
     target: 'es2022',
     chunkSizeWarningLimit: 1500,
@@ -26,8 +27,6 @@ export default defineConfig({
         orientation: 'landscape',
         background_color: '#050405',
         theme_color: '#050405',
-        start_url: '/',
-        scope: '/',
         icons: [
           { src: 'icons/icon-192.png', sizes: '192x192', type: 'image/png' },
           { src: 'icons/icon-512.png', sizes: '512x512', type: 'image/png' },
@@ -35,10 +34,10 @@ export default defineConfig({
         ],
       },
       workbox: {
-        globPatterns: ['**/*.{js,css,html,json,woff,woff2,png,webp,ogg,mp3,wav,svg,ico}'],
+        globPatterns: ['**/*.{js,css,html,json,woff,woff2,png,jpg,jpeg,webp,ogg,mp3,wav,svg,ico}'],
         maximumFileSizeToCacheInBytes: 20 * 1024 * 1024,
-        navigateFallback: '/index.html',
-        navigateFallbackDenylist: [/^\/wheel\.html/],
+        navigateFallback: 'index.html',
+        navigateFallbackDenylist: [/\/wheel\.html/],
         cleanupOutdatedCaches: true,
       },
     }),
