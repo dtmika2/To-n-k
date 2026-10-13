@@ -1,6 +1,6 @@
 /**
  * 8-hour soak (simulated): the game clock runs at SOAK_SPEED× (default 100×, ≈ 5–6 min real) while a
- * synthetic player taps, drags, idles (so the plate falls asleep) and solves the lock about every
+ * synthetic player taps, drags, idles (sometimes long enough to reset) and solves the lock about every
  * 20 simulated minutes. Every simulated hour we sample heap (after GC), display objects, GPU memory
  * and frame times. Fails on any page error, memory growth, or a stuck state machine.
  */
@@ -12,7 +12,7 @@ const HOURS = Number(process.env.SOAK_HOURS ?? 8);
 const SPEED = Number(process.env.SOAK_SPEED ?? 100);
 
 type Fgl = {
-  snap(): { state: string; loops: number; asleep: boolean };
+  snap(): { state: string; loops: number };
   diag(): { objects: number; tweens: number; timers: number; splitTextures: number; motes: number; gpu: { totalMB: number } };
   stats: { reset(): void; summary(): { avg: number; p95: number; max: number } };
   clock: { now: number };
@@ -100,7 +100,7 @@ test(`soak: ${HOURS} simulated hours of play at ${SPEED}×`, async ({ page }) =>
           }
           await touch.send('touchEnd', []);
         } else {
-          // idle for a while (long enough at times to fall asleep)
+          // idle for a while (long enough at times to reset to the mist)
           await page.waitForTimeout(rnd() < 0.2 ? 1000 : 150);
         }
         actions++;

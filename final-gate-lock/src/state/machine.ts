@@ -9,7 +9,8 @@
  * Operator shortcuts: forceOpen() (Shrouded/Intro/Playable → Success) and operatorReset() (any state
  * except Shrouded/Reset → Reset).
  *
- * While Playable, the machine also tracks inactivity: no activity() for asleepAfterIdleMs → asleep.
+ * While Playable, the machine also tracks inactivity: no activity() for resetAfterIdleMs → Reset
+ * (the mist rolls back and the lock re-arms for the next group).
  */
 import type { Timers } from '../util/clock';
 
@@ -17,19 +18,15 @@ export type GameState = 'Shrouded' | 'Intro' | 'Playable' | 'Success' | 'Open' |
 
 export interface MachineTimings {
   resetAfterSuccessMs: number;
-  asleepAfterIdleMs: number;
+  resetAfterIdleMs: number;
 }
 
-export type MachineEvent =
-  | { type: 'state'; from: GameState; to: GameState }
-  | { type: 'asleep' }
-  | { type: 'wake' };
+export type MachineEvent = { type: 'state'; from: GameState; to: GameState };
 
 type Listener = (e: MachineEvent) => void;
 
 export class Machine {
   private _state: GameState = 'Shrouded';
-  private _asleep = false;
   private listeners = new Set<Listener>();
   private resetTimer: number | null = null;
   private idleTimer: number | null = null;
@@ -43,10 +40,6 @@ export class Machine {
 
   get state(): GameState {
     return this._state;
-  }
-
-  get asleep(): boolean {
-    return this._asleep;
   }
 
   /** Players may only move wheels while Playable. */
@@ -71,10 +64,6 @@ export class Machine {
     const from = this._state;
     this._state = to;
     this.clearIdle();
-    if (this._asleep) {
-      this._asleep = false;
-      this.emit({ type: 'wake' });
-    }
     if (to !== 'Open') this.clearReset();
     if (to === 'Playable') this.armIdle();
     if (to === 'Open') {
@@ -141,13 +130,9 @@ export class Machine {
     return true;
   }
 
-  /** Any touch while Playable. Wakes the plate if asleep and restarts the idle countdown. */
+  /** Any touch while Playable: restarts the idle countdown. */
   activity(): void {
     if (this._state !== 'Playable') return;
-    if (this._asleep) {
-      this._asleep = false;
-      this.emit({ type: 'wake' });
-    }
     this.armIdle();
   }
 
@@ -161,11 +146,8 @@ export class Machine {
     this.clearIdle();
     this.idleTimer = this.timers.setTimeout(() => {
       this.idleTimer = null;
-      if (this._state === 'Playable' && !this._asleep) {
-        this._asleep = true;
-        this.emit({ type: 'asleep' });
-      }
-    }, this.timings.asleepAfterIdleMs);
+      if (this._state === 'Playable') this.go('Reset');
+    }, this.timings.resetAfterIdleMs);
   }
 
   private clearIdle() {

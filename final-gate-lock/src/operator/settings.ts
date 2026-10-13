@@ -61,7 +61,7 @@ export function sanitize(s: OperatorSettings): OperatorSettings {
   if (typeof s.fps === 'boolean') out.fps = s.fps;
   if (s.timings && typeof s.timings === 'object') {
     const t: Partial<Timings> = {};
-    for (const k of ['resetAfterSuccessMs', 'asleepAfterIdleMs', 'settledToDrowsyMs', 'operatorHoldMs'] as const) {
+    for (const k of ['resetAfterSuccessMs', 'resetAfterIdleMs', 'settledToDrowsyMs', 'operatorHoldMs'] as const) {
       if (pos(s.timings[k])) t[k] = s.timings[k];
     }
     for (const k of ['blinkIntervalMs', 'glanceIntervalMs'] as const) {

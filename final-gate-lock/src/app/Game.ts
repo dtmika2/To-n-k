@@ -96,7 +96,7 @@ export class Game {
     this.clock.speed = flags.speed;
     this.tweens = new Tweens(this.clock);
     this.machine = new Machine(
-      { resetAfterSuccessMs: config.timings.resetAfterSuccessMs, asleepAfterIdleMs: config.timings.asleepAfterIdleMs },
+      { resetAfterSuccessMs: config.timings.resetAfterSuccessMs, resetAfterIdleMs: config.timings.resetAfterIdleMs },
       this.clock,
     );
     this.model = new LockModel(config.wheels);
@@ -174,8 +174,7 @@ export class Game {
         this.stateLog.push({ state: e.to, t: this.clock.now });
         if (this.stateLog.length > 300) this.stateLog.splice(0, this.stateLog.length - 300);
         this.enter(e.to, e.from);
-      } else if (e.type === 'asleep') this.fallAsleep();
-      else if (e.type === 'wake') this.wakeUp();
+      }
     });
 
     if (flags.debug) this.drawDebug();
@@ -286,6 +285,8 @@ export class Game {
     this.seq = null;
     switch (state) {
       case 'Shrouded':
+        // a new group never sees the operator's solution
+        if (this.solutionVisible) this.setSolutionVisible(false);
         this.enterShrouded();
         this.sfx.loop('mist_loop', true, 1500);
         this.sfx.loop('eye_loop', false, 1500);
@@ -374,8 +375,12 @@ export class Game {
     this.machine.forceOpen();
   }
 
+  /** Correct numbers overlaid on the wheels (operator); stays on until switched off or the lock resets. */
+  solutionVisible = false;
+
   /** Overlay the correct number on each wheel (operator menu only). */
   setSolutionVisible(on: boolean): void {
+    this.solutionVisible = on;
     this.wheels.forEach((w) => {
       const spec = this.model.spec(w.id);
       w.showOverlay(on ? String(spec.slots[spec.correct]) : null);
@@ -391,7 +396,7 @@ export class Game {
   setTimings(t: Partial<Timings>): void {
     Object.assign(this.config.timings, t);
     const T = this.config.timings;
-    this.machine.setTimings({ resetAfterSuccessMs: T.resetAfterSuccessMs, asleepAfterIdleMs: T.asleepAfterIdleMs });
+    this.machine.setTimings({ resetAfterSuccessMs: T.resetAfterSuccessMs, resetAfterIdleMs: T.resetAfterIdleMs });
     for (const w of this.wheels) {
       w.eye.setTimings({ blinkIntervalMs: T.blinkIntervalMs, glanceIntervalMs: T.glanceIntervalMs, settledToDrowsyMs: T.settledToDrowsyMs });
     }
@@ -466,29 +471,6 @@ export class Game {
         if (!(e instanceof Cancelled)) console.error(e);
       },
     );
-  }
-
-  // ------------------------------------------------------------------ asleep
-
-  /** No touch for asleepAfterIdleMs: lids close in a ripple across the plate, screen dims to 60%. */
-  private fallAsleep() {
-    const now = this.clock.now;
-    for (const w of this.wheels) {
-      // ripple left → right with a little vertical skew
-      const delay = ((w.x - 150) / 980) * 900 + ((w.y - 215) / 410) * 150;
-      w.eye.setMode('asleep', now, Math.max(0, delay));
-    }
-    this.tweens.kill('dim');
-    const from = this.layers.dim.alpha;
-    void this.tweens.to({ duration: 1800, delay: 300, ease: ease.inOutCubic, tag: 'dim', onUpdate: (k) => (this.layers.dim.alpha = from + (0.6 - from) * k) });
-  }
-
-  private wakeUp() {
-    const now = this.clock.now;
-    if (this.machine.state === 'Playable') for (const w of this.wheels) w.eye.setMode('live', now);
-    this.tweens.kill('dim');
-    const from = this.layers.dim.alpha;
-    void this.tweens.to({ duration: 350, ease: ease.outCubic, tag: 'dim', onUpdate: (k) => (this.layers.dim.alpha = from * (1 - k)) });
   }
 
   // ------------------------------------------------------------------ frame
@@ -601,7 +583,6 @@ export class Game {
   snapshot() {
     return {
       state: this.machine.state,
-      asleep: this.machine.asleep,
       slots: this.model.snapshot(),
       solved: this.model.isSolved(),
       atRest: this.wheels.every((w) => w.atRest),

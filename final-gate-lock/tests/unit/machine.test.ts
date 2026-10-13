@@ -7,7 +7,7 @@ const realTimers: Timers = {
   clearTimeout: (h) => clearTimeout(h),
 };
 
-const T = { resetAfterSuccessMs: 40_000, asleepAfterIdleMs: 60_000 };
+const T = { resetAfterSuccessMs: 40_000, resetAfterIdleMs: 60_000 };
 
 function make() {
   const m = new Machine(T, realTimers);
@@ -126,50 +126,40 @@ describe('Machine', () => {
     expect(b.skipToPlayable()).toBe(true);
   });
 
-  describe('asleep', () => {
-    it('falls asleep after 60 s without activity in Playable, wakes on activity', () => {
-      const { m, events } = make();
+  describe('idle reset', () => {
+    it('resets after 60 s without activity in Playable; activity restarts the countdown', () => {
+      const { m } = make();
       m.tap();
       m.introDone();
-      vi.advanceTimersByTime(59_999);
-      expect(m.asleep).toBe(false);
-      vi.advanceTimersByTime(1);
-      expect(m.asleep).toBe(true);
-      expect(events.at(-1)).toEqual({ type: 'asleep' });
-      m.activity();
-      expect(m.asleep).toBe(false);
-      expect(events.at(-1)).toEqual({ type: 'wake' });
       vi.advanceTimersByTime(59_000);
-      expect(m.asleep).toBe(false);
       m.activity(); // restarts countdown
-      vi.advanceTimersByTime(59_000);
-      expect(m.asleep).toBe(false);
-      vi.advanceTimersByTime(1_000);
-      expect(m.asleep).toBe(true);
+      vi.advanceTimersByTime(59_999);
+      expect(m.state).toBe('Playable');
+      vi.advanceTimersByTime(1);
+      expect(m.state).toBe('Reset');
+      expect(m.resetDone()).toBe(true);
+      expect(m.state).toBe('Shrouded');
     });
 
-    it('never sleeps outside Playable and activity is ignored there', () => {
+    it('never resets on idle outside Playable and activity is ignored there', () => {
       const { m, events } = make();
       m.activity();
       vi.advanceTimersByTime(120_000);
-      expect(m.asleep).toBe(false);
+      expect(m.state).toBe('Shrouded');
       m.tap();
       vi.advanceTimersByTime(120_000);
-      expect(m.asleep).toBe(false);
+      expect(m.state).toBe('Intro');
       expect(events).toHaveLength(1);
     });
 
-    it('leaving Playable while asleep emits wake and stops the idle timer', () => {
-      const { m, events } = make();
+    it('leaving Playable stops the idle timer', () => {
+      const { m } = make();
       m.tap();
       m.introDone();
-      vi.advanceTimersByTime(60_000);
-      expect(m.asleep).toBe(true);
+      vi.advanceTimersByTime(30_000);
       m.solved();
-      expect(m.asleep).toBe(false);
-      expect(events.slice(-2).map((e) => e.type)).toEqual(['wake', 'state']);
-      vi.advanceTimersByTime(120_000);
-      expect(m.asleep).toBe(false);
+      vi.advanceTimersByTime(40_000);
+      expect(m.state).toBe('Success');
     });
   });
 

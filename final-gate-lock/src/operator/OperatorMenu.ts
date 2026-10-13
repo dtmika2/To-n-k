@@ -8,6 +8,7 @@ export interface OperatorActions {
   resetToShrouded(): void;
   forceOpen(): void;
   setSolutionVisible(on: boolean): void;
+  getSolutionVisible(): boolean;
   setCorrectMinusOne(): void;
   soundTest(): void;
   beep(): void;
@@ -29,7 +30,7 @@ export const AUTO_CLOSE_MS = 60_000;
 
 const TIMING_FIELDS: { key: keyof Timings; label: string }[] = [
   { key: 'resetAfterSuccessMs', label: 'Reset after success (s)' },
-  { key: 'asleepAfterIdleMs', label: 'Asleep after idle (s)' },
+  { key: 'resetAfterIdleMs', label: 'Reset after idle (s)' },
   { key: 'settledToDrowsyMs', label: 'Settled → drowsy (s)' },
   { key: 'operatorHoldMs', label: 'Operator hold (s)' },
 ];
@@ -48,7 +49,6 @@ function el<K extends keyof HTMLElementTagNameMap>(tag: K, attrs: Record<string,
 export class OperatorMenu {
   private overlay: HTMLDivElement | null = null;
   private idleTimer: number | null = null;
-  private solution = false;
   /** 'pin' | 'menu' | null */
   view: 'pin' | 'menu' | null = null;
 
@@ -122,15 +122,15 @@ export class OperatorMenu {
         this.a.forceOpen();
         this.close();
       }),
-      action('Show solution: off', 'solution', () => {}, 'op-btn op-toggle'),
+      action(`Show solution: ${this.a.getSolutionVisible() ? 'ON' : 'off'}`, 'solution', () => {}, 'op-btn op-toggle'),
       action('All wheels correct − 1', 'minus-one', () => this.a.setCorrectMinusOne()),
       action('Sound test', 'sound-test', () => this.a.soundTest()),
     );
     const solBtn = actions.querySelector<HTMLButtonElement>('[data-testid="op-solution"]')!;
     solBtn.addEventListener('click', () => {
-      this.solution = !this.solution;
-      this.a.setSolutionVisible(this.solution);
-      solBtn.textContent = `Show solution: ${this.solution ? 'ON' : 'off'}`;
+      const on = !this.a.getSolutionVisible();
+      this.a.setSolutionVisible(on);
+      solBtn.textContent = `Show solution: ${on ? 'ON' : 'off'}`;
     });
 
     // volume
@@ -233,10 +233,6 @@ export class OperatorMenu {
   close(): void {
     if (this.idleTimer !== null) this.a.clearTimeout(this.idleTimer);
     this.idleTimer = null;
-    if (this.solution) {
-      this.solution = false;
-      this.a.setSolutionVisible(false); // the solution only shows while the menu is open
-    }
     this.overlay?.remove();
     this.overlay = null;
     this.view = null;

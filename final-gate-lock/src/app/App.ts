@@ -42,6 +42,7 @@ export async function startApp(baseConfig: AppConfig, flags: Flags): Promise<Gam
     resetToShrouded: () => game.operatorReset(),
     forceOpen: () => game.operatorForceOpen(),
     setSolutionVisible: (on) => game.setSolutionVisible(on),
+    getSolutionVisible: () => game.solutionVisible,
     setCorrectMinusOne: () => game.setCorrectMinusOne(),
     soundTest: () => {
       audio.unlock();

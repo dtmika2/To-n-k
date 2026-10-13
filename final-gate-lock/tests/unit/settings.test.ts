@@ -61,11 +61,11 @@ describe('operator settings', () => {
   });
 
   it('applies only timings, volume and mode over config.json', () => {
-    const c = applySettings(cfg, { masterVolume: 0.2, visualMode: 'sprites', timings: { asleepAfterIdleMs: 5000 } });
+    const c = applySettings(cfg, { masterVolume: 0.2, visualMode: 'procedural', timings: { resetAfterIdleMs: 5000 } });
     expect(c.audio.masterVolume).toBe(0.2);
-    expect(c.visual.mode).toBe('sprites');
-    expect(c.timings.asleepAfterIdleMs).toBe(5000);
-    expect(c.timings.resetAfterSuccessMs).toBe(40000);
+    expect(c.visual.mode).toBe('procedural');
+    expect(c.timings.resetAfterIdleMs).toBe(5000);
+    expect(c.timings.resetAfterSuccessMs).toBe(cfg.timings.resetAfterSuccessMs);
     expect(c.wheels).toBe(cfg.wheels);
     expect(applySettings(cfg, {})).toEqual(cfg);
   });

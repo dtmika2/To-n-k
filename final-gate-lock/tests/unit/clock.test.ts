@@ -27,7 +27,7 @@ describe('Clock', () => {
 
   it('drives the machine reset timer', () => {
     const c = new Clock();
-    const m = new Machine({ resetAfterSuccessMs: 1000, asleepAfterIdleMs: 9999 }, c);
+    const m = new Machine({ resetAfterSuccessMs: 1000, resetAfterIdleMs: 9999 }, c);
     m.forceOpen();
     m.successDone();
     for (let i = 0; i < 10; i++) c.tick(100);

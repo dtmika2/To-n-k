@@ -56,16 +56,18 @@ stalls, and lowers its render resolution automatically if frames are consistentl
 
 ## 4. Operator menu
 
-Hold the **bottom-left corner** (about 2 × 2 cm) for **3 seconds**. A faint ring fills during the last
-second. Enter the PIN (`operator.pin` in config.json; default `0000`).
+Hold the **bottom-left corner** (about 2 × 2 cm) for **1 second** (`timings.operatorHoldMs`). A faint
+ring fills as you hold. Enter the PIN (`operator.pin` in config.json; default `0000`).
 
 - **Reset to Shrouded**: rolls the mist back and re-arms the lock.
 - **Force open**: runs the success sequence (for staff or a stuck group).
-- **Show solution**: shows the correct number under each wheel while the menu is open.
+- **Show solution**: shows the correct number under each wheel. It stays on after the menu closes,
+  until you switch it off or the lock resets to the mist.
 - **All wheels correct − 1**: every wheel one tap (↻) from its answer; useful for testing the opening.
 - **Sound test**: plays every cue once.
-- **Master volume**, **Visual mode** (procedural / sprites), **FPS meter**, and timings in seconds:
-  reset after success, asleep after idle, settled → drowsy, operator hold.
+- **Master volume**, **Visual mode** (sprites by default / procedural), **FPS meter**, and timings in
+  seconds: reset after success (default 20), reset after idle (default 30), settled → drowsy,
+  operator hold (default 1).
 
 Menu settings are saved on the tablet (localStorage) and survive restarts; `config.json` stays the
 default. The menu closes itself after 60 s without input.
@@ -74,8 +76,8 @@ default. The menu closes itself after 60 s without input.
 
 - Morning: unlock the screen pin if needed, launch the app, check it shows mist; run the operator
   **Sound test** once.
-- Between groups: nothing. The lock resets itself 40 s after it opens (mist rolls back, wheels are
-  reset unseen).
+- Between groups: nothing. The lock resets itself 20 s after it opens (mist rolls back, wheels are
+  reset unseen), and also after 30 s with nobody touching it mid-game.
 - If anything looks wrong: operator menu → **Reset to Shrouded**. As a last resort, swipe the app
   away and relaunch it; it boots offline in a few seconds.
 

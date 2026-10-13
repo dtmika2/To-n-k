@@ -12,7 +12,7 @@ export interface WheelConfig {
 
 export interface Timings {
   resetAfterSuccessMs: number;
-  asleepAfterIdleMs: number;
+  resetAfterIdleMs: number;
   blinkIntervalMs: [number, number];
   glanceIntervalMs: [number, number];
   settledToDrowsyMs: number;
@@ -117,7 +117,7 @@ export function validateConfig(raw: unknown): ValidationResult {
   if (!isObj(t)) {
     errors.push('"timings" must be an object');
   } else {
-    for (const key of ['resetAfterSuccessMs', 'asleepAfterIdleMs', 'settledToDrowsyMs', 'operatorHoldMs']) {
+    for (const key of ['resetAfterSuccessMs', 'resetAfterIdleMs', 'settledToDrowsyMs', 'operatorHoldMs']) {
       if (!isPositive(t[key])) errors.push(`timings.${key} must be a positive number`);
     }
     for (const key of ['blinkIntervalMs', 'glanceIntervalMs']) {
