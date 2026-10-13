@@ -48,6 +48,27 @@
     "pivotX": 86,
     "pivotY": 86
   },
+  "arrowCw": {
+    "file": "sprites/arrowCw.png",
+    "width": 44,
+    "height": 45,
+    "pivotX": 20,
+    "pivotY": 20
+  },
+  "arrowCcw": {
+    "file": "sprites/arrowCcw.png",
+    "width": 44,
+    "height": 45,
+    "pivotX": 20,
+    "pivotY": 20
+  },
+  "badge": {
+    "file": "sprites/badge.png",
+    "width": 49,
+    "height": 50,
+    "pivotX": 23,
+    "pivotY": 23
+  },
   "wall": {
     "file": "sprites/wall.png",
     "width": 1282,
@@ -75,6 +96,20 @@
     "height": 236,
     "pivotX": -73,
     "pivotY": -305
+  },
+  "brackets": {
+    "file": "sprites/brackets.png",
+    "width": 1134,
+    "height": 695,
+    "pivotX": -74,
+    "pivotY": -54
+  },
+  "bezel": {
+    "file": "sprites/bezel.png",
+    "width": 212,
+    "height": 215,
+    "pivotX": 99,
+    "pivotY": 99
   },
   "core": {
     "file": "sprites/core.png",

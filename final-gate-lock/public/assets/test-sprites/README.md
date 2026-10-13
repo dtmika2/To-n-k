@@ -12,7 +12,7 @@ a time with your own art and only that piece changes.
 - **Transparent PNG**, fully transparent (alpha 0) wherever the layer should not cover anything.
 - The **door pieces** are positioned on the 1280×800 canvas: their pivot is minus their top-left
   position. The app splits the door into halves itself, so draw each piece whole (no left/right files).
-- **No digits** in any image: the numbers are drawn in code, on top of `disc`.
+- **No digits** in any image: the numbers are drawn in code, on top of `disc` and `badge`.
 - One light direction (top left) for every piece.
 - `glow`, dust and sparks always stay in code.
 
@@ -31,6 +31,7 @@ a time with your own art and only that piece changes.
 | `arrowCwPressed.png` | wheel | clockwise arrow button, pressed | 86×88 | pivot (19, 19) from its top-left |
 | `arrowCcw.png` | wheel | counter-clockwise arrow button | 88×90 | pivot (20, 20) from its top-left |
 | `arrowCcwPressed.png` | wheel | counter-clockwise arrow button, pressed | 86×88 | pivot (19, 19) from its top-left |
+| `badge.png` | wheel | round plate beside each arrow (number drawn in code on top) | 98×100 | pivot (23, 23) from its top-left |
 | `wall.png` | scene | stone wall behind the door (full screen) | 2564×1604 | pivot (641, 401) from its top-left |
 | `mistTile.png` | scene | one mist puff (used for every puff; tinted and faded in code) | 516×516 | pivot (129, 129) from its top-left |
 | `plateShadow.png` | door | shadow the door casts on the wall | 2364×1484 | top-left at (59, 43) on the 1280×800 canvas |

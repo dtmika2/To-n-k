@@ -3,7 +3,7 @@
  * by every wheel). Every layer is centred on the wheel pivot (0, 0). Light comes from the top left.
  */
 import { FillGradient, GraphicsContext } from 'pixi.js';
-import { WHEEL } from '../../layout';
+import { ARROW, WHEEL } from '../../layout';
 import { C } from '../palette';
 import { mulberry32 } from '../../util/random';
 
@@ -315,6 +315,18 @@ export function arrowContext(dir: 'cw' | 'ccw', pressed: boolean): GraphicsConte
       ex - tx * 1.5 - nx * 4.5, ey - ty * 1.5 - ny * 4.5,
     ];
     g.poly(head.map((v, i) => (i % 2 === 0 ? s * v + off : v + off))).fill({ color: 0x24180a, alpha: 0.95 });
+  });
+}
+
+/** Enamel plate of the number badge beside each arrow (the number is drawn on top in code). */
+export function badgeContext(): GraphicsContext {
+  return once('badge', (g) => {
+    const R = ARROW.badgeRadius;
+    g.circle(3, 4, R + 1.5).fill({ color: C.black, alpha: 0.55 });
+    g.circle(0, 0, R).fill(C.enamel);
+    g.circle(0, 0, R).stroke({ width: 3, color: C.brass });
+    g.circle(0, 0, R + 1.5).stroke({ width: 1, color: C.brassDeep, alpha: 0.9 });
+    g.circle(0, 0, R - 2.5).stroke({ width: 0.8, color: C.brassLight, alpha: 0.4 });
   });
 }
 

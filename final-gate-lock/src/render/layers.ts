@@ -10,6 +10,7 @@ import { C } from './palette';
 import { mistPuff, radialLight } from './textures';
 import {
   arrowContext,
+  badgeContext,
   discContext,
   highlightContext,
   irisContext,
@@ -37,6 +38,7 @@ export const LAYER_IDS = [
   'arrowCwPressed',
   'arrowCcw',
   'arrowCcwPressed',
+  'badge',
   'wall',
   'mistTile',
   // the door (see render/procedural/plate.ts)
@@ -84,6 +86,7 @@ const builders = new Map<LayerId, Builder>([
   ['arrowCwPressed', () => new Graphics(arrowContext('cw', true))],
   ['arrowCcw', () => new Graphics(arrowContext('ccw', false))],
   ['arrowCcwPressed', () => new Graphics(arrowContext('ccw', true))],
+  ['badge', () => new Graphics(badgeContext())],
   [
     'glow',
     () => {

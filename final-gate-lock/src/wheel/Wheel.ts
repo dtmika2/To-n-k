@@ -110,6 +110,8 @@ export class Wheel {
   /** Badges beside the arrows and the slot each one currently shows. */
   private readonly badges = { cw: new Container({ label: 'badge:cw' }), ccw: new Container({ label: 'badge:ccw' }) };
   private readonly badgeSlot = { cw: -1, ccw: -1 };
+  /** The `badge` layer holder in each badge (child 0; the glyphs follow it). */
+  private readonly badgePlates: Container[] = [];
   /** The dud start slot: drawn as a blank symbol. */
   readonly blankSlot: number;
   private overlay: Container | null = null;
@@ -200,14 +202,9 @@ export class Wheel {
     for (const dir of ['ccw', 'cw'] as const) {
       const b = this.badges[dir];
       b.position.set(dir === 'cw' ? ARROW.badgeOffsetX : -ARROW.badgeOffsetX, ARROW.badgeOffsetY);
-      const R = ARROW.badgeRadius;
-      const plate = new Graphics();
-      plate.circle(3, 4, R + 1.5).fill({ color: C.black, alpha: 0.55 });
-      plate.circle(0, 0, R).fill(C.enamel);
-      plate.circle(0, 0, R).stroke({ width: 3, color: C.brass });
-      plate.circle(0, 0, R + 1.5).stroke({ width: 1, color: C.brassDeep, alpha: 0.9 });
-      plate.circle(0, 0, R - 2.5).stroke({ width: 0.8, color: C.brassLight, alpha: 0.4 });
+      const plate = new Container({ label: 'slot:badge' });
       b.addChild(plate);
+      this.badgePlates.push(plate);
       this.arrows.addChild(b);
     }
 
@@ -224,6 +221,10 @@ export class Wheel {
     for (const [id, c] of this.slots) {
       for (const child of c.removeChildren()) child.destroy();
       c.addChild(this.factory.create(id));
+    }
+    for (const c of this.badgePlates) {
+      for (const child of c.removeChildren()) child.destroy();
+      c.addChild(this.factory.create('badge'));
     }
     this.factoryRevision = this.factory.revision;
     this.updateArrowVisuals();

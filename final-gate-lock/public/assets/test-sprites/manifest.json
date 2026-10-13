@@ -90,6 +90,13 @@
     "pivotX": 19,
     "pivotY": 19
   },
+  "badge": {
+    "file": "test-sprites/badge.png",
+    "width": 49,
+    "height": 50,
+    "pivotX": 23,
+    "pivotY": 23
+  },
   "wall": {
     "file": "test-sprites/wall.png",
     "width": 1282,

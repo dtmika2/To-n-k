@@ -32,6 +32,7 @@ const ABOUT = {
   arrowCwPressed: ['wheel', 'clockwise arrow button, pressed'],
   arrowCcw: ['wheel', 'counter-clockwise arrow button'],
   arrowCcwPressed: ['wheel', 'counter-clockwise arrow button, pressed'],
+  badge: ['wheel', 'round plate beside each arrow (number drawn in code on top)'],
   plateShadow: ['door', 'shadow the door casts on the wall'],
   oak: ['door', 'the wooden panel (only the wood)'],
   frame: ['door', 'brass trim around the panel, with its rivets (the panel area is transparent)'],
@@ -131,7 +132,7 @@ a time with your own art and only that piece changes.
 - **Transparent PNG**, fully transparent (alpha 0) wherever the layer should not cover anything.
 - The **door pieces** are positioned on the 1280×800 canvas: their pivot is minus their top-left
   position. The app splits the door into halves itself, so draw each piece whole (no left/right files).
-- **No digits** in any image: the numbers are drawn in code, on top of \`disc\`.
+- **No digits** in any image: the numbers are drawn in code, on top of \`disc\` and \`badge\`.
 - One light direction (top left) for every piece.
 - \`glow\`, dust and sparks always stay in code.
 
