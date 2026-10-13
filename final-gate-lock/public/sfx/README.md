@@ -13,7 +13,7 @@ synthesised stand-ins for every missing file.
 | spin_ratchet | ✅ | `spin_ratchet.mp3` (2.0 s) | `spin_ratchet.mp3` | | intro wheel spin |
 | detent_click | ✅ | `detent_click_1`, `_2`, `_3` (0.9 s each) | `detent_click_1.mp3` … `_3.mp3` | | wheel settles in a slot |
 | arrow_tap | ◐ 1 of 2 | `arrow_tap.mp3` (0.9 s) | `arrow_tap_1.mp3`, `arrow_tap_2.mp3` | | arrow pressed |
-| drag_tick | ❌ | — | `drag_tick_1.mp3`, `drag_tick_2.mp3` | | slot boundary crossed while dragging |
+| drag_tick | ✅ | `drag_tick.mp3`, `_2`, `_3` (0.6 s each) | `drag_tick_1.mp3` … `_3.mp3` | | while dragging: 3 ticks between two numbers (at 36°, 60°, 84° of the 120°); 2 during an arrow step (30°, 90°); quieter during the intro spin. Positions: `dragTicks` / `arrowTicks` in `src/feel.ts` |
 | eye_blink | ✅ | `eye_blink.mp3`, `_2`, `_3` (0.6 s each) | `eye_blink_1.mp3` … `_3.mp3` | | every blink, at low volume |
 | idle_whisper | ✅ | `idle_whisper_1` … `_4` (5.1 s each) | `idle_whisper_1.mp3` … `_4.mp3` | | random, every 30–60 s while playing |
 | success_stinger | ❌ | — | `success_stinger.mp3` | | lock solved |

@@ -8,7 +8,7 @@ export const CUES = {
   spin_ratchet: { loop: false, variants: 1 },
   detent_click: { loop: false, variants: 3 },
   arrow_tap: { loop: false, variants: 2 },
-  drag_tick: { loop: false, variants: 2 },
+  drag_tick: { loop: false, variants: 3 },
   eye_blink: { loop: false, variants: 3 },
   idle_whisper: { loop: false, variants: 4 },
   success_stinger: { loop: false, variants: 1 },

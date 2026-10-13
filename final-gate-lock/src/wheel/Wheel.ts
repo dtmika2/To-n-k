@@ -23,11 +23,12 @@ import { HeavySpring, notch, recoil, releaseCurve } from './heavy';
 import { Eye } from './Eye';
 import { STEP, angleForSlot, nearestDetent, normalizeAngle, slotOfAngle, snapTarget } from './snap';
 
+export type SlotPassReason = 'drag' | 'spin' | 'arrow';
 export type SettleReason = 'arrow' | 'drag' | 'spin';
 
 export interface WheelHooks {
   onSettle(w: Wheel, slot: number, reason: SettleReason): void;
-  onSlotPass(w: Wheel, reason: 'drag' | 'spin'): void;
+  onSlotPass(w: Wheel, reason: SlotPassReason): void;
 }
 
 interface Anim {
@@ -41,6 +42,17 @@ interface Anim {
 }
 
 const eased = (from: number, to: number, e: Ease) => (u: number) => from + (to - from) * e(u);
+
+/**
+ * drag_tick zone the plate is in: `marks` are the tick positions within each step between two
+ * numbers (fractions of STEP); crossing one, either way, changes the zone.
+ */
+function tickIndex(angle: number, marks: readonly number[]): number {
+  const s = angle / STEP;
+  const k = Math.floor(s);
+  const f = s - k;
+  return k * marks.length + marks.filter((m) => f >= m).length;
+}
 
 const DEG = Math.PI / 180;
 export const WINDOW_CENTER = ((WHEEL.windowStartDeg + WHEEL.windowEndDeg) / 2) * DEG;
@@ -122,7 +134,10 @@ export class Wheel {
   restSlot: number;
   private anim: Anim | null = null;
   private queued: Dir | null = null;
-  private lastDetent: number;
+  /** Index of the drag_tick zone the plate is in (see tickIndex). */
+  private lastTick: number;
+  /** Tick marks `lastTick` is counted against (drag and spin vs. arrow steps). */
+  private tickMarks: readonly number[] = FEEL.wheel.dragTicks;
   /** Pointer id currently dragging this wheel. */
   owner: number | null = null;
   /** Drag physics: the plate's mass follows the notched finger target. */
@@ -160,7 +175,7 @@ export class Wheel {
     this.restSlot = startSlot;
     this.blankSlot = startSlot;
     this.angle = angleForSlot(startSlot);
-    this.lastDetent = nearestDetent(this.angle);
+    this.lastTick = tickIndex(this.angle, this.tickMarks);
 
     const slot = (id: LayerId, parent: Container) => {
       const c = new Container({ label: `slot:${id}` });
@@ -308,7 +323,7 @@ export class Wheel {
     this.anim = null; // take over from wherever the plate is
     this.queued = null;
     this.recoilAt = -Infinity;
-    this.lastDetent = nearestDetent(this.angle);
+    this.lastTick = tickIndex(this.angle, this.tickMarks);
     this.spring = new HeavySpring(this.angle, 0, FEEL.wheel.dragOmega);
     this.dragStart = this.angle;
     // keep the plate where it is even if the drag starts between notches
@@ -368,7 +383,7 @@ export class Wheel {
     this.recoilAt = -Infinity;
     this.angle = angleForSlot(slot);
     this.restSlot = slot;
-    this.lastDetent = nearestDetent(this.angle);
+    this.lastTick = tickIndex(this.angle, this.tickMarks);
     this.irisRot.rotation = this.angle;
   }
 
@@ -377,7 +392,7 @@ export class Wheel {
     this.anim = null;
     this.recoilAt = -Infinity;
     this.angle = angle;
-    this.lastDetent = nearestDetent(angle);
+    this.lastTick = tickIndex(angle, this.tickMarks);
     this.irisRot.rotation = angle;
   }
 
@@ -404,7 +419,7 @@ export class Wheel {
     this.recoilAt = now;
     this.thudAt = now;
     this.angle = normalizeAngle(this.angle);
-    this.lastDetent = nearestDetent(this.angle);
+    this.lastTick = tickIndex(this.angle, this.tickMarks);
     this.restSlot = slotOfAngle(this.angle);
     this.eye.settle(now);
     this.hooks.onSettle(this, this.restSlot, a.reason);
@@ -530,12 +545,13 @@ export class Wheel {
       // dragging: the plate's mass follows the notched finger target
       this.spring.step(this.dragTarget, dt / 1000);
       this.angle = this.spring.x;
-      this.checkDetent('drag');
+      this.checkDetent('drag', FEEL.wheel.dragTicks);
     } else if (this.anim) {
       const a = this.anim;
       const t = Math.min(1, (now - a.start) / a.dur);
       this.angle = t >= 1 ? a.to : a.curve(t);
-      if (a.reason === 'spin') this.checkDetent('spin');
+      if (a.reason === 'spin') this.checkDetent('spin', FEEL.wheel.dragTicks);
+      else if (a.reason === 'arrow') this.checkDetent('arrow', FEEL.wheel.arrowTicks);
       if (t >= 1) this.finishAnim(now);
     }
     this.irisRot.rotation = this.angle + this.recoilOffset(now);
@@ -546,10 +562,14 @@ export class Wheel {
     this.applyPose();
   }
 
-  private checkDetent(reason: 'drag' | 'spin') {
-    const d = nearestDetent(this.angle);
-    if (d !== this.lastDetent) {
-      this.lastDetent = d;
+  private checkDetent(reason: SlotPassReason, marks: readonly number[]) {
+    const d = tickIndex(this.angle, marks);
+    if (marks !== this.tickMarks) {
+      // switched between drag and arrow marks: start counting afresh, no tick
+      this.tickMarks = marks;
+      this.lastTick = d;
+    } else if (d !== this.lastTick) {
+      this.lastTick = d;
       this.hooks.onSlotPass(this, reason);
     }
   }

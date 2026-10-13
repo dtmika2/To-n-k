@@ -22,6 +22,13 @@ export const FEEL = {
     dragOmega: 24,
     /** Notch strength 0…1: sticky near each number, quicker between numbers (ratchet). */
     notch: 0.55,
+    /**
+     * drag_tick positions between two neighbouring numbers, as fractions of the 120° step
+     * (0 and 1 are the numbers). Dragging (and the intro spin): 36°, 60°, 84°, kept to the
+     * empty middle. Arrow step: 30°, 90°.
+     */
+    dragTicks: [0.3, 0.5, 0.7] as readonly number[],
+    arrowTicks: [0.25, 0.75] as readonly number[],
     /** Release: arrival speed at the detent as a share of the average speed (hard stop). */
     arrivalSpeed: 0.55,
     /** Thud on settle: dip into the socket and a short jolt. */

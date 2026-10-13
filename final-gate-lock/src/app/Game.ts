@@ -31,7 +31,7 @@ import { WakeLock } from '../util/wakeLock';
 import { FEEL } from '../feel';
 import { BlinkCoordinator } from '../wheel/BlinkCoordinator';
 import { Eye } from '../wheel/Eye';
-import { Wheel, type SettleReason } from '../wheel/Wheel';
+import { Wheel, type SettleReason, type SlotPassReason } from '../wheel/Wheel';
 import { routeWheelPress, type WheelInputHooks } from '../wheel/WheelInput';
 import { Stage } from './Stage';
 
@@ -257,8 +257,8 @@ export class Game {
     if (this.model.isSolved() && this.wheels.every((x) => x.atRest)) this.machine.solved();
   }
 
-  private onSlotPass(_w: Wheel, reason: 'drag' | 'spin') {
-    if (reason === 'drag') this.sfx.play('drag_tick');
+  private onSlotPass(_w: Wheel, reason: SlotPassReason) {
+    if (reason !== 'spin') this.sfx.play('drag_tick');
     else this.sfx.play('drag_tick', { volume: 0.35 });
   }
 

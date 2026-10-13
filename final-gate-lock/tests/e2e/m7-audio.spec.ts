@@ -73,7 +73,7 @@ test('?placeholderSfx synthesises every cue; a real file wins over its placehold
   expect(sources.detent_click).toEqual(['file', 'placeholder', 'placeholder']);
   const all = Object.values(sources).flat();
   expect(all.filter((s) => s === 'missing')).toHaveLength(0);
-  expect(all.length).toBe(1 + 2 + 1 + 3 + 1 + 3 + 2 + 2 + 3 + 4 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1);
+  expect(all.length).toBe(1 + 2 + 1 + 3 + 1 + 3 + 2 + 3 + 3 + 4 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1);
 });
 
 test('first tap resumes the context; arrow, click, mist loop; ducking and cues through a success', async ({ page }) => {
