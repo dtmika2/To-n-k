@@ -271,6 +271,7 @@ export class Eye {
         if (this.forcedBlinkAt !== null && now >= this.forcedBlinkAt) {
           this.forcedBlinkAt = null;
           this.blink = { start: now, dur: SLOW_BLINK_MS };
+          this.o.onBlink?.();
         }
         if (!this.blink && now >= this.nextBlinkAt) {
           if (this.o.gate.tryBlink(now, BLINK_MS)) {

@@ -13,12 +13,24 @@ import { pickNoRepeat } from '../util/random';
 type Ctx = AudioContext;
 
 interface LoopState {
-  src: AudioBufferSourceNode;
+  /** Playing and queued sources (an alternating loop keeps the next run queued ahead). */
+  srcs: Set<AudioBufferSourceNode>;
   gain: GainNode;
+  stopped: boolean;
+  /** Alternating loops: when the last queued run ends. */
+  nextAt: number;
 }
 
 /** Max simultaneous voices per cue (rapid ticks shouldn't pile up). */
-const MAX_VOICES: Partial<Record<Cue, number>> = { drag_tick: 4, detent_click: 6, arrow_tap: 4, eye_blink: 1, spin_ratchet: 4, lock_clunk: 8 };
+const MAX_VOICES: Partial<Record<Cue, number>> = { drag_tick: 4, detent_click: 6, arrow_tap: 4, eye_blink: 4, spin_ratchet: 4, lock_clunk: 8 };
+
+/** Loop level relative to the file (default 1). */
+const LOOP_VOLUME: Partial<Record<Cue, number>> = { eye_loop: 0.25 };
+
+/** Alternating loops: one variant repeats a random number of times in [min, max], then fades out and the next starts. */
+const LOOP_REPEATS: Partial<Record<Cue, readonly [number, number]>> = { eye_loop: [3, 8] };
+/** Fade-out at the end of each alternating run (s). */
+const RUN_FADE_S = 1;
 
 export class AudioManager implements Sfx {
   readonly ctx: Ctx | null;
@@ -177,17 +189,59 @@ export class AudioManager implements Sfx {
   private startLoop(cue: Cue, fadeMs: number) {
     const ctx = this.ctx;
     if (!ctx || !this.ambience || this.loops.has(cue)) return;
+    const g = ctx.createGain();
+    const l: LoopState = { srcs: new Set(), gain: g, stopped: false, nextAt: ctx.currentTime };
+    const repeats = LOOP_REPEATS[cue];
+    if (repeats) {
+      // queue two runs; each run that ends queues the next, so one is always waiting
+      if (!this.queueRun(cue, l, repeats) || !this.queueRun(cue, l, repeats)) return;
+    } else {
+      const buffer = this.pick(cue);
+      if (!buffer) return;
+      const src = ctx.createBufferSource();
+      src.buffer = buffer;
+      src.loop = true;
+      src.connect(g);
+      src.start();
+      l.srcs.add(src);
+    }
+    g.gain.value = 0;
+    g.gain.setTargetAtTime(LOOP_VOLUME[cue] ?? 1, ctx.currentTime, fadeMs / 3000);
+    g.connect(this.ambience);
+    this.loops.set(cue, l);
+  }
+
+  /**
+   * Alternating loop: one variant played `repeats` times back to back, then faded out over
+   * RUN_FADE_S (the variants don't join seamlessly); the next run starts once it is silent.
+   */
+  private queueRun(cue: Cue, l: LoopState, [min, max]: readonly [number, number]): boolean {
+    const ctx = this.ctx!;
     const buffer = this.pick(cue);
-    if (!buffer) return;
+    if (!buffer) return false;
+    const n = min + Math.floor(Math.random() * (max - min + 1));
     const src = ctx.createBufferSource();
     src.buffer = buffer;
     src.loop = true;
-    const g = ctx.createGain();
-    g.gain.value = 0;
-    g.gain.setTargetAtTime(1, ctx.currentTime, fadeMs / 3000);
-    src.connect(g).connect(this.ambience);
-    src.start();
-    this.loops.set(cue, { src, gain: g });
+    const fade = ctx.createGain();
+    src.connect(fade).connect(l.gain);
+    const start = l.nextAt;
+    const fadeAt = start + n * buffer.duration;
+    l.nextAt = fadeAt + RUN_FADE_S;
+    // a short fade-in too, so the new run doesn't start with a click
+    fade.gain.setValueAtTime(0, start);
+    fade.gain.linearRampToValueAtTime(1, start + 0.05);
+    fade.gain.setValueAtTime(1, fadeAt);
+    fade.gain.linearRampToValueAtTime(0, l.nextAt);
+    src.start(start);
+    src.stop(l.nextAt);
+    l.srcs.add(src);
+    src.onended = () => {
+      l.srcs.delete(src);
+      fade.disconnect();
+      if (!l.stopped) this.queueRun(cue, l, [min, max]);
+    };
+    return true;
   }
 
   private stopLoop(cue: Cue, fadeMs: number) {
@@ -195,9 +249,15 @@ export class AudioManager implements Sfx {
     const l = this.loops.get(cue);
     if (!ctx || !l) return;
     this.loops.delete(cue);
+    l.stopped = true;
     l.gain.gain.setTargetAtTime(0, ctx.currentTime, fadeMs / 3000);
-    l.src.stop(ctx.currentTime + fadeMs / 1000 + 0.1);
-    l.src.onended = () => l.gain.disconnect();
+    // a queued run whose start lies past `end` never plays
+    const end = ctx.currentTime + fadeMs / 1000 + 0.1;
+    for (const src of l.srcs) {
+      src.onended = null;
+      src.stop(end);
+    }
+    setTimeout(() => l.gain.disconnect(), fadeMs + 200);
   }
 
   duck(on: boolean, fadeMs = 200): void {

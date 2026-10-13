@@ -41,6 +41,7 @@ export async function runSuccess(game: Game, seq: Seq): Promise<void> {
 
   // 2. every eye opens wide, slow teal pulse
   game.sfx.play('success_stinger');
+  game.sfx.play('eye_glowup');
   for (const w of game.wheels) w.eye.setMode('wide', seq.now);
   void seq
     .fire({ duration: 420, ease: ease.outQuad, onUpdate: (k) => game.unlock.setPulse(0.55 * k) })

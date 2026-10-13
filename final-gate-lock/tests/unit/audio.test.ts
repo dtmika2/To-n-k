@@ -22,7 +22,7 @@ describe('placeholder synthesis', () => {
   }
 
   it('loops fade in and out at the seams (no click)', () => {
-    for (const cue of ['mist_loop', 'core_hum'] as const) {
+    for (const cue of ['mist_loop', 'eye_loop', 'core_hum'] as const) {
       const { samples } = synthesize(cue, 0, 22050);
       expect(Math.abs(samples[0])).toBeLessThan(1e-6);
       expect(Math.abs(samples[samples.length - 1])).toBeLessThan(0.01);

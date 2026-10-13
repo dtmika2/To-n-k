@@ -262,11 +262,8 @@ export class Game {
     else this.sfx.play('drag_tick', { volume: 0.35 });
   }
 
-  private lastBlinkSound = -Infinity;
+  /** Every blink is heard (low volume). */
   private onBlink() {
-    // low volume, max one per 2 s globally
-    if (this.clock.now - this.lastBlinkSound < 2000) return;
-    this.lastBlinkSound = this.clock.now;
     this.sfx.play('eye_blink', { volume: 0.35 });
   }
 
@@ -291,8 +288,12 @@ export class Game {
       case 'Shrouded':
         this.enterShrouded();
         this.sfx.loop('mist_loop', true, 1500);
+        this.sfx.loop('eye_loop', false, 1500);
         break;
       case 'Intro':
+        // the mist sound goes with the mist: it fades while the mist parts
+        this.sfx.loop('mist_loop', false, FEEL.intro.veilMs);
+        this.sfx.loop('eye_loop', true, FEEL.intro.veilMs);
         this.runSeq((seq) => runIntro(this, seq, this.introOrigin), () => this.machine.introDone());
         break;
       case 'Playable':
@@ -305,11 +306,13 @@ export class Game {
         this.layers.veil.alpha = 0;
         this.glimmers.level = 0;
         this.mist.setDensity(0, 1500);
-        this.sfx.loop('mist_loop', true, 1500);
+        this.sfx.loop('mist_loop', false, 1500);
+        this.sfx.loop('eye_loop', true, 1500);
         this.scheduleWhisper();
         break;
       case 'Success':
         this.sfx.loop('mist_loop', false, 300);
+        this.sfx.loop('eye_loop', false, 300);
         this.runSeq((seq) => runSuccess(this, seq), () => this.machine.successDone());
         break;
       case 'Open':

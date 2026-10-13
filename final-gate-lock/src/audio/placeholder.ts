@@ -100,7 +100,8 @@ export function synthesize(cue: Cue, variant: number, sr = 44100): Synth {
       }
       break;
     }
-    case 'success_stinger': {
+    case 'success_stinger':
+    case 'eye_glowup': {
       out = buf(2.4, sr);
       const chord = [220, 277.18, 329.63, 440];
       for (let i = 0; i < out.length; i++) {
@@ -162,6 +163,7 @@ export function synthesize(cue: Cue, variant: number, sr = 44100): Synth {
       break;
     }
     case 'mist_loop':
+    case 'eye_loop':
     case 'core_hum': {
       // seamless loop: whole number of cycles, noise crossfaded at the ends
       const len = 4;
@@ -169,7 +171,11 @@ export function synthesize(cue: Cue, variant: number, sr = 44100): Synth {
       let lp = 0;
       for (let i = 0; i < out.length; i++) {
         const t = i / sr;
-        if (cue === 'core_hum') {
+        if (cue === 'eye_loop') {
+          // slow low throb; the second variant sits a little higher
+          const f = v === 0 ? 70 : 82;
+          out[i] = Math.sin(TAU * f * t) * 0.35 * (0.6 + 0.4 * Math.sin((TAU * 2 * t) / len));
+        } else if (cue === 'core_hum') {
           out[i] = (Math.sin(TAU * 55 * t) * 0.5 + Math.sin(TAU * 110 * t) * 0.25 + Math.sin(TAU * 165 * t) * 0.08) * 0.5;
         } else {
           lp += 0.02 * (noise() - lp);

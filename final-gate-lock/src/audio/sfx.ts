@@ -1,6 +1,8 @@
 /** Sound cue names (PLAN §7) and the interface the game talks to. */
 export const CUES = {
   mist_loop: { loop: true, variants: 1 },
+  /** Ambience from the mist parting until the lock opens; the two variants alternate (AudioManager). */
+  eye_loop: { loop: true, variants: 2 },
   reveal_whoosh: { loop: false, variants: 1 },
   eye_open: { loop: false, variants: 3 },
   spin_ratchet: { loop: false, variants: 1 },
@@ -10,6 +12,7 @@ export const CUES = {
   eye_blink: { loop: false, variants: 3 },
   idle_whisper: { loop: false, variants: 4 },
   success_stinger: { loop: false, variants: 1 },
+  eye_glowup: { loop: false, variants: 1 },
   lock_clunk: { loop: false, variants: 2 },
   plate_slide: { loop: false, variants: 1 },
   dust_fall: { loop: false, variants: 1 },

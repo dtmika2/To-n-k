@@ -73,7 +73,7 @@ test('?placeholderSfx synthesises every cue; a real file wins over its placehold
   expect(sources.detent_click).toEqual(['file', 'placeholder', 'placeholder']);
   const all = Object.values(sources).flat();
   expect(all.filter((s) => s === 'missing')).toHaveLength(0);
-  expect(all.length).toBe(1 + 1 + 3 + 1 + 3 + 2 + 2 + 3 + 4 + 1 + 1 + 1 + 1 + 1 + 1 + 1);
+  expect(all.length).toBe(1 + 2 + 1 + 3 + 1 + 3 + 2 + 2 + 3 + 4 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1);
 });
 
 test('first tap resumes the context; arrow, click, mist loop; ducking and cues through a success', async ({ page }) => {
@@ -83,7 +83,7 @@ test('first tap resumes the context; arrow, click, mist loop; ducking and cues t
   const touch = await Touch.create(page);
   await tapArrow(page, touch, 1, 'cw'); // any tap resumes audio
   await expect.poll(() => g(page, (x) => x.audio.ctx?.state)).toBe('running');
-  await expect.poll(() => g(page, (x) => x.audio.activeLoops)).toContain('mist_loop');
+  await expect.poll(() => g(page, (x) => x.audio.activeLoops)).toEqual(['eye_loop']); // no mist while playing
   await page.waitForTimeout(300);
   await tapArrow(page, touch, 1, 'ccw'); // back to correct
   await page.waitForTimeout(300);
@@ -95,7 +95,7 @@ test('first tap resumes the context; arrow, click, mist loop; ducking and cues t
   expect(await g(page, (x) => x.audio.isDucked)).toBe(false);
   await expect.poll(() => g(page, (x) => x.snap().state), { timeout: 10_000 }).toBe('Open');
   const played = await g(page, (x) => x.audio.played);
-  for (const cue of ['arrow_tap', 'detent_click', 'success_stinger', 'lock_clunk', 'plate_slide', 'dust_fall', 'reveal_whoosh']) {
+  for (const cue of ['arrow_tap', 'detent_click', 'success_stinger', 'eye_glowup', 'lock_clunk', 'plate_slide', 'dust_fall', 'reveal_whoosh']) {
     expect(played, cue).toContain(cue);
   }
   expect(played.indexOf('success_stinger')).toBeGreaterThan(played.lastIndexOf('arrow_tap'));
