@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#050405" />
+    <link rel="icon" type="image/png" href="/icons/icon-192.png" />
+    <link rel="apple-touch-icon" href="/icons/icon-192.png" />
+    <title>Install Gate Lock</title>
+    <style>
+      :root {
+        --bg: #050405;
+        --ink: #e9dcc0;
+        --muted: #9d8f74;
+        --brass: #a07e35;
+        --brass-light: #c9a75a;
+        --brass-deep: #34250c;
+        --teal: #7fe3d4;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        margin: 0;
+        min-height: 100%;
+        background: var(--bg);
+        color: var(--ink);
+        font-family: system-ui, sans-serif;
+      }
+      body {
+        display: grid;
+        place-items: center;
+        min-height: 100vh;
+        padding: 24px 16px;
+        background: radial-gradient(ellipse at 50% 35%, #1a120a 0%, var(--bg) 65%);
+      }
+      main {
+        width: min(460px, 100%);
+        text-align: center;
+      }
+      img {
+        width: 112px;
+        height: 112px;
+        border-radius: 24px;
+        box-shadow: 0 6px 28px rgba(0, 0, 0, 0.7);
+      }
+      h1 {
+        font-family: 'Cinzel', serif;
+        font-weight: 700;
+        letter-spacing: 0.06em;
+        font-size: 30px;
+        margin: 20px 0 6px;
+        color: var(--brass-light);
+      }
+      .lead {
+        color: var(--muted);
+        margin: 0 0 28px;
+        line-height: 1.5;
+      }
+      button,
+      .open {
+        display: inline-block;
+        min-width: 240px;
+        padding: 16px 28px;
+        border-radius: 999px;
+        border: 2px solid var(--brass-light);
+        background: linear-gradient(180deg, #c9a75a 0%, #a07e35 55%, #6e5420 100%);
+        color: #1a1006;
+        font: 700 18px 'Cinzel', serif;
+        letter-spacing: 0.08em;
+        text-decoration: none;
+        cursor: pointer;
+        box-shadow: 0 4px 18px rgba(0, 0, 0, 0.6);
+      }
+      button:disabled {
+        opacity: 0.35;
+        cursor: default;
+      }
+      .open {
+        background: transparent;
+        color: var(--brass-light);
+        margin-top: 14px;
+      }
+      [hidden] {
+        display: none !important;
+      }
+      #status {
+        margin: 22px 0 0;
+        min-height: 1.5em;
+        line-height: 1.5;
+      }
+      #status.ok {
+        color: var(--teal);
+      }
+      #offline {
+        margin: 6px 0 0;
+        font-size: 14px;
+        color: var(--muted);
+      }
+      #offline.ok {
+        color: var(--teal);
+      }
+      details {
+        margin-top: 30px;
+        text-align: left;
+        color: var(--muted);
+        border-top: 1px solid var(--brass-deep);
+        padding-top: 14px;
+      }
+      summary {
+        cursor: pointer;
+        color: var(--ink);
+      }
+      ol {
+        padding-left: 20px;
+        line-height: 1.6;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <img src="/icons/icon-192.png" alt="" />
+      <h1>Final Gate Lock</h1>
+      <p class="lead">Install the lock on this tablet. Once installed it runs fullscreen and works without internet.</p>
+
+      <button id="install" type="button" disabled>Install</button>
+      <div><a class="open" id="open" href="./" hidden>Open the lock</a></div>
+
+      <p id="status" role="status">Getting ready…</p>
+      <p id="offline">Saving files for offline use…</p>
+
+      <details>
+        <summary>The button doesn't work?</summary>
+        <ol>
+          <li>Use <strong>Chrome</strong> (not an in-app browser or Samsung Internet).</li>
+          <li>Chrome menu <strong>⋮</strong> → <strong>Add to Home screen</strong> → <strong>Install</strong>.</li>
+          <li>If it is already installed, open it from the home-screen icon (a brass eye).</li>
+        </ol>
+      </details>
+    </main>
+    <script type="module" src="/src/install/installPage.ts"></script>
+  </body>
+</html>

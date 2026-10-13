@@ -12,6 +12,7 @@ export default defineConfig({
       input: {
         main: resolve(__dirname, 'index.html'),
         wheel: resolve(__dirname, 'wheel.html'),
+        install: resolve(__dirname, 'install.html'),
       },
     },
   },

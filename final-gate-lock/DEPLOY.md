@@ -23,9 +23,13 @@ screen), rebuild and redeploy. Sound files go in `public/sfx/` (see the README t
 
 ## 2. Install on the tablet
 
-1. Open the HTTPS URL in **Chrome** on the Tab S11.
-2. Tap the lock once, so the intro plays and the service worker finishes installing.
-3. Chrome menu ⋮ → **Add to Home screen → Install**. The icon is a brass eye.
+The site is published by GitHub Pages on every push to `main` (`.github/workflows/pages.yml`):
+**https://dtmika2.github.io/To-n-k/**.
+
+1. Open **https://dtmika2.github.io/To-n-k/install.html** in **Chrome** on the Tab S11.
+2. Wait until it says *All files saved: works offline* and the **Install** button lights up.
+3. Tap **Install** and confirm. The icon is a brass eye. (Without the page: Chrome menu ⋮ →
+   **Add to Home screen → Install**.)
 4. Launch it from the home-screen icon. It opens fullscreen in landscape.
 5. **Offline check:** turn on Airplane mode, close the app from Recents, launch it again. It must
    boot to the misty screen.
