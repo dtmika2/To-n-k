@@ -8,7 +8,7 @@ export interface ValidationResult {
   warnings: string[];
 }
 
-type ValidatorSettings = Pick<Settings, 'hit' | 'master' | 'validator'>;
+type ValidatorSettings = Pick<Settings, 'hit' | 'master' | 'creative' | 'validator'>;
 
 /** Plan §8: hard rules for pattern.json, plus a few warnings. */
 export function validatePattern(pattern: Pattern, s: ValidatorSettings): ValidationResult {
@@ -38,7 +38,7 @@ export function validatePattern(pattern: Pattern, s: ValidatorSettings): Validat
     if (sequence[i] === sequence[i - 1]) errors.push(`point ${sequence[i]} follows itself at step ${i}`);
   }
 
-  // Points overlapping each other or the master button.
+  // Points overlapping each other or the master/creative buttons.
   for (let i = 0; i < points.length; i++) {
     const a = points[i];
     for (let j = i + 1; j < points.length; j++) {
@@ -49,9 +49,13 @@ export function validatePattern(pattern: Pattern, s: ValidatorSettings): Validat
         warnings.push(`points ${a.id} and ${b.id} are close: a generous hit on one reaches the other's wrong radius`);
       }
     }
-    const m = s.master;
-    if (dist(toWorld(a), toWorld(m)) < a.r * s.hit.correctScale + m.r * s.hit.masterScale) {
-      errors.push(`point ${a.id} overlaps the master button's hit area`);
+    for (const [name, m] of [
+      ['master', s.master],
+      ['creative', s.creative],
+    ] as const) {
+      if (dist(toWorld(a), toWorld(m)) < a.r * s.hit.correctScale + m.r * s.hit.masterScale) {
+        errors.push(`point ${a.id} overlaps the ${name} button's hit area`);
+      }
     }
     const ex = s.validator.edgeWarnFraction;
     const ny = a.r / ASPECT;

@@ -57,6 +57,13 @@ describe('validator', () => {
     });
   }
 
+  it('rejects a point on the creative button', () => {
+    const p = clone();
+    const free = p.points.find((q) => !p.sequence.includes(q.id))!;
+    Object.assign(free, { x: settings.creative.x, y: settings.creative.y - 0.02 });
+    expect(validatePattern(p, settings).errors.join('\n')).toMatch(/creative button/);
+  });
+
   it('warns about points near the edge', () => {
     const p = clone();
     p.points[1].x = 0.06;

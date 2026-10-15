@@ -17,7 +17,7 @@ export class DebugOverlay {
     this.el.style.display = v ? 'block' : 'none';
   }
 
-  update(s: GameState, ctx: GameContext, now: number, fps: number, audio: string): void {
+  update(s: GameState, ctx: GameContext, now: number, fps: number, extra: string): void {
     if (!this.visible) return;
     const t = ctx.timing;
     const secs = (ms: number) => `${(Math.max(0, ms) / 1000).toFixed(1)} s`;
@@ -30,8 +30,9 @@ export class DebugOverlay {
       `wrong strikes ${s.wrongStrikes}  lift strikes ${s.liftStrikes}`,
       `lift timer ${lift}  inactivity ${idle}`,
       `pointer ${s.pointer ? `${s.pointer.id}${s.pointer.ignored ? ' (ignored)' : ''}` : '—'}  hysteresis [${s.inside.join(',')}]`,
-      `audio ${audio}  ${fps.toFixed(0)} fps`,
-      `D overlay · E editor · R reset · 1–4 INTRO/GAME/REVEAL/IDLE`,
+      ...(s.mode === 'CREATIVE' ? [`chain ${s.chain.join(' → ') || '—'}`] : []),
+      `${fps.toFixed(0)} fps  ${extra}`,
+      `D overlay · P primitives · E editor · R reset · 1–5 INTRO/GAME/REVEAL/IDLE/CREATIVE`,
     ].join('\n');
   }
 }

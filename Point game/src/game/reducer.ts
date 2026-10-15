@@ -20,6 +20,7 @@ export function initialState(now: number): GameState {
     demoStep: 0,
     collapseFrom: 0,
     cloudsReturning: false,
+    chain: [],
   };
 }
 
@@ -47,6 +48,7 @@ export function createReducer(ctx: GameContext): Reducer {
     s.tether = null;
     s.inside = [];
     s.collapseFrom = 0;
+    s.chain = [];
   }
 
   function setSub(s: GameState, sub: GameState['sub'], now: number): void {
@@ -74,6 +76,22 @@ export function createReducer(ctx: GameContext): Reducer {
     s.cloudsReturning = false;
     fx.push({ type: 'startGame' });
     startDemo(s, now, fx);
+  }
+
+  function enterCreative(s: GameState, now: number, fx: Effect[]): void {
+    clearAttempt(s);
+    s.mode = 'CREATIVE';
+    s.modeSince = now;
+    setSub(s, 'READY', now);
+    fx.push({ type: 'creativeStart' });
+  }
+
+  function exitCreative(s: GameState, now: number, fx: Effect[]): void {
+    s.mode = 'GAME';
+    s.modeSince = now;
+    if (s.pointer) s.pointer.ignored = true;
+    fx.push({ type: 'creativeExit' });
+    toReady(s, now, fx);
   }
 
   function toIntro(s: GameState, now: number, fx: Effect[], reason: 'inactivity' | 'cycle' | 'debug'): void {
@@ -136,6 +154,10 @@ export function createReducer(ctx: GameContext): Reducer {
       startGame(s, now, fx);
       return;
     }
+    if (s.mode === 'CREATIVE') {
+      onCreativeDown(s, pos, now, fx);
+      return;
+    }
     if (s.mode !== 'GAME') return;
     const { correctScale, masterScale } = ctx.hit;
     switch (s.sub) {
@@ -145,6 +167,8 @@ export function createReducer(ctx: GameContext): Reducer {
           startTracing(s, pos, now, fx, 'start');
         } else if (dist(pos, ctx.master.pos) <= masterScale * ctx.master.r) {
           startDemo(s, now, fx);
+        } else if (dist(pos, ctx.creative.pos) <= masterScale * ctx.creative.r) {
+          enterCreative(s, now, fx);
         }
         return;
       case 'LIFTED':
@@ -160,6 +184,24 @@ export function createReducer(ctx: GameContext): Reducer {
   }
 
   /**
+   * Earliest entry at or after `t0` along a→b into a candidate point's circle. `radius` returns null
+   * for points that cannot be hit; on a tie the `prefer`red point wins.
+   */
+  function firstHit(a: Vec, b: Vec, t0: number, radius: (id: number) => number | null, prefer?: number): { id: number; t: number } | null {
+    const from = lerpVec(a, b, t0);
+    let best: { id: number; t: number } | null = null;
+    for (const p of ctx.points) {
+      const r = radius(p.id);
+      if (r === null) continue;
+      const tt = segmentCircleEntry(from, b, p.pos, r);
+      if (tt === null) continue;
+      const t = t0 + tt * (1 - t0);
+      if (!best || t < best.t || (t === best.t && p.id === prefer)) best = { id: p.id, t };
+    }
+    return best;
+  }
+
+  /**
    * Follow the finger along the interpolated path. Each sample-to-sample segment is hit-tested against
    * every point's circle; hits are processed in order along the path (so a fast swipe cannot skip a point).
    */
@@ -170,22 +212,19 @@ export function createReducer(ctx: GameContext): Reducer {
       const b = path[i];
       let t0 = 0;
       for (;;) {
-        const from = lerpVec(a, b, t0);
         const last = lastPoint(s);
         const expected = ctx.sequence[s.progress];
-        let best: { id: number; t: number; correct: boolean } | null = null;
-        for (const p of ctx.points) {
-          if (p.id === last || s.inside.includes(p.id)) continue;
-          const correct = p.id === expected;
-          const tt = segmentCircleEntry(from, b, p.pos, (correct ? correctScale : wrongScale) * p.r);
-          if (tt === null) continue;
-          const t = t0 + tt * (1 - t0);
-          if (!best || t < best.t || (t === best.t && correct)) best = { id: p.id, t, correct };
-        }
+        const best = firstHit(
+          a,
+          b,
+          t0,
+          (id) => (id === last || s.inside.includes(id) ? null : (id === expected ? correctScale : wrongScale) * point(id).r),
+          expected,
+        );
         if (!best) break;
         const hitPos = lerpVec(a, b, best.t);
 
-        if (!best.correct) {
+        if (best.id !== expected) {
           s.wrongStrikes++;
           fx.push({ type: 'flinch', point: best.id });
           if (s.wrongStrikes >= 2) {
@@ -217,6 +256,50 @@ export function createReducer(ctx: GameContext): Reducer {
     s.tether = path[path.length - 1];
   }
 
+  // ── creative mode ────────────────────────────────────────────
+
+  function onCreativeDown(s: GameState, pos: Vec, now: number, fx: Effect[]): void {
+    if (dist(pos, ctx.creative.pos) <= ctx.hit.masterScale * ctx.creative.r) {
+      exitCreative(s, now, fx);
+      return;
+    }
+    s.chain = [];
+    s.inside = [];
+    s.tether = null;
+    const hit = ctx.points.find((p) => within(pos, p.id, ctx.hit.creativeScale));
+    if (hit) {
+      s.chain = [hit.id];
+      s.inside = [hit.id];
+      s.tether = pos;
+      fx.push({ type: 'playNote', point: hit.id, kind: 'start' });
+    }
+  }
+
+  /** Free play: any point the finger reaches joins the chain (no wrong points, no strikes). */
+  function creativeTrace(s: GameState, path: Vec[], fx: Effect[]): void {
+    const { creativeScale, exitHysteresis } = ctx.hit;
+    for (let i = 1; i < path.length; i++) {
+      const a = path[i - 1];
+      const b = path[i];
+      let t0 = 0;
+      for (;;) {
+        const last = s.chain[s.chain.length - 1];
+        const best = firstHit(a, b, t0, (id) => (id === last || s.inside.includes(id) ? null : creativeScale * point(id).r));
+        if (!best) break;
+        if (last === undefined) fx.push({ type: 'playNote', point: best.id, kind: 'start' });
+        else {
+          fx.push({ type: 'creativeLink', from: last, to: best.id });
+          fx.push({ type: 'playNote', point: best.id, kind: 'reach' });
+        }
+        s.chain.push(best.id);
+        s.inside.push(best.id);
+        t0 = best.t;
+      }
+      s.inside = s.inside.filter((id) => within(b, id, exitHysteresis));
+    }
+    s.tether = s.chain.length > 0 ? path[path.length - 1] : null;
+  }
+
   // ── time ─────────────────────────────────────────────────────
 
   function tick(s: GameState, now: number, fx: Effect[]): void {
@@ -234,6 +317,9 @@ export function createReducer(ctx: GameContext): Reducer {
           fx.push({ type: 'cloudsReturn' });
         }
         if (s.cloudsReturning && now - s.modeSince >= t.revealHoldMs + t.cloudsReturnMs) toIntro(s, now, fx, 'cycle');
+        return;
+      case 'CREATIVE':
+        if (now - s.lastInputAt >= t.inactivityMs) toIntro(s, now, fx, 'inactivity');
         return;
       case 'GAME':
         break;
@@ -293,11 +379,14 @@ export function createReducer(ctx: GameContext): Reducer {
         s.progress = N;
         toIdle(s, now, fx);
         return;
+      case 'CREATIVE':
+        enterCreative(s, now, fx);
+        return;
     }
   }
 
   return function reduce(prev: GameState, ev: GameEvent, now: number): ReduceResult {
-    const s: GameState = { ...prev, inside: [...prev.inside], pointer: prev.pointer && { ...prev.pointer } };
+    const s: GameState = { ...prev, inside: [...prev.inside], chain: [...prev.chain], pointer: prev.pointer && { ...prev.pointer } };
     const fx: Effect[] = [];
     switch (ev.type) {
       case 'POINTER_DOWN':
@@ -313,6 +402,7 @@ export function createReducer(ctx: GameContext): Reducer {
         s.finger = ev.path[ev.path.length - 1];
         s.lastInputAt = now;
         if (s.mode === 'GAME' && s.sub === 'TRACING' && !s.pointer.ignored) trace(s, [start, ...ev.path], now, fx);
+        else if (s.mode === 'CREATIVE' && !s.pointer.ignored) creativeTrace(s, [start, ...ev.path], fx);
         break;
       }
       case 'POINTER_UP':
@@ -323,6 +413,11 @@ export function createReducer(ctx: GameContext): Reducer {
         if (s.mode === 'GAME' && s.sub === 'TRACING') {
           s.tether = s.finger; // the tether hangs where the finger left
           lift(s, now, fx);
+        } else if (s.mode === 'CREATIVE' && s.chain.length > 0) {
+          fx.push({ type: 'creativeRelease', chain: s.chain });
+          s.chain = [];
+          s.inside = [];
+          s.tether = null;
         }
         s.finger = null;
         break;
@@ -331,6 +426,10 @@ export function createReducer(ctx: GameContext): Reducer {
         break;
       case 'MASTER_PRESSED':
         if (s.mode === 'GAME' && s.sub === 'READY') startDemo(s, now, fx);
+        break;
+      case 'CREATIVE_PRESSED':
+        if (s.mode === 'GAME' && s.sub === 'READY') enterCreative(s, now, fx);
+        else if (s.mode === 'CREATIVE') exitCreative(s, now, fx);
         break;
       case 'DEMO_DONE':
         if (s.mode === 'GAME' && s.sub === 'DEMO') toReady(s, now, fx);

@@ -12,8 +12,13 @@ export const settings = {
     revealHoldMs: 15000,
     cloudsReturnMs: 3000,
     inactivityMs: 30000,
+    /** Creative mode: how long a drawing takes to fade after the finger lifts. */
+    creativeFadeMs: 3000,
+    /** INTRO attract demo: three random points connect, then the line un-draws from start to end. */
+    attract: { drawMs: 700, noteMs: 600, holdMs: 900, undrawMs: 1600, gapMs: 1000 },
   },
-  hit: { correctScale: 1.5, wrongScale: 0.6, exitHysteresis: 1.25, masterScale: 1.5 },
+  /** creativeScale: point radius (× r) for connecting points in creative mode. */
+  hit: { correctScale: 1.5, wrongScale: 0.6, exitHysteresis: 1.25, masterScale: 1.5, creativeScale: 1.0 },
   audio: {
     masterGain: 0.7,
     reverbWet: 0.35,
@@ -28,11 +33,23 @@ export const settings = {
     introDroneLevel: 0.035,
     padLevel: 0.08,
   },
-  display: { rotateDeg: 0, renderScale: 0.5 },
+  display: {
+    rotateDeg: 0,
+    /** Resolution of the cloud/mist shader layer relative to the screen. */
+    renderScale: 0.5,
+    /** fBm octaves in the cloud/mist shader (performance vs. detail). */
+    noiseOctaves: 5,
+    /** Lower renderScale step by step (never below minRenderScale) if the frame rate stays under 55 fps. */
+    autoScale: true,
+    minRenderScale: 0.3,
+    stars: 600,
+  },
   game: { allowSkipDemo: false },
   reveal: { image: 'assets/reveal-number.png', widthFraction: 0.45, placeholderText: '5' },
   /** Master button, in normalized portrait coordinates (x across, y down); r is in portrait-width units. */
   master: { x: 0.5, y: 0.06, r: 0.045 },
+  /** Creative-mode button (free play), bottom centre; same units as master. */
+  creative: { x: 0.5, y: 0.94, r: 0.045 },
   /** Validator: extra clearance (portrait-width units) added to wrongScale × r for segments passing points. */
   validator: { segmentMargin: 0.015, edgeWarnFraction: 0.04 },
 };

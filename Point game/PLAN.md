@@ -360,3 +360,15 @@ Goal: the owner can play the full rules on the real TV, hear the real sound, and
 - Final point positions and sequence (set with the editor, then re-run `assign-pitches`).
 - `public/assets/reveal-number.png`: transparent background, high resolution (at least 1500 px tall).
 - The PC's OS (Windows assumed) and its audio output (TV speakers or external).
+
+---
+
+## Amendment (2026-10-15): attract demo and creative mode
+
+- **INTRO attract demo.** Instead of random blinks, three random points connect one after another (1 → 2 → 3), each playing its note at full volume. Then the line un-draws from the first point to the third, like the collapse but running forwards. Then three new points are chosen, and so on.
+- **Creative mode.**
+  - **Button:** a second button at the bottom centre (a ring with three linked stars), active in READY.
+  - **Play:** dragging connects any points and plays their notes.
+  - **No penalties:** there are no strikes and no reveal.
+  - **Fading:** each drawing fades a few seconds after the finger lifts.
+  - **Leaving:** tap the button again, or wait 30 s without input (→ INTRO).

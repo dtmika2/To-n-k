@@ -1,8 +1,10 @@
 import { Assets, Container, Graphics, Sprite, Text, type Texture } from 'pixi.js';
 import { liftIntensity } from '../game/reducer.ts';
+import type { AttractView } from '../game/attract.ts';
 import type { Effect, GameContext, GameState } from '../game/types.ts';
 import { lerpVec } from '../pattern/geometry.ts';
 import { ASPECT, type Pattern, type Vec } from '../pattern/types.ts';
+import { almond, circle, easeOut, easeOutElastic, hash, lerpColor } from './draw.ts';
 
 /** Phase 1 rendering: debug primitives only (plan §12, milestone 4). */
 
@@ -68,14 +70,22 @@ export class DebugRenderer {
   private ripples: Ripple[] = [];
   private retracts: Retract[] = [];
   private strikePulseAt = -1e9;
-  private nextIntroBlink = 0;
 
   debug = false;
+  /** Drawn faintly over the real scene (D key) instead of as the whole picture. */
+  private overlay = false;
 
   constructor(private readonly reveal: RevealConfig) {
     this.bg.rect(0, 0, 1, ASPECT).fill({ color: C.bg });
     this.root.addChild(this.bg, this.revealLayer, this.g, this.labels);
     this.labels.visible = false;
+  }
+
+  setOverlay(on: boolean): void {
+    this.overlay = on;
+    this.bg.visible = !on;
+    this.revealLayer.visible = !on;
+    this.root.alpha = on ? 0.55 : 1;
   }
 
   async loadReveal(): Promise<void> {
@@ -166,7 +176,7 @@ export class DebugRenderer {
 
   // ── frame ────────────────────────────────────────────────────
 
-  render(s: GameState, now: number): void {
+  render(s: GameState, now: number, attract: AttractView | null = null): void {
     const g = this.g;
     g.clear();
     this.labels.visible = this.debug;
@@ -174,10 +184,12 @@ export class DebugRenderer {
 
     this.drawReveal(s, now);
     for (const r of this.ripples) this.drawRipple(r, now);
-    if (s.mode === 'INTRO') this.drawIntro(now);
+    if (s.mode === 'INTRO' && !this.overlay) this.drawIntro(now);
     this.drawLines(s, now);
+    this.drawExtras(s, attract);
     this.drawPoints(s, now);
     this.drawMaster(s.mode === 'GAME' && s.sub === 'READY', now);
+    this.drawCreativeButton((s.mode === 'GAME' && s.sub === 'READY') || s.mode === 'CREATIVE', now);
   }
 
   private prune(now: number): void {
@@ -213,11 +225,6 @@ export class DebugRenderer {
       circle(this.g, c.x, c.y, 0.04 + 0.16 * t).stroke({ width: 0.004, color: C.gold, alpha: 0.5 * (1 - t) });
     }
     circle(this.g, c.x, c.y, 0.025 + 0.005 * Math.sin(now / 400)).fill({ color: C.gold, alpha: 0.8 });
-    if (now > this.nextIntroBlink) {
-      const ids = this.ctx.points.map((p) => p.id);
-      this.blinks.push({ point: ids[Math.floor(Math.random() * ids.length)], start: now, dur: 900 });
-      this.nextIntroBlink = now + 900 + Math.random() * 2200;
-    }
   }
 
   private segmentPath(from: Vec, to: Vec, color: number, alpha: number, u: number, now: number, seed: number): void {
@@ -315,7 +322,7 @@ export class DebugRenderer {
       // hit radii (always visible in Phase 1)
       circle(g, x, y, r * correctScale).stroke({ width: 0.0018, color: C.correctRing, alpha: 0.35 });
       circle(g, x, y, r * wrongScale).stroke({ width: 0.0018, color: C.wrongRing, alpha: 0.45 });
-      circle(g, x, y, r).fill({ color: lerpColor(C.point, C.gold, glow), alpha: 0.85 }).stroke({ width: 0.003, color: C.pointEdge, alpha: 0.7 });
+      circle(g, x, y, r).fill({ color: lerpColor(C.point, C.gold, glow), alpha: this.overlay ? 0.12 : 0.85 }).stroke({ width: 0.003, color: C.pointEdge, alpha: 0.7 });
       if (glow > 0.6) circle(g, x, y, r * (1 + glow * 0.6)).stroke({ width: 0.004, color: C.gold, alpha: (glow - 0.6) * 1.5 });
       if (fl) {
         const t = (now - fl.start) / fl.dur;
@@ -339,9 +346,46 @@ export class DebugRenderer {
     if (this.debug) circle(g, pos.x, pos.y, r * this.ctx.hit.masterScale).stroke({ width: 0.0018, color: C.correctRing, alpha: 0.35 });
   }
 
+  /** Creative-mode button: a ring with a small triangle of dots. */
+  private drawCreativeButton(active: boolean, now: number): void {
+    const { pos, r } = this.ctx.creative;
+    const a = active ? 0.55 + 0.35 * Math.sin(now / 900 + 1.6) : 0.08;
+    const g = this.g;
+    circle(g, pos.x, pos.y, r).stroke({ width: 0.004, color: C.pointEdge, alpha: a });
+    const pts = [-90, 30, 150].map((d) => ({ x: pos.x + Math.cos((d * Math.PI) / 180) * r * 0.5, y: pos.y + Math.sin((d * Math.PI) / 180) * r * 0.5 }));
+    g.poly(pts.flatMap((p) => [p.x, p.y]), true).stroke({ width: 0.0025, color: C.gold, alpha: a });
+    if (this.debug) circle(g, pos.x, pos.y, r * this.ctx.hit.masterScale).stroke({ width: 0.0018, color: C.correctRing, alpha: 0.35 });
+  }
+
+  /** INTRO attract demo and creative-mode chain, as plain lines. */
+  private drawExtras(s: GameState, attract: AttractView | null): void {
+    const g = this.g;
+    const P = (id: number) => this.pos.get(id)!;
+    if (attract) {
+      const [a, b, c] = attract.points.map(P);
+      const at = (x: number) => (x <= 1 ? lerpVec(a, b, x) : lerpVec(b, c, x - 1));
+      const stops = [attract.tail, ...[1].filter((k) => k > attract.tail && k < attract.head), attract.head].map(at);
+      g.moveTo(stops[0].x, stops[0].y);
+      for (const p of stops.slice(1)) g.lineTo(p.x, p.y);
+      g.stroke({ width: LINE_W, color: C.gold, alpha: 0.9 });
+    }
+    if (s.mode === 'CREATIVE' && s.chain.length > 0) {
+      const pts = s.chain.map(P);
+      if (s.tether) pts.push(s.tether);
+      g.moveTo(pts[0].x, pts[0].y);
+      for (const p of pts.slice(1)) g.lineTo(p.x, p.y);
+      g.stroke({ width: LINE_W, color: C.violet, alpha: 0.9 });
+    }
+  }
+
+  onAttractNote(point: number, noteMs: number, now: number): void {
+    this.blinks.push({ point, start: now, dur: noteMs + 300 });
+  }
+
   // ── editor ───────────────────────────────────────────────────
 
   renderEditor(view: EditorView, now: number): void {
+    this.setOverlay(false);
     const g = this.g;
     g.clear();
     this.revealLayer.alpha = 0;
@@ -370,60 +414,11 @@ export class DebugRenderer {
     this.notes = new Map(view.pattern.points.map((p) => [p.id, p.note]));
     this.updateLabels(pts, seq);
     this.drawMaster(true, now);
+    this.drawCreativeButton(true, now);
   }
 
   /** Restore labels after leaving the editor. */
   refreshLabels(): void {
     this.updateLabels(this.ctx.points, this.ctx.sequence);
   }
-}
-
-/**
- * Circles as explicit polygons: Pixi chooses circle tessellation from the local-space radius, and world
- * units are tiny (r ≈ 0.045), which would give diamonds.
- */
-const CIRCLE_SEGMENTS = 64;
-const UNIT_CIRCLE = Array.from({ length: CIRCLE_SEGMENTS }, (_, i) => (i / CIRCLE_SEGMENTS) * Math.PI * 2);
-
-function circle(g: Graphics, x: number, y: number, r: number): Graphics {
-  const pts: number[] = [];
-  for (const a of UNIT_CIRCLE) pts.push(x + Math.cos(a) * r, y + Math.sin(a) * r);
-  return g.poly(pts, true);
-}
-
-/** Eye outline: two mirrored arcs meeting at (x ± hw, y), half-height hh. */
-function almond(g: Graphics, x: number, y: number, hw: number, hh: number): Graphics {
-  const pts: number[] = [];
-  const n = 24;
-  for (let i = 0; i <= n; i++) {
-    const t = -1 + (2 * i) / n;
-    pts.push(x + t * hw, y - (1 - t * t) * hh);
-  }
-  for (let i = n - 1; i > 0; i--) {
-    const t = -1 + (2 * i) / n;
-    pts.push(x + t * hw, y + (1 - t * t) * hh);
-  }
-  return g.poly(pts, true);
-}
-
-function easeOut(t: number): number {
-  return 1 - Math.pow(1 - Math.min(1, Math.max(0, t)), 3);
-}
-
-function easeOutElastic(t: number): number {
-  if (t <= 0) return 0;
-  if (t >= 1) return 1;
-  return Math.pow(2, -10 * t) * Math.sin(((t * 10 - 0.75) * 2 * Math.PI) / 3) + 1;
-}
-
-function lerpColor(a: number, b: number, t: number): number {
-  const k = Math.min(1, Math.max(0, t));
-  const ch = (c: number, s: number) => (c >> s) & 255;
-  const mix = (s: number) => Math.round(ch(a, s) + (ch(b, s) - ch(a, s)) * k) << s;
-  return mix(16) | mix(8) | mix(0);
-}
-
-function hash(a: number, b: number): number {
-  const x = Math.sin(a * 127.1 + b * 311.7) * 43758.5453;
-  return x - Math.floor(x);
 }

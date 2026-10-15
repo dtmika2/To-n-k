@@ -30,7 +30,7 @@ function savePattern(): Plugin {
               res.end(errors.join('\n'));
               return;
             }
-            writeFileSync(resolve(__dirname, 'src/config/pattern.json'), formatPattern(pattern));
+            writeFileSync(resolve(import.meta.dirname, 'src/config/pattern.json'), formatPattern(pattern));
             res.end('ok');
           } catch (e) {
             res.statusCode = 400;

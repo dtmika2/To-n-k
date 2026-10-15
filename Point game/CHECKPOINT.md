@@ -52,3 +52,61 @@ The mouse works like a finger.
 - **Inactivity can't hit TRACING.** "30 s inactivity from every substate" cannot apply there while the finger is down (a held pointer counts as activity), so the test checks that it does *not* time out.
 - **Kiosk browser not tested yet.** Smoke-tested in headless Chrome: the full trace → REVEAL → IDLE, wrong strike, lift strikes → collapse → READY, `?rotate=90` input mapping, and the editor, with no console errors. Real-touch, palm and audio checks still need the TV.
 - **Phase 1 visuals are debug primitives,** so text labels show only in debug mode or the editor.
+
+---
+
+# Phase 2: look, feel and deployment
+
+The owner confirmed without feedback, so the Phase 1 settings and behaviour were kept as they were.
+
+## Done
+7. **Visuals** (`src/render/`):
+   - **Sky:** a night gradient plus 600 twinkling stars on 3 depths with parallax drift (`sky.ts`).
+   - **Clouds and mist:** a single GLSL pass at `renderScale` (`atmosphere.ts`). The cloud cover is domain-warped fBm, solid over the number and broken elsewhere. The mist is lighter and faster, and parts around the finger. The finger trail is drawn into a small mask texture, so the mist closes back in over about 2.6 s.
+   - **Eyes:** procedural per seed (`eye.ts`): an almond/blob outline with slow noise morphing, wispy lashes, size 0.85–1.15×, a random rotation, and lids that open, half-open or snap shut. The iris is a pre-rendered nebula texture, two counter-rotating copies clipped by the lids.
+   - **Constellation:** wavy gold strands with a glow, a core and a hot centre. The tether sheds stardust. Unsettled lines jitter, gap, cool, dim and shed cold particles. Retract has an elastic rewind and a spark. Collapse un-draws back to the start, then puffs into mist. The reveal flares the whole line.
+   - **Master button:** an eye glyph inside a ring of light. It breathes in READY and sits at 8 % elsewhere.
+   - **Debug primitives:** still available. `D` draws them faintly over the scene; `P` (or `?primitives`) shows them alone.
+8. **App states:**
+   - INTRO: drifting mist, random blinks and a rippling ring glyph.
+   - INTRO → GAME: the mist thins.
+   - REVEAL: the line flares, all eyes open and close slowly, and the clouds tear open in wisps from the constellation centre with lit rims (5 s).
+   - IDLE: 15 s, then the clouds roll back (3 s) → INTRO.
+   - Inactivity → INTRO with a mist swell.
+9. **Deployment:**
+   - PWA precaching and a Screen Wake Lock.
+   - `kiosk/serve.mjs`: a static server with no dependencies (`npm run serve`).
+   - `kiosk/start-kiosk.bat` (Windows) and `start-kiosk.sh` (Linux).
+   - `kiosk/README.md`: the setup checklist.
+10. **Performance:**
+    - The shader resolution (`display.renderScale` 0.5) and `noiseOctaves` (5) can be tuned. URL overrides: `?scale=` and `?octaves=`.
+    - `display.autoScale` lowers the render scale in 0.05 steps, down to 0.3, while the frame rate stays under 55 fps.
+    - FPS and the current scale show in the `D` overlay.
+
+## Not verified
+- **60 fps at 3840×2160 on the target PC.** This needs the real hardware. Headless Chrome uses a software GPU (about 6 fps), so it says nothing about performance.
+- **Real touch, palms and room audio,** as listed in §11.
+
+## Deviations
+- **Iris swirl:** two counter-rotating pre-rendered nebula textures instead of a per-eye shader. It looks like a swirl and costs almost nothing.
+- **Cloud cover over the stars:** it is solid only around the number (sized from the number's bounds). Elsewhere it is broken, so the stars stay visible during play.
+- **Layers 3 and 4:** the cloud cover and the mist are computed in one shader pass, since nothing is drawn between them.
+
+---
+
+# Additions after Phase 2
+
+- **Attract demo (INTRO)** in `src/game/attract.ts`, which replaces the random blinks:
+  - Three random points connect A → B → C, each note at full voice level.
+  - The line then un-draws from A to C, and a new triple follows.
+  - A triple's segments always stay clear of other points, and consecutive triples use different points.
+  - Timing is set in `settings.timing.attract`.
+  - Before the first touch the demo has sound only under the kiosk autoplay flag; a normal browser stays silent until the first tap.
+- **Creative mode** (new top-level mode `CREATIVE` in the reducer):
+  - **Button:** bottom centre (`settings.creative`), a ring holding three linked stars. It is active in READY; tapping it again returns to READY.
+  - **Play:** dragging connects any points (radius `hit.creativeScale` × r) and plays each note.
+  - **No penalties:** there are no strikes and no reveal.
+  - **Fading:** the drawing is coloured by pitch and fades over `timing.creativeFadeMs` after the finger lifts.
+  - **Timeout:** 30 s without input returns to INTRO.
+  - **Debug key:** `5`.
+- **Validator:** points must also keep clear of the creative button.

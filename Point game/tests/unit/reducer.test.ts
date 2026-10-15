@@ -25,6 +25,7 @@ function testContext(sequence: number[], timing: Partial<GameContext['timing']> 
     points: pts.map((pos, id) => ({ id, pos, r: R })),
     sequence,
     master: { pos: { x: 0.5, y: 0.1 }, r: 0.045 },
+    creative: { pos: { x: 0.5, y: 1.6 }, r: 0.045 },
     timing: { ...TIMING, ...timing },
     hit: { ...settings.hit },
     allowSkipDemo: false,
@@ -403,5 +404,105 @@ describe('inactivity', () => {
     sim.down({ x: 0.1, y: 1.7 });
     expect(sim.state).toMatchObject({ mode: 'GAME', sub: 'DEMO' });
     expect(sim.effects[0]).toEqual({ type: 'startGame' });
+  });
+});
+
+describe('creative mode', () => {
+  /** READY → tap the creative button → CREATIVE. */
+  const enter = (sim: Sim) => {
+    sim.toReady().down(sim.ctx.creative.pos).up();
+    expect(sim.state.mode).toBe('CREATIVE');
+    expect(sim.effects).toContainEqual({ type: 'creativeStart' });
+    return sim;
+  };
+
+  it('the creative button works only in READY', () => {
+    const ctx = testContext([0, 1, 2]);
+    const sim = new Sim(ctx).down({ x: 0.5, y: 0.9 }).up(); // DEMO
+    sim.down(ctx.creative.pos).up();
+    sim.send({ type: 'CREATIVE_PRESSED' });
+    expect(sim.state).toMatchObject({ mode: 'GAME', sub: 'DEMO' });
+    sim.send({ type: 'DEMO_DONE' });
+    sim.down(sim.pos(0)).moveTo(sim.pos(1), 6).up(); // LIFTED
+    sim.down(ctx.creative.pos).up();
+    sim.send({ type: 'CREATIVE_PRESSED' });
+    expect(sim.state).toMatchObject({ mode: 'GAME', sub: 'LIFTED' });
+  });
+
+  it('CREATIVE_PRESSED enters from READY and leaves from CREATIVE', () => {
+    const sim = new Sim(testContext([0, 1, 2])).toReady();
+    sim.send({ type: 'CREATIVE_PRESSED' });
+    expect(sim.state.mode).toBe('CREATIVE');
+    sim.send({ type: 'CREATIVE_PRESSED' });
+    expect(sim.state).toMatchObject({ mode: 'GAME', sub: 'READY' });
+  });
+
+  it('connects any points, unused ones too, with no strikes', () => {
+    const sim = enter(new Sim(testContext([0, 1, 2])));
+    sim.down(sim.pos(3)).moveTo(sim.pos(4), 6).moveTo(sim.pos(5), 6);
+    expect(sim.state.chain).toEqual([3, 4, 5]);
+    expect(sim.effects.filter((e) => e.type === 'creativeLink')).toEqual([
+      { type: 'creativeLink', from: 3, to: 4 },
+      { type: 'creativeLink', from: 4, to: 5 },
+    ]);
+    expect(sim.count('playNote')).toBe(3);
+    expect(sim.count('flinch')).toBe(0);
+    expect(sim.state).toMatchObject({ mode: 'CREATIVE', wrongStrikes: 0 });
+  });
+
+  it('a point can be revisited after the finger has left it', () => {
+    const sim = enter(new Sim(testContext([0, 1, 2])));
+    sim.down(sim.pos(4)).moveTo(sim.pos(5), 6).moveTo(sim.pos(4), 6);
+    expect(sim.state.chain).toEqual([4, 5, 4]);
+  });
+
+  it('a touch off every point starts a chain at the first point reached', () => {
+    const sim = enter(new Sim(testContext([0, 1, 2])));
+    sim.down({ x: 0.35, y: 1.3 });
+    expect(sim.state.chain).toEqual([]);
+    sim.moveTo(sim.pos(5), 6);
+    expect(sim.state.chain).toEqual([5]);
+    expect(sim.effects).toContainEqual({ type: 'playNote', point: 5, kind: 'start' });
+  });
+
+  it('lifting releases the drawing; the next touch starts a new chain', () => {
+    const sim = enter(new Sim(testContext([0, 1, 2])));
+    sim.down(sim.pos(3)).moveTo(sim.pos(4), 6).up();
+    expect(sim.last).toEqual([{ type: 'creativeRelease', chain: [3, 4] }]);
+    expect(sim.state.chain).toEqual([]);
+    sim.down(sim.pos(5));
+    expect(sim.state.chain).toEqual([5]);
+  });
+
+  it('tapping the button again returns to READY', () => {
+    const sim = enter(new Sim(testContext([0, 1, 2])));
+    sim.down(sim.ctx.creative.pos);
+    expect(sim.state).toMatchObject({ mode: 'GAME', sub: 'READY', chain: [] });
+    expect(sim.last).toEqual([{ type: 'creativeExit' }, { type: 'ready' }]);
+  });
+
+  it('the master button does nothing in CREATIVE', () => {
+    const sim = enter(new Sim(testContext([0, 1, 2])));
+    sim.down(sim.ctx.master.pos).up();
+    sim.send({ type: 'MASTER_PRESSED' });
+    expect(sim.state.mode).toBe('CREATIVE');
+    expect(sim.count('demoStart')).toBe(1); // only the one from entering GAME
+  });
+
+  it('a second pointer is ignored', () => {
+    const sim = enter(new Sim(testContext([0, 1, 2])));
+    sim.down(sim.pos(3), 1).down(sim.pos(4), 2);
+    sim.send({ type: 'POINTER_MOVE', id: 2, path: [sim.pos(5)] });
+    expect(sim.state.chain).toEqual([3]);
+  });
+
+  it('30 s without input returns to INTRO, but not while a finger is held', () => {
+    const sim = enter(new Sim(testContext([0, 1, 2])));
+    sim.down(sim.pos(3));
+    sim.wait(TIMING.inactivityMs * 2);
+    expect(sim.state.mode).toBe('CREATIVE');
+    sim.up().wait(TIMING.inactivityMs);
+    expect(sim.state.mode).toBe('INTRO');
+    expect(sim.last).toContainEqual({ type: 'toIntro', reason: 'inactivity' });
   });
 });

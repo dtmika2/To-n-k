@@ -267,6 +267,19 @@ export class AudioEngine {
 
   // ── game effects ─────────────────────────────────────────────
 
+  /** A demo-style note: sound, sustain `noteMs`, release; consecutive notes glide with a dip. */
+  private blinkNote(f: number, noteMs: number): void {
+    this.setMode('demo');
+    this.noteOn(f);
+    this.amp.gain.setTargetAtTime(0, this.t + noteMs / 1000, RELEASE_TC);
+  }
+
+  /** INTRO attract demo note (full voice level, like the game demo). */
+  onAttractNote(point: number, noteMs: number): void {
+    if (!this.running) return;
+    this.blinkNote(this.freqs.get(point) ?? 220, noteMs);
+  }
+
   onEffect(e: Effect): void {
     if (!this.running) return;
     const f = (id: number) => this.freqs.get(id) ?? 220;
@@ -280,9 +293,7 @@ export class AudioEngine {
         this.setMode('silent');
         break;
       case 'demoBlink':
-        this.setMode('demo');
-        this.noteOn(f(e.point));
-        this.amp.gain.setTargetAtTime(0, this.t + e.noteMs / 1000, RELEASE_TC);
+        this.blinkNote(f(e.point), e.noteMs);
         break;
       case 'playNote':
         if (e.kind === 'reach') this.ring(f(e.point));
@@ -326,6 +337,15 @@ export class AudioEngine {
         this.setMode('silent');
         this.setDrone(true);
         break;
+      case 'creativeStart':
+        this.ampTo(0, 0.08);
+        this.setMode('silent');
+        break;
+      case 'creativeRelease':
+      case 'creativeExit':
+        this.ampTo(0, RELEASE_TC);
+        this.setMode('silent');
+        break;
       default:
         break;
     }
@@ -349,6 +369,9 @@ export class AudioEngine {
         f = fLast * Math.pow(fNext / fLast, k);
       }
       this.freqTo(f, DRAG_TC);
+      this.ampTo(this.cfg.voiceLevel + this.cfg.speedSwell * Math.min(1, fingerSpeed / 1.5), 0.08);
+    } else if (this.mode === 'trace' && s.mode === 'CREATIVE' && s.chain.length > 0 && t > this.holdUntil) {
+      // free play: hold the last note, swell with finger speed (no target, so no glide hint)
       this.ampTo(this.cfg.voiceLevel + this.cfg.speedSwell * Math.min(1, fingerSpeed / 1.5), 0.08);
     } else if (this.mode === 'unsettled' && s.mode === 'GAME' && s.sub === 'LIFTED') {
       const u = liftIntensity(s, now, this.ctx.timing.liftStrikeMs);

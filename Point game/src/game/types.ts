@@ -1,6 +1,6 @@
 import type { Vec } from '../pattern/types.ts';
 
-export type Mode = 'INTRO' | 'GAME' | 'REVEAL' | 'IDLE';
+export type Mode = 'INTRO' | 'GAME' | 'REVEAL' | 'IDLE' | 'CREATIVE';
 export type Sub = 'DEMO' | 'READY' | 'TRACING' | 'LIFTED' | 'COLLAPSE';
 
 /** Geometry and timing the reducer needs. All positions and radii are in world units (see pattern/types.ts). */
@@ -8,6 +8,7 @@ export interface GameContext {
   points: { id: number; pos: Vec; r: number }[];
   sequence: number[];
   master: { pos: Vec; r: number };
+  creative: { pos: Vec; r: number };
   timing: {
     demoStepMs: number;
     demoLeadMs: number;
@@ -19,8 +20,9 @@ export interface GameContext {
     revealHoldMs: number;
     cloudsReturnMs: number;
     inactivityMs: number;
+    creativeFadeMs: number;
   };
-  hit: { correctScale: number; wrongScale: number; exitHysteresis: number; masterScale: number };
+  hit: { correctScale: number; wrongScale: number; exitHysteresis: number; masterScale: number; creativeScale: number };
   allowSkipDemo: boolean;
 }
 
@@ -51,6 +53,8 @@ export interface GameState {
   collapseFrom: number;
   /** IDLE: the clouds have started rolling back in. */
   cloudsReturning: boolean;
+  /** CREATIVE: the points connected during the current touch, in order. */
+  chain: number[];
 }
 
 export type GameEvent =
@@ -61,6 +65,8 @@ export type GameEvent =
   | { type: 'POINTER_CANCEL'; id: number }
   | { type: 'TICK' }
   | { type: 'MASTER_PRESSED' }
+  /** The creative-mode button (keyboard equivalent): enters from READY, leaves from CREATIVE. */
+  | { type: 'CREATIVE_PRESSED' }
   /** Ends the demo right away (used when allowSkipDemo is on, and by tests). */
   | { type: 'DEMO_DONE' }
   /** Ends the current timed animation (collapse, reveal, clouds returning) right away. */
@@ -88,7 +94,12 @@ export type Effect =
   | { type: 'startReveal' }
   | { type: 'idle' }
   | { type: 'cloudsReturn' }
-  | { type: 'toIntro'; reason: 'inactivity' | 'cycle' | 'debug' };
+  | { type: 'toIntro'; reason: 'inactivity' | 'cycle' | 'debug' }
+  | { type: 'creativeStart' }
+  | { type: 'creativeExit' }
+  | { type: 'creativeLink'; from: number; to: number }
+  /** The finger lifted in creative mode: the drawing of this touch starts to fade. */
+  | { type: 'creativeRelease'; chain: number[] };
 
 export interface ReduceResult {
   state: GameState;

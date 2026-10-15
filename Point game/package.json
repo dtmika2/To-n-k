@@ -12,7 +12,8 @@
     "test": "vitest run",
     "validate": "node scripts/validate-pattern.ts",
     "assign-pitches": "node scripts/assign-pitches.ts",
-    "verify": "npm run typecheck && npm test && npm run validate && npm run build"
+    "verify": "npm run typecheck && npm test && npm run validate && npm run build",
+    "serve": "node kiosk/serve.mjs"
   },
   "dependencies": {
     "pixi.js": "^8.22.0"
