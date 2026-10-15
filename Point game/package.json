@@ -1,0 +1,27 @@
+{
+  "name": "dream-pattern",
+  "version": "0.1.0",
+  "description": "Dream Pattern — touch-table memory game PWA",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview --port 4173 --strictPort",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run",
+    "validate": "node scripts/validate-pattern.ts",
+    "assign-pitches": "node scripts/assign-pitches.ts",
+    "verify": "npm run typecheck && npm test && npm run validate && npm run build"
+  },
+  "dependencies": {
+    "pixi.js": "^8.22.0"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.4",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.3",
+    "vite-plugin-pwa": "^2.0.0",
+    "vitest": "^5.0.3"
+  }
+}

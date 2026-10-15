@@ -1,0 +1,102 @@
+html,
+body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  background: #07051a;
+  overscroll-behavior: none;
+}
+body {
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  cursor: none;
+}
+body.show-cursor {
+  cursor: default;
+}
+#stage,
+#stage canvas {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+.debug-overlay {
+  position: fixed;
+  left: 8px;
+  top: 8px;
+  z-index: 10;
+  padding: 8px 10px;
+  font: 13px/1.45 Consolas, monospace;
+  white-space: pre;
+  color: #d8d4ff;
+  background: rgba(10, 8, 30, 0.75);
+  border-radius: 6px;
+  pointer-events: none;
+}
+.editor-panel {
+  position: fixed;
+  right: 8px;
+  top: 8px;
+  z-index: 11;
+  width: 360px;
+  max-height: calc(100% - 16px);
+  overflow: auto;
+  padding: 10px 12px;
+  font: 13px/1.45 system-ui, sans-serif;
+  color: #e8e6ff;
+  background: rgba(16, 14, 40, 0.92);
+  border: 1px solid #3a3570;
+  border-radius: 8px;
+  cursor: default;
+  user-select: text;
+}
+.editor-panel h3 {
+  margin: 0 0 6px;
+  font-size: 15px;
+}
+.editor-panel small {
+  font-weight: normal;
+  opacity: 0.7;
+}
+.editor-panel p {
+  margin: 4px 0;
+}
+.editor-panel .sel {
+  font-family: Consolas, monospace;
+}
+.editor-panel .buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin: 8px 0;
+}
+.editor-panel button {
+  font: inherit;
+  padding: 4px 8px;
+  color: #fff;
+  background: #3d3770;
+  border: 1px solid #6a5fc0;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.editor-panel .msg {
+  color: #f3d99a;
+}
+.editor-panel .err {
+  color: #ff8a8a;
+}
+.editor-panel .ok {
+  color: #8affb0;
+}
+.editor-panel .warn {
+  margin-top: 4px;
+  color: #ffd27a;
+}
+.editor-panel .pitches {
+  margin-top: 6px;
+  font: 12px/1.4 Consolas, monospace;
+  opacity: 0.85;
+}
