@@ -50,6 +50,7 @@ export interface SceneConfig {
   stars: number;
   octaves: number;
   renderScale: number;
+  eyeMinOpen: number;
 }
 
 const easeInOut = (t: number) => {
@@ -147,6 +148,16 @@ export class SceneRenderer {
     this.atmosphere.resize(portraitPxWidth, renderScale);
   }
 
+  /** Bottom layer image; without one (empty url or load failure) the sky keeps its gradient. */
+  async loadBackdrop(url: string): Promise<void> {
+    if (!url) return;
+    try {
+      this.sky.setBackdrop(await Assets.load<Texture>(url));
+    } catch {
+      console.warn(`[dream-pattern] backdrop "${url}" did not load; using the gradient`);
+    }
+  }
+
   async loadReveal(): Promise<void> {
     let node: Sprite | Text;
     const { imageUrl, widthFraction, placeholderText } = this.cfg.reveal;
@@ -183,7 +194,7 @@ export class SceneRenderer {
     this.pitch = new Map(midi.map(([id, m]) => [id, hi > lo ? (m - lo) / (hi - lo) : 0.5]));
     this.creativeLinks = [];
     for (const p of ctx.points) {
-      const eye = new Eye(p.id, p.pos, p.r, seeds.get(p.id) ?? p.id + 1, this.dot);
+      const eye = new Eye(p.id, p.pos, p.r, seeds.get(p.id) ?? p.id + 1, this.dot, this.cfg.eyeMinOpen);
       this.eyes.set(p.id, eye);
       this.eyesLayer.addChild(eye.root);
     }

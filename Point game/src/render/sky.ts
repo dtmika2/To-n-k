@@ -1,4 +1,4 @@
-import { Container, Particle, ParticleContainer, Sprite, type Texture } from 'pixi.js';
+import { Container, Graphics, Particle, ParticleContainer, Sprite, type Texture } from 'pixi.js';
 import { ASPECT } from '../pattern/types.ts';
 import { rng, skyTexture } from './textures.ts';
 
@@ -17,10 +17,15 @@ const DEPTHS = [
 ];
 const TINTS = [0xffffff, 0xdfe6ff, 0xfff1d6, 0xd8ccff];
 
-/** Plan §7 layer 1: night gradient plus ~600 twinkling stars on three depths with parallax drift. */
+/**
+ * Plan §7 layer 1: the backdrop image (or a night gradient if there is none) plus ~600 twinkling stars
+ * on three depths with parallax drift.
+ */
 export class Sky {
   readonly root = new Container();
   private readonly stars: Star[] = [];
+
+  private readonly gradient: Sprite;
 
   constructor(dot: Texture, count: number) {
     const bg = new Sprite(skyTexture());
@@ -47,7 +52,24 @@ export class Sky {
       pc.addParticle(p);
       this.stars.push({ p, depth, base: d.alpha * (0.4 + r() * 0.6), twinkle: 0.6 + r() * 2.2, phase: r() * 6.283 });
     }
+    this.gradient = bg;
     this.root.addChild(bg, pc);
+  }
+
+  /**
+   * The backdrop image becomes the bottom layer (cover-fitted to the portrait world, centred) and
+   * replaces the gradient, which stays only as the fallback when no image loads.
+   */
+  setBackdrop(tex: Texture): void {
+    const bd = new Sprite(tex);
+    bd.anchor.set(0.5);
+    bd.scale.set(Math.max(1 / tex.width, ASPECT / tex.height));
+    bd.position.set(0.5, ASPECT / 2);
+    const clip = new Graphics().rect(0, 0, 1, ASPECT).fill({ color: 0xffffff });
+    bd.mask = clip;
+    this.root.addChildAt(clip, 0);
+    this.root.addChildAt(bd, 0);
+    this.gradient.visible = false;
   }
 
   update(now: number, dt: number): void {

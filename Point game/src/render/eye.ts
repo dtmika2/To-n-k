@@ -5,7 +5,7 @@ import { irisTexture, makeWobble, rng } from './textures.ts';
 
 /** What the scene wants an eye to look like this frame. */
 export interface EyeLook {
-  /** 0 = closed lid line, 1 = wide open. */
+  /** 0 = closed lid line, 1 = wide open (the eye clamps this to its minimum openness). */
   open: number;
   /** Lid closing time constant (s): short for a blink, long for the slow close after the reveal. */
   closeTc: number;
@@ -51,7 +51,10 @@ export class Eye {
     r: number,
     seed: number,
     dot: Texture,
+    /** The lids never close further than this (0 = fully closed line, 1 = wide open). */
+    private readonly minOpen = 0,
   ) {
+    this.open = minOpen;
     const rand = rng(seed);
     const size = 0.85 + rand() * 0.3;
     this.w = r * 1.12 * size;
@@ -98,14 +101,15 @@ export class Eye {
     return this.home;
   }
 
-  /** Snap the lids shut (flinch). */
+  /** Snap the lids shut, as far as they go (flinch). */
   shut(): void {
-    this.open = 0;
+    this.open = this.minOpen;
   }
 
   update(now: number, dt: number, look: EyeLook): void {
-    const tc = look.open > this.open ? 0.06 : look.closeTc;
-    this.open += (look.open - this.open) * (1 - Math.exp(-dt / tc));
+    const target = Math.max(this.minOpen, look.open);
+    const tc = target > this.open ? 0.06 : look.closeTc;
+    this.open += (target - this.open) * (1 - Math.exp(-dt / tc));
     const time = now / 1000;
     const open = this.open;
 

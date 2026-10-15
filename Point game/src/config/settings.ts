@@ -43,6 +43,10 @@ export const settings = {
     autoScale: true,
     minRenderScale: 0.3,
     stars: 600,
+    /** Eyes never close further than this (0 = closed lid line, 1 = wide open). */
+    eyeMinOpen: 0.2,
+    /** Bottom layer image (portrait 9:16, in public/); '' = plain night gradient. */
+    backdrop: 'assets/backdrop.png',
   },
   game: { allowSkipDemo: false },
   reveal: { image: 'assets/reveal-number.png', widthFraction: 0.45, placeholderText: '5' },

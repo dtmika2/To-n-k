@@ -55,12 +55,18 @@ export async function startApp(): Promise<void> {
     stars: settings.display.stars,
     octaves: num('octaves', settings.display.noiseOctaves),
     renderScale,
+    eyeMinOpen: settings.display.eyeMinOpen,
   });
   const primitives = new DebugRenderer(reveal);
   app.stage.addChild(scene.root, primitives.root);
   scene.setPattern(ctx, pattern);
   primitives.setPattern(ctx, pattern);
-  await Promise.all([scene.loadReveal(), primitives.loadReveal()]);
+  const backdrop = settings.display.backdrop;
+  await Promise.all([
+    scene.loadReveal(),
+    primitives.loadReveal(),
+    scene.loadBackdrop(backdrop && import.meta.env.BASE_URL + backdrop),
+  ]);
 
   const audio = new AudioEngine(freqsOf(pattern), ctx, settings.audio);
   const overlay = new DebugOverlay();
