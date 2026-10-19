@@ -375,5 +375,5 @@ Goal: the owner can play the full rules on the real TV, hear the real sound, and
 
 ## Amendment (2026-10-19): Leo pattern
 
-- **Layout.** The pattern is now the Leo constellation, rotated 90° to portrait with the head at the top-left. It has 9 stars (ids 0–8, in order of first touch) and 7 decoy eyes scattered around it (ids 9–15).
+- **Layout.** The pattern is now the Leo constellation, rotated 90° to portrait with the head at the top-left. It has 9 stars (ids 0–8, in order of first touch) and 9 decoy eyes around it (ids 9–17; 16 and 17 placed by hand). The point count is now 18 and the scale gains D3 and G6 (D3–G6), so every eye still has its own note.
 - **Sequence:** `0 1 2 3 1 4 3 0 5 4 6 7 8`. The start star is touched again at step 8, so the "start appears only once" rule is dropped. The end still appears only once.

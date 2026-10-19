@@ -31,7 +31,7 @@ describe('validator', () => {
   });
 
   const broken: [string, (p: Pattern) => void, RegExp][] = [
-    ['wrong point count', (p) => p.points.pop(), /16 points/],
+    ['wrong point count', (p) => p.points.pop(), /18 points/],
     ['wrong sequence length', (p) => p.sequence.pop(), /13 touches/],
     ['start equals end', (p) => (p.sequence[12] = p.sequence[0]), /start and end/],
     ['end repeated', (p) => (p.sequence[5] = p.sequence[12]), /end point .* more than once/],
@@ -78,13 +78,13 @@ describe('pitch assignment', () => {
     expect(n.get(0)).toBe('A3');
     expect(n.get(15)).toBe('A4');
     expect([4, 9, 5, 11, 13, 14, 6, 2].map((id) => n.get(id))).toEqual(['C4', 'D4', 'E4', 'G4', 'C5', 'D5', 'E5', 'G5']);
-    expect([1, 3, 7, 8, 10, 12].map((id) => n.get(id))).toEqual(['E3', 'G3', 'A5', 'C6', 'D6', 'E6']);
+    expect([1, 3, 7, 8, 10, 12, 16, 17].map((id) => n.get(id))).toEqual(['D3', 'E3', 'G3', 'A5', 'C6', 'D6', 'E6', 'G6']);
   });
 
   it('gives every point a distinct note when fewer points are used', () => {
     const p: Pattern = { points: base.points, sequence: [0, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 3] };
     const n = assignPitches(p).notes;
-    expect(new Set(n.values()).size).toBe(16);
+    expect(new Set(n.values()).size).toBe(18);
     expect([n.get(1), n.get(2)]).toEqual(['G4', 'C5']); // most central notes
   });
 

@@ -78,6 +78,9 @@ export class SceneRenderer {
   private readonly fx = new Graphics();
   private readonly master = new Graphics();
 
+  /** Debug (`?unused`, U key): mark the eyes the sequence never uses with a red ring and cross. */
+  markUnused = false;
+
   private ctx!: GameContext;
   private eyes = new Map<number, Eye>();
   private centre: Vec = { x: 0.5, y: ASPECT / 2 };
@@ -615,6 +618,7 @@ export class SceneRenderer {
     }
     this.drawNotice(s, now);
     this.drawOutro(now);
+    if (this.markUnused) this.drawUnusedMarks();
 
     this.drawMaster(s.mode === 'GAME' && s.sub === 'READY', now, dt);
     this.drawCreativeButton((s.mode === 'GAME' && s.sub === 'READY') || s.mode === 'CREATIVE', now, dt);
@@ -671,6 +675,18 @@ export class SceneRenderer {
       wobblyCircle(g, c.x, c.y, r, 0.04, time, 3 + i).stroke({ width: 0.012, color: C.hot, alpha: 0.18 * (1 - tp) });
       wobblyCircle(g, c.x, c.y, r, 0.04, time, 3 + i).stroke({ width: 0.004, color: C.hot, alpha: 0.85 * (1 - tp) });
     });
+  }
+
+  private drawUnusedMarks(): void {
+    const g = this.fx;
+    for (const p of this.ctx.points) {
+      if (this.ctx.sequence.includes(p.id)) continue;
+      const { x, y } = p.pos;
+      const r = p.r * 1.25;
+      const d = r * 0.7;
+      circle(g, x, y, r).stroke({ width: 0.004, color: 0xff4040, alpha: 0.9 });
+      g.moveTo(x - d, y - d).lineTo(x + d, y + d).moveTo(x + d, y - d).lineTo(x - d, y + d).stroke({ width: 0.004, color: 0xff4040, alpha: 0.9 });
+    }
   }
 
   /** After the demo's last blink: the breath goes out (a wobbling ring expands from the centre and fades). */

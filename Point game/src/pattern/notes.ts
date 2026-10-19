@@ -1,7 +1,7 @@
 const SEMITONES: Record<string, number> = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 };
 
-/** A minor pentatonic, E3–E6: the 16 notes the points are tuned to. */
-export const SCALE = ['E3', 'G3', 'A3', 'C4', 'D4', 'E4', 'G4', 'A4', 'C5', 'D5', 'E5', 'G5', 'A5', 'C6', 'D6', 'E6'];
+/** A minor pentatonic, D3–G6: the 18 notes the points are tuned to. */
+export const SCALE = ['D3', 'E3', 'G3', 'A3', 'C4', 'D4', 'E4', 'G4', 'A4', 'C5', 'D5', 'E5', 'G5', 'A5', 'C6', 'D6', 'E6', 'G6'];
 export const START_NOTE = 'A3';
 export const END_NOTE = 'A4';
 

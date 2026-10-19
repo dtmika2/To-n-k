@@ -110,6 +110,7 @@ export async function startApp(): Promise<void> {
   // D: debug overlay (state text + hit radii drawn faintly over the scene). P: Phase 1 primitives only.
   let debugOn = params.has('debug');
   let primitivesOnly = params.has('primitives');
+  scene.markUnused = params.has('unused');
   const applyView = () => {
     overlay.setVisible(debugOn);
     primitives.debug = debugOn;
@@ -162,6 +163,7 @@ export async function startApp(): Promise<void> {
     const k = e.key.toLowerCase();
     if (k === 'd') debugOn = !debugOn;
     else if (k === 'p') primitivesOnly = !primitivesOnly;
+    else if (k === 'u') scene.markUnused = !scene.markUnused;
     else if (k === 'e') {
       editor.toggle(pattern);
       if (!editor.isOpen) primitives.refreshLabels();

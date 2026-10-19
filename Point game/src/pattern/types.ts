@@ -23,7 +23,7 @@ export interface Vec {
 /** Portrait height / width. World units: x in [0, 1], y in [0, ASPECT], so distances are isotropic. */
 export const ASPECT = 16 / 9;
 
-export const POINT_COUNT = 16;
+export const POINT_COUNT = 18;
 export const SEQUENCE_LENGTH = 13;
 
 export function toWorld(p: { x: number; y: number }): Vec {

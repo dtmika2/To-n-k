@@ -37,6 +37,7 @@ To quit kiosk Chrome, press Alt+F4. Then close the "Dream Pattern server" window
 |---|---|
 | `D` | debug overlay: state, strikes, timers, FPS, render scale, and hit radii over the scene |
 | `P` | switch to the plain debug primitives (Phase 1 look) and back |
+| `U` | mark the unused (decoy) eyes with a red ring and cross; also `?unused` in the URL |
 | `E` | layout editor (drag points, change radii, record the sequence, export `pattern.json`) |
 | `R` | back to the intro |
 | `1`–`5` | jump to INTRO / GAME / REVEAL / IDLE / CREATIVE |

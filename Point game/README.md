@@ -11,4 +11,4 @@ npm run validate     # check src/config/pattern.json
 npm run assign-pitches           # re-assign notes after changing the sequence
 ```
 
-Operator keys: `D` debug overlay · `P` primitives · `E` layout editor · `R` reset · `1`–`5` jump to a state.
+Operator keys: `D` debug overlay · `P` primitives · `U` mark unused eyes (or `?unused`) · `E` layout editor · `R` reset · `1`–`5` jump to a state.
