@@ -43,7 +43,7 @@ export function assignPitches(pattern: Pattern): PitchAssignment {
     `melody: ${seq.map((id) => notes.get(id)).join(' ')}`,
   ];
   if (used.length !== 8 || unused.length !== 6) {
-    report.push(`note: ${used.length} middle points and ${unused.length} unused points (plan default is 8 and 6) — please review`);
+    report.push(`note: ${used.length} middle points and ${unused.length} unused points (plan default is 8 and 6)`);
   }
   return { notes, report };
 }

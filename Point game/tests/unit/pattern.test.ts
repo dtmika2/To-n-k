@@ -34,7 +34,7 @@ describe('validator', () => {
     ['wrong point count', (p) => p.points.pop(), /16 points/],
     ['wrong sequence length', (p) => p.sequence.pop(), /13 touches/],
     ['start equals end', (p) => (p.sequence[12] = p.sequence[0]), /start and end/],
-    ['start repeated', (p) => (p.sequence[5] = p.sequence[0]), /start point .* more than once/],
+    ['end repeated', (p) => (p.sequence[5] = p.sequence[12]), /end point .* more than once/],
     ['point follows itself', (p) => (p.sequence[3] = p.sequence[2]), /follows itself/],
     ['unknown id', (p) => (p.sequence[4] = 99), /unknown id/],
     ['missing note', (p) => (p.points[3].note = ''), /note is missing/],

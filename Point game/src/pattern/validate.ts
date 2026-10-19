@@ -31,7 +31,6 @@ export function validatePattern(pattern: Pattern, s: ValidatorSettings): Validat
   const end = sequence[sequence.length - 1];
   if (sequence.length > 0) {
     if (start === end) errors.push('start and end are the same point');
-    if (sequence.filter((id) => id === start).length > 1) errors.push(`start point ${start} appears more than once`);
     if (sequence.filter((id) => id === end).length > 1) errors.push(`end point ${end} appears more than once`);
   }
   for (let i = 1; i < sequence.length; i++) {

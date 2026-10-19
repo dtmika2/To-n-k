@@ -29,7 +29,7 @@ The app is an offline PWA running in kiosk-mode Chrome on a PC that drives the T
 | Display | 75" 4K touch TV lying flat. The app is laid out in **portrait**. "Top" means the top edge of the portrait layout. |
 | Input | **One touch at a time.** Lock onto the first pointer and ignore all others until it lifts. |
 | Points | **16 points**, organic eye-like shapes. Some are never used in the sequence. Used and unused points look identical. |
-| Sequence | **Fixed, hand-authored** (not procedural). **13 touches = 12 segments.** The start and end are **two different points**, and each appears only once (one connection each). Other points may repeat. No point follows itself. |
+| Sequence | **Fixed, hand-authored** (not procedural). **13 touches = 12 segments.** The start and end are **two different points**; the end appears only once. Other points, including the start, may repeat (amended for the Leo pattern). No point follows itself. |
 | Pitch | **Same point = same pitch.** Notes come from the A minor pentatonic scale (see §5). |
 | Sound | Theremin-like monophonic voice with glide, vibrato and reverb. |
 | Visual style | Clouds, mist, stars, eyes, fantasy, dream. |
@@ -267,7 +267,7 @@ Fails if any of these hold:
 - the number of points is not 16;
 - the sequence length is not 13;
 - the start equals the end;
-- the start or end appears more than once;
+- the end appears more than once (a repeated start is allowed since the Leo pattern);
 - a point follows itself;
 - an id is unknown;
 - a note is missing;
@@ -372,3 +372,8 @@ Goal: the owner can play the full rules on the real TV, hear the real sound, and
   - **No penalties:** there are no strikes and no reveal.
   - **Fading:** each drawing fades a few seconds after the finger lifts.
   - **Leaving:** tap the button again, or wait 30 s without input (→ INTRO).
+
+## Amendment (2026-10-19): Leo pattern
+
+- **Layout.** The pattern is now the Leo constellation, rotated 90° to portrait with the head at the top-left. It has 9 stars (ids 0–8, in order of first touch) and 7 decoy eyes scattered around it (ids 9–15).
+- **Sequence:** `0 1 2 3 1 4 3 0 5 4 6 7 8`. The start star is touched again at step 8, so the "start appears only once" rule is dropped. The end still appears only once.
