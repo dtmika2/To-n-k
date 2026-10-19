@@ -96,6 +96,8 @@ export class SceneRenderer {
   /** Each point's pitch as 0 (lowest note) … 1 (highest), for colouring creative strands. */
   private pitch = new Map<number, number>();
   private creativeAlpha = 0.08;
+  /** The short outro after the demo's last blink. */
+  private outro: Anim | null = null;
   private mist = 1;
   private masterAlpha = 0.08;
   private lastNow = 0;
@@ -268,6 +270,9 @@ export class SceneRenderer {
       }
       case 'collapse':
         this.pendingPuffs.push({ at: now + this.ctx.timing.collapseMs, pos: this.pos(this.ctx.sequence[0]) });
+        break;
+      case 'demoOutro':
+        this.outro = { start: now, dur: e.ms };
         break;
       case 'startGame':
         // like final-gate-lock's intro: the tap parts the clouds outward from the finger
@@ -609,6 +614,7 @@ export class SceneRenderer {
       circle(g, r.pos.x, r.pos.y, rad).stroke({ width: r.width, color: r.color, alpha: r.alpha * (1 - t) });
     }
     this.drawNotice(s, now);
+    this.drawOutro(now);
 
     this.drawMaster(s.mode === 'GAME' && s.sub === 'READY', now, dt);
     this.drawCreativeButton((s.mode === 'GAME' && s.sub === 'READY') || s.mode === 'CREATIVE', now, dt);
@@ -665,6 +671,24 @@ export class SceneRenderer {
       wobblyCircle(g, c.x, c.y, r, 0.04, time, 3 + i).stroke({ width: 0.012, color: C.hot, alpha: 0.18 * (1 - tp) });
       wobblyCircle(g, c.x, c.y, r, 0.04, time, 3 + i).stroke({ width: 0.004, color: C.hot, alpha: 0.85 * (1 - tp) });
     });
+  }
+
+  /** After the demo's last blink: the breath goes out (a wobbling ring expands from the centre and fades). */
+  private drawOutro(now: number): void {
+    if (!this.outro) return;
+    const t = (now - this.outro.start) / this.outro.dur;
+    if (t < 0 || t >= 1) {
+      if (t >= 1) this.outro = null;
+      return;
+    }
+    const g = this.fx;
+    const c = this.centre;
+    const time = now / 1000;
+    const out = easeOut(t);
+    const fade = 1 - smooth(t);
+    wobblyCircle(g, c.x, c.y, 0.07 + 0.38 * out, 0.035, time, 7).stroke({ width: 0.016, color: C.gold, alpha: 0.14 * fade });
+    wobblyCircle(g, c.x, c.y, 0.07 + 0.38 * out, 0.035, time, 7).stroke({ width: 0.0035, color: C.gold, alpha: 0.75 * fade });
+    wobblyCircle(g, c.x, c.y, 0.045 * (1 - out) + 0.005, 0.08, time * 1.6, 2).fill({ color: C.hot, alpha: 0.5 * fade });
   }
 
   /** A stylized eye inside a thin ring of light; breathes in READY, ~8 % elsewhere. */

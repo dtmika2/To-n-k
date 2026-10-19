@@ -13,6 +13,7 @@ export interface GameContext {
     demoStepMs: number;
     demoLeadMs: number;
     introLeadMs: number;
+    demoOutroMs: number;
     demoNoteMs: number;
     retractMs: number;
     liftStrikeMs: number;
@@ -81,6 +82,8 @@ export type Effect =
   /** `at`: the tap that started it (the clouds part from there); absent for debug jumps. */
   | { type: 'startGame'; at?: Vec }
   | { type: 'demoStart'; leadMs: number }
+  /** The sequence has been shown; READY (the players' turn) follows after `ms`. */
+  | { type: 'demoOutro'; ms: number }
   | { type: 'demoBlink'; point: number; step: number; noteMs: number }
   | { type: 'ready' }
   /** A note for a point reached by the player: the start touch, a retouch or a newly reached point. */

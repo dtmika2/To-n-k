@@ -340,7 +340,13 @@ export function createReducer(ctx: GameContext): Reducer {
           fx.push({ type: 'demoBlink', point: ctx.sequence[s.demoStep], step: s.demoStep, noteMs: t.demoNoteMs });
           s.demoStep++;
         }
-        if (now >= t0 + N * t.demoStepMs) toReady(s, now, fx);
+        // after the last step: a short outro (demoStep N → N + 1 marks it as started), then READY
+        const end = t0 + N * t.demoStepMs;
+        if (s.demoStep === N && now >= end) {
+          s.demoStep++;
+          fx.push({ type: 'demoOutro', ms: t.demoOutroMs });
+        }
+        if (now >= end + t.demoOutroMs) toReady(s, now, fx);
         return;
       }
       case 'LIFTED':

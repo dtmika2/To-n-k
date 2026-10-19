@@ -114,10 +114,23 @@ describe('full trace', () => {
     const ctx = testContext([0, 1, 2]);
     const sim = new Sim(ctx).down({ x: 0.5, y: 0.9 }).up();
     expect(sim.state.sub).toBe('DEMO');
-    sim.wait(TIMING.introLeadMs + 3 * TIMING.demoStepMs);
+    sim.wait(TIMING.introLeadMs + 3 * TIMING.demoStepMs + TIMING.demoOutroMs);
     const blinks = sim.effects.filter((e) => e.type === 'demoBlink').map((e) => (e as { point: number }).point);
     expect(blinks).toEqual([0, 1, 2]);
     expect(sim.state.sub).toBe('READY');
+  });
+
+  it('after the last blink a short outro plays, and touches stay ignored until READY', () => {
+    const ctx = testContext([0, 1, 2]);
+    const sim = new Sim(ctx).down({ x: 0.5, y: 0.9 }).up();
+    sim.wait(TIMING.introLeadMs + 3 * TIMING.demoStepMs);
+    expect(sim.effects.filter((e) => e.type === 'demoOutro')).toEqual([{ type: 'demoOutro', ms: TIMING.demoOutroMs }]);
+    expect(sim.state.sub).toBe('DEMO');
+    sim.down(sim.pos(0)).up(); // too early
+    expect(sim.state).toMatchObject({ sub: 'DEMO', progress: 0 });
+    sim.wait(TIMING.demoOutroMs);
+    expect(sim.state.sub).toBe('READY');
+    expect(sim.count('demoOutro')).toBe(1);
   });
 
   it('after the start tap the first blink waits for the long notice; master replays use the short lead', () => {

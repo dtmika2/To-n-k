@@ -7,6 +7,8 @@ export const settings = {
     demoLeadMs: 900,
     /** After the start tap: the clouds part and a "breathe in, pay attention" notice plays before the demo. */
     introLeadMs: 5000,
+    /** After the last demo blink: a short outro (the breath goes out, a closing chord) before READY. */
+    demoOutroMs: 1000,
     liftStrikeMs: 4000,
     retractMs: 600,
     collapseMs: 1500,

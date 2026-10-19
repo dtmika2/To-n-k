@@ -319,6 +319,32 @@ export class AudioEngine {
     });
   }
 
+  /** The demo's outro: a quiet, resolving A-minor chord (A3 E4 A4) that fades over `ms`. */
+  private outroChord(ms: number): void {
+    const ac = this.ac!;
+    const t0 = this.t;
+    const dur = ms / 1000;
+    const g = ac.createGain();
+    g.gain.setValueAtTime(0, t0);
+    g.gain.linearRampToValueAtTime(this.cfg.noticeLevel, t0 + 0.06);
+    g.gain.setTargetAtTime(0, t0 + 0.1, dur / 3);
+    g.connect(this.bus);
+    for (const [freq, lvl] of [
+      [220, 1],
+      [329.63, 0.6],
+      [440, 0.45],
+    ]) {
+      const o = ac.createOscillator();
+      o.setPeriodicWave(this.wave);
+      o.frequency.value = freq;
+      const og = ac.createGain();
+      og.gain.value = lvl;
+      o.connect(og).connect(g);
+      o.start(t0);
+      o.stop(t0 + dur + 2);
+    }
+  }
+
   /** INTRO attract demo note (full voice level, like the game demo). */
   onAttractNote(point: number, noteMs: number): void {
     if (!this.running) return;
@@ -342,6 +368,9 @@ export class AudioEngine {
       case 'ready':
         this.ampTo(0, 0.08);
         this.setMode('silent');
+        break;
+      case 'demoOutro':
+        this.outroChord(e.ms);
         break;
       case 'demoBlink':
         this.blinkNote(f(e.point), e.noteMs);
