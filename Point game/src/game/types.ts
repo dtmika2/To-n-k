@@ -59,6 +59,8 @@ export interface GameState {
   cloudsReturning: boolean;
   /** CREATIVE: the points connected during the current touch, in order. */
   chain: number[];
+  /** CREATIVE: where leaving returns to (INTRO when it was opened under the clouds). */
+  creativeFrom: 'INTRO' | 'READY';
 }
 
 export type GameEvent =
@@ -102,7 +104,8 @@ export type Effect =
   | { type: 'idle' }
   | { type: 'cloudsReturn' }
   | { type: 'toIntro'; reason: 'inactivity' | 'cycle' | 'debug' }
-  | { type: 'creativeStart' }
+  /** `at`: the tap that opened it from INTRO (the clouds part from there). */
+  | { type: 'creativeStart'; at?: Vec }
   | { type: 'creativeExit' }
   | { type: 'creativeLink'; from: number; to: number }
   /** The finger lifted in creative mode: the drawing of this touch starts to fade. */

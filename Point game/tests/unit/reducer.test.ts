@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { NOTICE, noticeProgress, noticeSpanMs } from '../../src/config/notice.ts';
 import { settings } from '../../src/config/settings.ts';
 import pattern from '../../src/config/pattern.json';
 import { buildContext } from '../../src/game/context.ts';
@@ -137,8 +138,11 @@ describe('full trace', () => {
     const ctx = testContext([0, 1, 2]);
     const sim = new Sim(ctx).down({ x: 0.5, y: 0.9 }).up();
     expect(sim.effects).toContainEqual({ type: 'demoStart', leadMs: TIMING.introLeadMs });
-    sim.wait(TIMING.introLeadMs - 100);
-    expect(sim.count('demoBlink')).toBe(0);
+    sim.wait(noticeSpanMs(TIMING.introLeadMs));
+    expect(noticeProgress(sim.state, sim.now)).toBeCloseTo(1); // the notice is over…
+    expect(NOTICE.tailMs).toBeGreaterThanOrEqual(500);
+    sim.wait(NOTICE.tailMs - 100);
+    expect(sim.count('demoBlink')).toBe(0); // …and a quiet half second passes before the first eye
     sim.wait(100);
     expect(sim.count('demoBlink')).toBe(1);
 
@@ -359,6 +363,18 @@ describe('master button and pointers', () => {
     expect(sim.state.sub).toBe('LIFTED');
   });
 
+  it('with only the start eye pending, the master button cancels it and replays the demo', () => {
+    const ctx = testContext([0, 1, 2]);
+    const sim = new Sim(ctx).toReady();
+    sim.down(sim.pos(0)).up(); // LIFTED, progress 1, no connection
+    expect(sim.state).toMatchObject({ sub: 'LIFTED', progress: 1 });
+    sim.down(ctx.master.pos).up();
+    expect(sim.state).toMatchObject({ sub: 'DEMO', progress: 0, liftStrikes: 0, liftTimerAt: null });
+    sim.send({ type: 'DEMO_DONE' }).down(sim.pos(0)).up();
+    sim.send({ type: 'MASTER_PRESSED' });
+    expect(sim.state.sub).toBe('DEMO');
+  });
+
   it('MASTER_PRESSED in READY replays the demo', () => {
     const sim = new Sim(testContext([0, 1, 2])).toReady();
     sim.send({ type: 'MASTER_PRESSED' });
@@ -455,6 +471,21 @@ describe('creative mode', () => {
     sim.down(ctx.creative.pos).up();
     sim.send({ type: 'CREATIVE_PRESSED' });
     expect(sim.state).toMatchObject({ mode: 'GAME', sub: 'LIFTED' });
+  });
+
+  it('opens from INTRO via the button and returns to INTRO', () => {
+    const ctx = testContext([0, 1, 2]);
+    const sim = new Sim(ctx).down(ctx.creative.pos).up();
+    expect(sim.state.mode).toBe('CREATIVE');
+    expect(sim.effects).toContainEqual({ type: 'creativeStart', at: ctx.creative.pos });
+    expect(sim.count('startGame')).toBe(0);
+    sim.down(sim.pos(0)).moveTo(sim.pos(1), 6).up();
+    expect(sim.count('creativeLink')).toBe(1);
+    sim.down(ctx.creative.pos).up();
+    expect(sim.state.mode).toBe('INTRO');
+    expect(sim.effects.map((e) => e.type)).toContain('toIntro');
+    sim.down({ x: 0.5, y: 0.9 }).up(); // a tap elsewhere still starts the game
+    expect(sim.state).toMatchObject({ mode: 'GAME', sub: 'DEMO' });
   });
 
   it('CREATIVE_PRESSED enters from READY and leaves from CREATIVE', () => {

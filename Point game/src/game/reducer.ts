@@ -22,6 +22,7 @@ export function initialState(now: number): GameState {
     collapseFrom: 0,
     cloudsReturning: false,
     chain: [],
+    creativeFrom: 'READY',
   };
 }
 
@@ -38,6 +39,10 @@ export function createReducer(ctx: GameContext): Reducer {
   };
   const lastPoint = (s: GameState) => ctx.sequence[s.progress - 1];
   const within = (pos: Vec, id: number, scale: number) => dist(pos, point(id).pos) <= scale * point(id).r;
+  const onMasterButton = (pos: Vec) => dist(pos, ctx.master.pos) <= ctx.hit.masterScale * ctx.master.r;
+  const onCreativeButton = (pos: Vec) => dist(pos, ctx.creative.pos) <= ctx.hit.masterScale * ctx.creative.r;
+  /** The hint (master) button works in READY, and while only the start eye is pending (no connection yet). */
+  const hintAvailable = (s: GameState) => s.mode === 'GAME' && (s.sub === 'READY' || (s.sub === 'LIFTED' && s.progress === 1));
 
   // ── transitions ──────────────────────────────────────────────
 
@@ -81,15 +86,23 @@ export function createReducer(ctx: GameContext): Reducer {
     startDemo(s, now, fx, ctx.timing.introLeadMs);
   }
 
-  function enterCreative(s: GameState, now: number, fx: Effect[]): void {
+  /** `from`: where leaving creative mode returns to. `at`: the tap that opened it (the clouds part from there). */
+  function enterCreative(s: GameState, now: number, fx: Effect[], from: GameState['creativeFrom'] = 'READY', at?: Vec): void {
     clearAttempt(s);
     s.mode = 'CREATIVE';
     s.modeSince = now;
+    s.lastInputAt = now;
+    s.creativeFrom = from;
     setSub(s, 'READY', now);
-    fx.push({ type: 'creativeStart' });
+    fx.push(at ? { type: 'creativeStart', at } : { type: 'creativeStart' });
   }
 
   function exitCreative(s: GameState, now: number, fx: Effect[]): void {
+    if (s.creativeFrom === 'INTRO') {
+      fx.push({ type: 'creativeExit' });
+      toIntro(s, now, fx, 'cycle');
+      return;
+    }
     s.mode = 'GAME';
     s.modeSince = now;
     if (s.pointer) s.pointer.ignored = true;
@@ -154,7 +167,8 @@ export function createReducer(ctx: GameContext): Reducer {
 
   function onDown(s: GameState, pos: Vec, now: number, fx: Effect[]): void {
     if (s.mode === 'INTRO') {
-      startGame(s, now, fx, pos);
+      if (onCreativeButton(pos)) enterCreative(s, now, fx, 'INTRO', pos);
+      else startGame(s, now, fx, pos);
       return;
     }
     if (s.mode === 'CREATIVE') {
@@ -162,20 +176,21 @@ export function createReducer(ctx: GameContext): Reducer {
       return;
     }
     if (s.mode !== 'GAME') return;
-    const { correctScale, masterScale } = ctx.hit;
+    const { correctScale } = ctx.hit;
     switch (s.sub) {
       case 'READY':
         if (within(pos, ctx.sequence[0], correctScale)) {
           s.progress = 1;
           startTracing(s, pos, now, fx, 'start');
-        } else if (dist(pos, ctx.master.pos) <= masterScale * ctx.master.r) {
+        } else if (onMasterButton(pos)) {
           startDemo(s, now, fx);
-        } else if (dist(pos, ctx.creative.pos) <= masterScale * ctx.creative.r) {
+        } else if (onCreativeButton(pos)) {
           enterCreative(s, now, fx);
         }
         return;
       case 'LIFTED':
         if (within(pos, lastPoint(s), correctScale)) startTracing(s, pos, now, fx, 'retouch');
+        else if (s.progress === 1 && onMasterButton(pos)) startDemo(s, now, fx); // only the start eye pending: replay the hint
         else fx.push({ type: 'pulseHint', point: lastPoint(s) });
         return;
       case 'DEMO':
@@ -262,7 +277,7 @@ export function createReducer(ctx: GameContext): Reducer {
   // ── creative mode ────────────────────────────────────────────
 
   function onCreativeDown(s: GameState, pos: Vec, now: number, fx: Effect[]): void {
-    if (dist(pos, ctx.creative.pos) <= ctx.hit.masterScale * ctx.creative.r) {
+    if (onCreativeButton(pos)) {
       exitCreative(s, now, fx);
       return;
     }
@@ -434,10 +449,11 @@ export function createReducer(ctx: GameContext): Reducer {
         tick(s, now, fx);
         break;
       case 'MASTER_PRESSED':
-        if (s.mode === 'GAME' && s.sub === 'READY') startDemo(s, now, fx);
+        if (hintAvailable(s)) startDemo(s, now, fx);
         break;
       case 'CREATIVE_PRESSED':
-        if (s.mode === 'GAME' && s.sub === 'READY') enterCreative(s, now, fx);
+        if (s.mode === 'INTRO') enterCreative(s, now, fx, 'INTRO');
+        else if (s.mode === 'GAME' && s.sub === 'READY') enterCreative(s, now, fx);
         else if (s.mode === 'CREATIVE') exitCreative(s, now, fx);
         break;
       case 'DEMO_DONE':

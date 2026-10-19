@@ -1,6 +1,6 @@
 import { Assets, Container, Graphics, Sprite, Text, type Renderer, type Texture } from 'pixi.js';
 import type { AttractView } from '../game/attract.ts';
-import { NOTICE, noticeProgress } from '../config/notice.ts';
+import { NOTICE, noticeProgress, noticeSpanMs } from '../config/notice.ts';
 import { liftIntensity } from '../game/reducer.ts';
 import type { Effect, GameContext, GameState } from '../game/types.ts';
 import { dist, lerpVec } from '../pattern/geometry.ts';
@@ -117,6 +117,9 @@ export class SceneRenderer {
     this.revealGlow.tint = 0xffd9a0;
     this.revealLayer.addChild(this.revealGlow);
     this.revealLayer.visible = false;
+    // scaled about the screen centre, so the number recedes into the distance there
+    this.revealLayer.pivot.set(0.5, ASPECT / 2);
+    this.revealLayer.position.set(0.5, ASPECT / 2);
     this.clouds = new CloudCover(cfg.clouds);
     this.atmosphere = new Atmosphere(pixi, this.softDot, cfg.octaves);
     this.strands.blendMode = 'add';
@@ -125,13 +128,13 @@ export class SceneRenderer {
     this.puffs = new Particles(this.softDot, 120, 'normal');
     this.root.addChild(
       this.sky.root,
-      this.revealLayer,
       this.clouds.root,
       this.atmosphere.sprite,
       this.puffs.container,
       this.strands,
       this.dust.container,
       this.eyesLayer,
+      this.revealLayer,
       this.master,
       this.fx,
     );
@@ -287,8 +290,11 @@ export class SceneRenderer {
         this.clouds.part(this.centre, this.ctx.timing.revealDisperseMs); // pushes the lingering wisps aside
         break;
       case 'idle':
-      case 'creativeStart':
         if (this.clouds.shrouded) this.clouds.part(this.centre, 1200); // debug jumps straight here
+        break;
+      case 'creativeStart':
+        // opened from INTRO: the clouds part from the button; debug jumps land here shrouded too
+        if (this.clouds.shrouded) this.clouds.part(e.at ?? this.centre, e.at ? this.cfg.clouds.partMs : 1200);
         break;
       case 'cloudsReturn':
         this.clouds.roll(this.ctx.timing.cloudsReturnMs);
@@ -352,8 +358,8 @@ export class SceneRenderer {
   }
 
   /**
-   * The number is drawn only from the reveal on: it fades in over revealDisperseMs, stays through
-   * IDLE, and is covered again as the clouds roll back in.
+   * The number is drawn above the eyes, only from the reveal on: it fades in over revealDisperseMs,
+   * then through IDLE it slowly shrinks and fades into the distance, gone as the clouds close again.
    */
   private updateReveal(s: GameState, now: number): void {
     const show = s.mode === 'REVEAL' || s.mode === 'IDLE';
@@ -361,10 +367,12 @@ export class SceneRenderer {
     if (!show) return;
     const t = this.ctx.timing;
     if (s.mode === 'REVEAL') {
-      const k = Math.min(1, (now - s.modeSince) / t.revealDisperseMs);
-      this.revealLayer.alpha = k * k * (3 - 2 * k);
+      this.revealLayer.alpha = smooth((now - s.modeSince) / t.revealDisperseMs);
+      this.revealLayer.scale.set(1);
     } else {
-      this.revealLayer.alpha = s.cloudsReturning ? 1 - this.clouds.density : 1;
+      const k = Math.min(1, (now - s.modeSince) / (t.revealHoldMs + t.cloudsReturnMs));
+      this.revealLayer.scale.set(1 - 0.7 * smooth(k));
+      this.revealLayer.alpha = 1 - smooth((k - 0.15) / 0.8);
     }
     this.revealGlow.alpha = 0.28 + 0.08 * Math.sin(now / 1300);
   }
@@ -620,8 +628,9 @@ export class SceneRenderer {
     this.drawOutro(now);
     if (this.markUnused) this.drawUnusedMarks();
 
-    this.drawMaster(s.mode === 'GAME' && s.sub === 'READY', now, dt);
-    this.drawCreativeButton((s.mode === 'GAME' && s.sub === 'READY') || s.mode === 'CREATIVE', now, dt);
+    const ready = s.mode === 'GAME' && s.sub === 'READY';
+    this.drawMaster(ready || (s.mode === 'GAME' && s.sub === 'LIFTED' && s.progress === 1), now, dt);
+    this.drawCreativeButton(ready || s.mode === 'CREATIVE' || s.mode === 'INTRO', now, dt);
   }
 
   /**
@@ -669,7 +678,7 @@ export class SceneRenderer {
     wobblyCircle(g, c.x, c.y, rad, 0.035, time, 1).stroke({ width: 0.0035, color: C.gold, alpha: (0.25 + 0.6 * inhale) * a });
     wobblyCircle(g, c.x, c.y, 0.02 + 0.025 * inhale, 0.08, time * 1.6, 2).fill({ color: C.hot, alpha: 0.5 * inhale * a });
     NOTICE.pulses.forEach((pk, i) => {
-      const tp = ((p - pk) * s.demoLeadMs) / 500;
+      const tp = ((p - pk) * noticeSpanMs(s.demoLeadMs)) / 500;
       if (tp < 0 || tp > 1) return;
       const r = 0.07 + 0.22 * easeOut(tp);
       wobblyCircle(g, c.x, c.y, r, 0.04, time, 3 + i).stroke({ width: 0.012, color: C.hot, alpha: 0.18 * (1 - tp) });

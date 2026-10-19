@@ -1,4 +1,4 @@
-import { NOTICE } from '../config/notice.ts';
+import { NOTICE, noticeSpanMs } from '../config/notice.ts';
 import type { Settings } from '../config/settings.ts';
 import { liftIntensity } from '../game/reducer.ts';
 import type { Effect, GameContext, GameState } from '../game/types.ts';
@@ -282,7 +282,7 @@ export class AudioEngine {
   private notice(leadMs: number): void {
     const ac = this.ac!;
     const t0 = this.t;
-    const L = leadMs / 1000;
+    const L = noticeSpanMs(leadMs) / 1000;
     const [i0, i1] = NOTICE.inhale;
     const breath = ac.createGain();
     breath.gain.setValueAtTime(0, t0);
@@ -420,6 +420,7 @@ export class AudioEngine {
       case 'creativeStart':
         this.ampTo(0, 0.08);
         this.setMode('silent');
+        this.setDrone(false); // when opened from INTRO
         break;
       case 'creativeRelease':
       case 'creativeExit':

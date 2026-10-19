@@ -5,8 +5,8 @@ export const settings = {
     demoNoteMs: 600,
     /** Pause between entering GAME (or pressing the master button) and the first demo blink. */
     demoLeadMs: 900,
-    /** After the start tap: the clouds part and a "breathe in, pay attention" notice plays before the demo. */
-    introLeadMs: 5000,
+    /** After the start tap: the clouds part and a "breathe in, pay attention" notice plays before the demo (ends NOTICE.tailMs before the first eye). */
+    introLeadMs: 5500,
     /** After the last demo blink: a short outro (the breath goes out, a closing chord) before READY. */
     demoOutroMs: 1000,
     liftStrikeMs: 4000,

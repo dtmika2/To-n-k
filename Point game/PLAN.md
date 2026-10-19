@@ -377,3 +377,10 @@ Goal: the owner can play the full rules on the real TV, hear the real sound, and
 
 - **Layout.** The pattern is now the Leo constellation, rotated 90° to portrait with the head at the top-left. It has 9 stars (ids 0–8, in order of first touch) and 9 decoy eyes around it (ids 9–17; 16 and 17 placed by hand). The point count is now 18 and the scale gains D3 and G6 (D3–G6), so every eye still has its own note.
 - **Sequence:** `0 1 2 3 1 4 3 0 5 4 6 7 8`. The start star is touched again at step 8, so the "start appears only once" rule is dropped. The end still appears only once.
+
+## Amendment (2026-10-19): small edits
+
+- **Creative button in INTRO.** It also works under the clouds. The clouds part from the button, and tapping it again returns to INTRO (the clouds roll back in and the attract demo resumes).
+- **Quiet tail.** After the "get ready" notice there is ½ s of quiet before the first eye opens (`NOTICE.tailMs`). `introLeadMs` is now 5.5 s.
+- **Reveal number.** The number is drawn above the eyes. Through IDLE it shrinks towards the centre and fades into the distance, gone as the clouds close.
+- **Hint while the start is pending.** With only the start eye touched and lifted (no connection yet), the hint button cancels the pending start and replays the demo.
