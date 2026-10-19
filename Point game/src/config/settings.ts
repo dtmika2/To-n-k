@@ -47,6 +47,17 @@ export const settings = {
     eyeMinOpen: 0.2,
     /** Bottom layer image (portrait 9:16, in public/); '' = plain night gradient. */
     backdrop: 'assets/backdrop.png',
+    /**
+     * Cloud cover (puffs, as in final-gate-lock): parts outward from the constellation at the reveal,
+     * rolls back in from the edges afterwards. `opacity` < 1 keeps it slightly see-through.
+     */
+    clouds: {
+      count: 34,
+      shroudAlpha: [0.45, 0.7] as [number, number],
+      wispAlpha: [0.03, 0.06] as [number, number],
+      opacity: 0.85,
+      tints: [0x9a8cd0, 0x8a6fb0, 0xb48ac8, 0x7a74b8, 0xc8b8ec],
+    },
   },
   game: { allowSkipDemo: false },
   reveal: { image: 'assets/reveal-number.png', widthFraction: 0.45, placeholderText: '5' },

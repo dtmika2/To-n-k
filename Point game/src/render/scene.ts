@@ -6,6 +6,7 @@ import { dist, lerpVec } from '../pattern/geometry.ts';
 import { noteToMidi } from '../pattern/notes.ts';
 import { ASPECT, type Pattern, type Vec } from '../pattern/types.ts';
 import { Atmosphere } from './atmosphere.ts';
+import { CloudCover, type CloudConfig } from './clouds.ts';
 import type { RevealConfig } from './debugRenderer.ts';
 import { almond, circle, easeOut, easeOutElastic, hash, lerpColor } from './draw.ts';
 import { Eye, type EyeLook } from './eye.ts';
@@ -51,12 +52,8 @@ export interface SceneConfig {
   octaves: number;
   renderScale: number;
   eyeMinOpen: number;
+  clouds: CloudConfig;
 }
-
-const easeInOut = (t: number) => {
-  const k = Math.min(1, Math.max(0, t));
-  return k * k * (3 - 2 * k);
-};
 
 /**
  * Phase 2 visuals (plan §7): sky, reveal number, cloud cover + mist, constellation strands with
@@ -71,6 +68,7 @@ export class SceneRenderer {
   private readonly revealLayer = new Container();
   private revealNode: Sprite | Text | null = null;
   private readonly revealGlow: Sprite;
+  private readonly clouds: CloudCover;
   private readonly atmosphere: Atmosphere;
   private readonly strands = new Graphics();
   private readonly dust: Particles;
@@ -82,7 +80,6 @@ export class SceneRenderer {
   private ctx!: GameContext;
   private eyes = new Map<number, Eye>();
   private centre: Vec = { x: 0.5, y: ASPECT / 2 };
-  private coverSize: Vec = { x: 0.32, y: 0.45 };
 
   private blinks: Blink[] = [];
   private flinches: (Anim & { point: number })[] = [];
@@ -115,6 +112,7 @@ export class SceneRenderer {
     this.revealGlow.tint = 0xffd9a0;
     this.revealLayer.addChild(this.revealGlow);
     this.revealLayer.visible = false;
+    this.clouds = new CloudCover(cfg.clouds);
     this.atmosphere = new Atmosphere(pixi, this.softDot, cfg.octaves);
     this.strands.blendMode = 'add';
     this.fx.blendMode = 'add';
@@ -123,6 +121,7 @@ export class SceneRenderer {
     this.root.addChild(
       this.sky.root,
       this.revealLayer,
+      this.clouds.root,
       this.atmosphere.sprite,
       this.puffs.container,
       this.strands,
@@ -179,8 +178,6 @@ export class SceneRenderer {
     this.revealGlow.position.set(0.5, ASPECT / 2);
     const size = Math.max(node.width, node.height) * 1.9;
     this.revealGlow.width = this.revealGlow.height = size;
-    // the solid part of the cloud cover must hide the number (and most of its glow)
-    this.coverSize = { x: (node.width / 2) * 1.3 + 0.03, y: (node.height / 2) * 1.3 + 0.03 };
   }
 
   setPattern(ctx: GameContext, pattern: Pattern): void {
@@ -275,9 +272,17 @@ export class SceneRenderer {
       case 'startReveal':
         for (const p of this.ctx.points) this.blink(p.id, now, 4200, 0.35, 1.3);
         this.ring(now, this.centre, { from: 0.05, to: 0.9, dur: 2200, color: C.hot, alpha: 0.6, width: 0.006 });
+        this.clouds.part(this.centre, this.ctx.timing.revealDisperseMs);
+        break;
+      case 'idle':
+        if (this.clouds.shrouded) this.clouds.part(this.centre, 1200); // debug jump straight to IDLE
+        break;
+      case 'cloudsReturn':
+        this.clouds.roll(this.ctx.timing.cloudsReturnMs);
         break;
       case 'toIntro':
         if (e.reason === 'inactivity') this.mistBumpAt = now;
+        if (!this.clouds.shrouded) this.clouds.roll(1500); // debug jumps; normally already rolled back
         this.fadeCreative(now);
         break;
       case 'creativeLink':
@@ -321,6 +326,7 @@ export class SceneRenderer {
     this.pendingPuffs = this.pendingPuffs.filter((q) => now < q.at);
 
     this.sky.update(now, dt);
+    this.clouds.update(dt);
     this.updateReveal(s, now);
     this.updateAtmosphere(s, now, dt);
     this.drawConstellation(s, now, dt);
@@ -332,33 +338,20 @@ export class SceneRenderer {
     this.puffs.update(now, dt);
   }
 
-  private disperse(s: GameState, now: number): number {
-    const t = this.ctx.timing;
-    if (s.mode === 'REVEAL') return easeInOut((now - s.modeSince) / t.revealDisperseMs);
-    if (s.mode === 'IDLE') {
-      if (!s.cloudsReturning) return 1;
-      return 1 - easeInOut((now - s.modeSince - t.revealHoldMs) / t.cloudsReturnMs);
-    }
-    return 0;
-  }
-
+  /** The number is drawn only from the reveal on, and shows as much as the clouds have thinned. */
   private updateReveal(s: GameState, now: number): void {
     const show = s.mode === 'REVEAL' || s.mode === 'IDLE';
     this.revealLayer.visible = show && !!this.revealNode;
-    if (show) this.revealGlow.alpha = 0.28 + 0.08 * Math.sin(now / 1300);
+    if (!show) return;
+    this.revealLayer.alpha = 1 - this.clouds.density;
+    this.revealGlow.alpha = 0.28 + 0.08 * Math.sin(now / 1300);
   }
 
   private updateAtmosphere(s: GameState, now: number, dt: number): void {
     const target = s.mode === 'INTRO' ? 1 : s.mode === 'GAME' ? 0.72 : s.mode === 'CREATIVE' ? 0.6 : 0.5;
     this.mist += (target - this.mist) * (1 - Math.exp(-dt / 1.6));
     const bump = 0.7 * Math.exp(-(now - this.mistBumpAt) / 1400);
-    this.atmosphere.update(now, {
-      disperse: this.disperse(s, now),
-      cover: 1,
-      mist: this.mist + bump,
-      center: this.centre,
-      coverSize: this.coverSize,
-    });
+    this.atmosphere.update(now, { mist: this.mist + bump });
   }
 
   // ── constellation ────────────────────────────────────────────

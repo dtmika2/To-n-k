@@ -38,6 +38,27 @@ export function softDotTexture(size = 64, hardness = 0): Texture {
   return Texture.from(c);
 }
 
+/** Irregular soft cloud puff (white; tint it). Same recipe as final-gate-lock's mist puffs. */
+export function cloudPuffTexture(variant: number, size = 256): Texture {
+  const [c, g] = canvas(size, size);
+  const r = rng(1000 + variant * 77);
+  const h = size / 2;
+  for (let i = 0; i < 14; i++) {
+    const a = r() * Math.PI * 2;
+    const d = r() * h * 0.42;
+    const cx = h + Math.cos(a) * d;
+    const cy = h + Math.sin(a) * d * 0.7;
+    const rr = h * (0.28 + r() * 0.3);
+    const grad = g.createRadialGradient(cx, cy, 0, cx, cy, rr);
+    grad.addColorStop(0, 'rgba(255,255,255,0.22)');
+    grad.addColorStop(0.6, 'rgba(255,255,255,0.08)');
+    grad.addColorStop(1, 'rgba(255,255,255,0)');
+    g.fillStyle = grad;
+    g.fillRect(0, 0, size, size);
+  }
+  return Texture.from(c);
+}
+
 /** Sky: deep indigo → violet → near-black, top to bottom of the portrait layout. */
 export function skyTexture(): Texture {
   const [c, g] = canvas(4, 512);

@@ -2,9 +2,9 @@ import { Container, Mesh, MeshGeometry, RenderTexture, Shader, Sprite, type Rend
 import { ASPECT, type Vec } from '../pattern/types.ts';
 
 /**
- * Plan §7 layers 3 + 4 in one pass: the cloud cover (thick, slow, luminous fBm that tears open outward
- * from a centre as `disperse` goes 0 → 1) and the lighter, faster mist on top of it, which parts around
- * the finger. Rendered at `renderScale` into a texture that a sprite stretches over the portrait world.
+ * Plan §7 layer 4: the light, drifting mist (fBm), which parts around the finger. Rendered at
+ * `renderScale` into a texture that a sprite stretches over the portrait world. The cloud cover
+ * (layer 3) is the puff layer in clouds.ts.
  */
 
 const VERTEX = `
@@ -26,10 +26,6 @@ in vec2 vUV;
 uniform sampler2D uMask;
 uniform float uTime;
 uniform float uAspect;
-uniform vec2 uCenter;
-uniform float uDisperse;
-uniform float uCover;
-uniform vec2 uCoverSize;
 uniform float uMist;
 uniform float uOctaves;
 
@@ -64,37 +60,13 @@ void main() {
   vec2 p = vec2(vUV.x, vUV.y * uAspect);
   float warpOct = min(uOctaves, 3.0);
 
-  // cloud cover
-  vec2 q = p * 2.4 + vec2(uTime * 0.006, uTime * 0.0035);
-  vec2 warp = vec2(fbm(q + vec2(1.7, 9.2), warpOct), fbm(q + vec2(8.3, 2.8), warpOct));
-  float n = fbm(q + 1.7 * warp + vec2(-uTime * 0.012, 0.0), uOctaves);
-  vec2 dc = (p - vec2(0.5, uAspect * 0.5)) / uCoverSize;
-  float core = 1.0 - smoothstep(0.85, 1.7, length(dc));
-  float dens = max(smoothstep(0.32, 0.72, n), core);
-
-  // disperse: torn wisps outward from the constellation centre
-  float reach = uDisperse * 1.75 - 0.32;
-  float edge = length(p - uCenter) + (n - 0.5) * 0.55;
-  float opened = 1.0 - smoothstep(reach - 0.14, reach + 0.04, edge);
-  float rim = smoothstep(reach - 0.02, reach + 0.04, edge) * (1.0 - smoothstep(reach + 0.04, reach + 0.16, edge));
-  dens *= 1.0 - opened;
-  float ca = clamp(dens * uCover, 0.0, 1.0);
-  vec3 cc = mix(vec3(0.08, 0.06, 0.20), vec3(0.36, 0.30, 0.58), smoothstep(0.30, 0.95, n));
-  cc += vec3(0.30, 0.22, 0.10) * smoothstep(0.62, 0.95, n);
-  cc += vec3(0.95, 0.80, 0.50) * rim * step(0.001, uDisperse) * (1.0 - step(0.999, uDisperse));
-
-  // mist: lighter, faster, parted by the finger mask
+  // mist: light, drifting, parted by the finger mask
   vec2 m = p * 3.6 + vec2(uTime * 0.035, -uTime * 0.02);
   float mn = fbm(m + 0.9 * vec2(fbm(m * 0.6 + uTime * 0.025, warpOct), 0.0), max(uOctaves - 1.0, 2.0));
   float parted = clamp(texture2D(uMask, vUV).r, 0.0, 1.0);
   float ma = smoothstep(0.38, 0.85, mn) * 0.5 * uMist * (1.0 - 0.92 * parted);
   vec3 mc = vec3(0.56, 0.56, 0.78);
-
-  vec3 col = cc * ca;
-  float a = ca;
-  col = mc * ma + col * (1.0 - ma);
-  a = ma + a * (1.0 - ma);
-  gl_FragColor = vec4(col, a);
+  gl_FragColor = vec4(mc * ma, ma);
 }
 `;
 
@@ -106,11 +78,7 @@ interface TrailPoint {
 }
 
 export interface AtmosphereParams {
-  disperse: number;
-  cover: number;
   mist: number;
-  center: Vec;
-  coverSize: Vec;
 }
 
 const TRAIL_MAX = 24;
@@ -147,10 +115,6 @@ export class Atmosphere {
         atmo: {
           uTime: { value: 0, type: 'f32' },
           uAspect: { value: ASPECT, type: 'f32' },
-          uCenter: { value: new Float32Array([0.5, ASPECT / 2]), type: 'vec2<f32>' },
-          uDisperse: { value: 0, type: 'f32' },
-          uCover: { value: 1, type: 'f32' },
-          uCoverSize: { value: new Float32Array([0.32, 0.45]), type: 'vec2<f32>' },
           uMist: { value: 1, type: 'f32' },
           uOctaves: { value: octaves, type: 'f32' },
         },
@@ -223,12 +187,8 @@ export class Atmosphere {
 
     const u = this.group.uniforms;
     u.uTime = (now / 1000) % 10000;
-    u.uDisperse = p.disperse;
-    u.uCover = p.cover;
     u.uMist = p.mist;
     u.uOctaves = this.octaves;
-    (u.uCenter as Float32Array).set([p.center.x, p.center.y]);
-    (u.uCoverSize as Float32Array).set([p.coverSize.x, p.coverSize.y]);
     this.group.update();
     this.renderer.render({ container: this.mesh, target: this.rt, clear: true, clearColor: [0, 0, 0, 0] });
   }

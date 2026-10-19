@@ -56,6 +56,7 @@ export async function startApp(): Promise<void> {
     octaves: num('octaves', settings.display.noiseOctaves),
     renderScale,
     eyeMinOpen: settings.display.eyeMinOpen,
+    clouds: settings.display.clouds,
   });
   const primitives = new DebugRenderer(reveal);
   app.stage.addChild(scene.root, primitives.root);

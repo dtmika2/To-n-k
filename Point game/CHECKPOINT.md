@@ -110,3 +110,9 @@ The owner confirmed without feedback, so the Phase 1 settings and behaviour were
   - **Timeout:** 30 s without input returns to INTRO.
   - **Debug key:** `5`.
 - **Validator:** points must also keep clear of the creative button.
+- **Cloud cover reworked after final-gate-lock** (`src/render/clouds.ts`). It replaces the cloud half of the shader; the shader now draws only the finger-parting mist.
+  - Soft puff sprites drift, turn slowly and breathe, with one density value from shroud to wisps.
+  - At the reveal they are pushed outward from the constellation centre and thin out over `revealDisperseMs`.
+  - After IDLE they roll back in from the edges over `cloudsReturnMs`.
+  - There is no black veil, and `display.clouds.opacity` (0.85) keeps the cover slightly see-through over the backdrop.
+  - The number is drawn only from the reveal on, and fades in as the clouds thin.
