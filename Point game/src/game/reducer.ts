@@ -18,6 +18,7 @@ export function initialState(now: number): GameState {
     inside: [],
     lastInputAt: now,
     demoStep: 0,
+    demoLeadMs: 0,
     collapseFrom: 0,
     cloudsReturning: false,
     chain: [],
@@ -56,11 +57,13 @@ export function createReducer(ctx: GameContext): Reducer {
     s.subSince = now;
   }
 
-  function startDemo(s: GameState, now: number, fx: Effect[]): void {
+  /** `leadMs`: pause before the first blink (the long "get ready" notice after the start tap). */
+  function startDemo(s: GameState, now: number, fx: Effect[], leadMs = ctx.timing.demoLeadMs): void {
     clearAttempt(s);
     setSub(s, 'DEMO', now);
     s.demoStep = 0;
-    fx.push({ type: 'demoStart' });
+    s.demoLeadMs = leadMs;
+    fx.push({ type: 'demoStart', leadMs });
   }
 
   function toReady(s: GameState, now: number, fx: Effect[]): void {
@@ -69,13 +72,13 @@ export function createReducer(ctx: GameContext): Reducer {
     fx.push({ type: 'ready' });
   }
 
-  function startGame(s: GameState, now: number, fx: Effect[]): void {
+  function startGame(s: GameState, now: number, fx: Effect[], at?: Vec): void {
     s.mode = 'GAME';
     s.modeSince = now;
     s.lastInputAt = now;
     s.cloudsReturning = false;
-    fx.push({ type: 'startGame' });
-    startDemo(s, now, fx);
+    fx.push(at ? { type: 'startGame', at } : { type: 'startGame' });
+    startDemo(s, now, fx, ctx.timing.introLeadMs);
   }
 
   function enterCreative(s: GameState, now: number, fx: Effect[]): void {
@@ -151,7 +154,7 @@ export function createReducer(ctx: GameContext): Reducer {
 
   function onDown(s: GameState, pos: Vec, now: number, fx: Effect[]): void {
     if (s.mode === 'INTRO') {
-      startGame(s, now, fx);
+      startGame(s, now, fx, pos);
       return;
     }
     if (s.mode === 'CREATIVE') {
@@ -332,7 +335,7 @@ export function createReducer(ctx: GameContext): Reducer {
 
     switch (s.sub) {
       case 'DEMO': {
-        const t0 = s.subSince + t.demoLeadMs;
+        const t0 = s.subSince + s.demoLeadMs;
         while (s.demoStep < N && now >= t0 + s.demoStep * t.demoStepMs) {
           fx.push({ type: 'demoBlink', point: ctx.sequence[s.demoStep], step: s.demoStep, noteMs: t.demoNoteMs });
           s.demoStep++;

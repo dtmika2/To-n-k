@@ -13,6 +13,23 @@ export function circle(g: Graphics, x: number, y: number, r: number): Graphics {
   return g.poly(pts, true);
 }
 
+/**
+ * A circle whose radius wobbles slightly: a few integer harmonics around the circle (so it closes
+ * seamlessly) with phases drifting over `time` (seconds). `amp` is the relative deviation (0.04 = ±4 %).
+ */
+export function wobblyCircle(g: Graphics, x: number, y: number, r: number, amp: number, time: number, seed = 0): Graphics {
+  const pts: number[] = [];
+  for (const a of UNIT_CIRCLE) {
+    const n =
+      0.5 * Math.sin(3 * a + time * 0.9 + seed * 1.7) +
+      0.3 * Math.sin(5 * a - time * 1.3 + seed * 2.9) +
+      0.2 * Math.sin(2 * a + time * 0.5 + seed * 0.6);
+    const rr = r * (1 + amp * n);
+    pts.push(x + Math.cos(a) * rr, y + Math.sin(a) * rr);
+  }
+  return g.poly(pts, true);
+}
+
 /** Eye outline: two mirrored arcs meeting at (x ± hw, y), half-height hh. */
 export function almond(g: Graphics, x: number, y: number, hw: number, hh: number): Graphics {
   const pts: number[] = [];
@@ -26,6 +43,12 @@ export function almond(g: Graphics, x: number, y: number, hw: number, hh: number
     pts.push(x + t * hw, y + (1 - t * t) * hh);
   }
   return g.poly(pts, true);
+}
+
+/** Smoothstep of t clamped to 0…1. */
+export function smooth(t: number): number {
+  const k = Math.min(1, Math.max(0, t));
+  return k * k * (3 - 2 * k);
 }
 
 export function easeOut(t: number): number {

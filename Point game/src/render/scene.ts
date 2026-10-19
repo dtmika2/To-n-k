@@ -1,5 +1,6 @@
 import { Assets, Container, Graphics, Sprite, Text, type Renderer, type Texture } from 'pixi.js';
 import type { AttractView } from '../game/attract.ts';
+import { NOTICE, noticeProgress } from '../config/notice.ts';
 import { liftIntensity } from '../game/reducer.ts';
 import type { Effect, GameContext, GameState } from '../game/types.ts';
 import { dist, lerpVec } from '../pattern/geometry.ts';
@@ -8,7 +9,7 @@ import { ASPECT, type Pattern, type Vec } from '../pattern/types.ts';
 import { Atmosphere } from './atmosphere.ts';
 import { CloudCover, type CloudConfig } from './clouds.ts';
 import type { RevealConfig } from './debugRenderer.ts';
-import { almond, circle, easeOut, easeOutElastic, hash, lerpColor } from './draw.ts';
+import { almond, circle, easeOut, easeOutElastic, hash, lerpColor, smooth, wobblyCircle } from './draw.ts';
 import { Eye, type EyeLook } from './eye.ts';
 import { Particles } from './particles.ts';
 import { Sky } from './sky.ts';
@@ -96,7 +97,6 @@ export class SceneRenderer {
   private pitch = new Map<number, number>();
   private creativeAlpha = 0.08;
   private mist = 1;
-  private introAlpha = 1;
   private masterAlpha = 0.08;
   private lastNow = 0;
   private renderScale: number;
@@ -269,13 +269,18 @@ export class SceneRenderer {
       case 'collapse':
         this.pendingPuffs.push({ at: now + this.ctx.timing.collapseMs, pos: this.pos(this.ctx.sequence[0]) });
         break;
+      case 'startGame':
+        // like final-gate-lock's intro: the tap parts the clouds outward from the finger
+        this.clouds.part(e.at ?? this.centre, this.cfg.clouds.partMs);
+        break;
       case 'startReveal':
         for (const p of this.ctx.points) this.blink(p.id, now, 4200, 0.35, 1.3);
         this.ring(now, this.centre, { from: 0.05, to: 0.9, dur: 2200, color: C.hot, alpha: 0.6, width: 0.006 });
-        this.clouds.part(this.centre, this.ctx.timing.revealDisperseMs);
+        this.clouds.part(this.centre, this.ctx.timing.revealDisperseMs); // pushes the lingering wisps aside
         break;
       case 'idle':
-        if (this.clouds.shrouded) this.clouds.part(this.centre, 1200); // debug jump straight to IDLE
+      case 'creativeStart':
+        if (this.clouds.shrouded) this.clouds.part(this.centre, 1200); // debug jumps straight here
         break;
       case 'cloudsReturn':
         this.clouds.roll(this.ctx.timing.cloudsReturnMs);
@@ -338,12 +343,21 @@ export class SceneRenderer {
     this.puffs.update(now, dt);
   }
 
-  /** The number is drawn only from the reveal on, and shows as much as the clouds have thinned. */
+  /**
+   * The number is drawn only from the reveal on: it fades in over revealDisperseMs, stays through
+   * IDLE, and is covered again as the clouds roll back in.
+   */
   private updateReveal(s: GameState, now: number): void {
     const show = s.mode === 'REVEAL' || s.mode === 'IDLE';
     this.revealLayer.visible = show && !!this.revealNode;
     if (!show) return;
-    this.revealLayer.alpha = 1 - this.clouds.density;
+    const t = this.ctx.timing;
+    if (s.mode === 'REVEAL') {
+      const k = Math.min(1, (now - s.modeSince) / t.revealDisperseMs);
+      this.revealLayer.alpha = k * k * (3 - 2 * k);
+    } else {
+      this.revealLayer.alpha = s.cloudsReturning ? 1 - this.clouds.density : 1;
+    }
     this.revealGlow.alpha = 0.28 + 0.08 * Math.sin(now / 1300);
   }
 
@@ -535,6 +549,9 @@ export class SceneRenderer {
     if (inGame && (s.sub === 'TRACING' || s.sub === 'LIFTED')) for (let i = 0; i < s.progress; i++) awake.add(seq[i]);
     if (s.mode === 'CREATIVE') for (const id of s.chain) awake.add(id);
     const readyStart = inGame && s.sub === 'READY' ? seq[0] : null;
+    // during the "get ready" notice every eye glows up with the breath, as if the table holds it
+    const notice = noticeProgress(s, now);
+    const held = notice === null ? 0 : smooth((notice - NOTICE.inhale[0]) / (NOTICE.inhale[1] - NOTICE.inhale[0])) * (1 - smooth((notice - 0.9) / 0.1));
 
     for (const eye of this.eyes.values()) {
       const id = eye.id;
@@ -545,6 +562,10 @@ export class SceneRenderer {
         glowColor: C.lavender,
         shudder: 0,
       };
+      if (held > 0) {
+        look.glow = Math.max(look.glow, 0.1 + 0.4 * held);
+        look.glowColor = lerpColor(C.lavender, C.gold, held);
+      }
       if (awake.has(id)) {
         look.open = 0.42;
         look.glow = 0.32;
@@ -575,7 +596,7 @@ export class SceneRenderer {
     }
   }
 
-  // ── fx, intro glyph, master button ───────────────────────────
+  // ── fx, notice and buttons ───────────────────────────────────
 
   private drawFx(s: GameState, now: number, dt: number): void {
     const g = this.fx;
@@ -587,22 +608,7 @@ export class SceneRenderer {
       circle(g, r.pos.x, r.pos.y, rad).stroke({ width: r.width * 3, color: r.color, alpha: r.alpha * 0.18 * (1 - t) });
       circle(g, r.pos.x, r.pos.y, rad).stroke({ width: r.width, color: r.color, alpha: r.alpha * (1 - t) });
     }
-
-    // INTRO: a ring of light rippling outward from the centre invites a touch
-    this.introAlpha += ((s.mode === 'INTRO' ? 1 : 0) - this.introAlpha) * (1 - Math.exp(-dt / 0.5));
-    if (this.introAlpha > 0.01) {
-      const c = { x: 0.5, y: ASPECT / 2 };
-      const a = this.introAlpha;
-      for (let i = 0; i < 3; i++) {
-        const t = (now / 2600 + i / 3) % 1;
-        const rad = 0.05 + 0.2 * easeOut(t);
-        circle(g, c.x, c.y, rad).stroke({ width: 0.012, color: C.gold, alpha: 0.12 * a * (1 - t) });
-        circle(g, c.x, c.y, rad).stroke({ width: 0.0035, color: C.gold, alpha: 0.6 * a * (1 - t) });
-      }
-      const breathe = 0.5 + 0.5 * Math.sin(now / 650);
-      circle(g, c.x, c.y, 0.03 + 0.006 * breathe).fill({ color: C.gold, alpha: 0.18 * a });
-      circle(g, c.x, c.y, 0.014 + 0.003 * breathe).fill({ color: C.hot, alpha: 0.85 * a });
-    }
+    this.drawNotice(s, now);
 
     this.drawMaster(s.mode === 'GAME' && s.sub === 'READY', now, dt);
     this.drawCreativeButton((s.mode === 'GAME' && s.sub === 'READY') || s.mode === 'CREATIVE', now, dt);
@@ -631,6 +637,34 @@ export class SceneRenderer {
       circle(g, st.x, st.y, 0.14 * r).fill({ color: C.gold, alpha: 0.35 * a });
       circle(g, st.x, st.y, 0.07 * r).fill({ color: C.hot, alpha: a });
     }
+  }
+
+  /**
+   * "Get ready" before the first demo blink (text-free, readable from every side): a wide ring of light
+   * over the constellation slowly contracts and brightens — breathe in — then three soft pulses ripple
+   * out from the centre, and the demo starts.
+   */
+  private drawNotice(s: GameState, now: number): void {
+    const p = noticeProgress(s, now);
+    if (p === null) return;
+    const g = this.fx;
+    const c = this.centre;
+    const [i0, i1] = NOTICE.inhale;
+    const inhale = smooth((p - i0) / (i1 - i0));
+    const a = smooth(p / i0) * (1 - smooth((p - 0.9) / 0.1));
+    const rad = 0.42 + (0.07 - 0.42) * inhale;
+    const time = now / 1000;
+    // slight organic wobble, so the rings aren't perfectly even (glow and core share the shape)
+    wobblyCircle(g, c.x, c.y, rad, 0.035, time, 1).stroke({ width: 0.016, color: C.gold, alpha: 0.12 * a * (0.4 + inhale) });
+    wobblyCircle(g, c.x, c.y, rad, 0.035, time, 1).stroke({ width: 0.0035, color: C.gold, alpha: (0.25 + 0.6 * inhale) * a });
+    wobblyCircle(g, c.x, c.y, 0.02 + 0.025 * inhale, 0.08, time * 1.6, 2).fill({ color: C.hot, alpha: 0.5 * inhale * a });
+    NOTICE.pulses.forEach((pk, i) => {
+      const tp = ((p - pk) * s.demoLeadMs) / 500;
+      if (tp < 0 || tp > 1) return;
+      const r = 0.07 + 0.22 * easeOut(tp);
+      wobblyCircle(g, c.x, c.y, r, 0.04, time, 3 + i).stroke({ width: 0.012, color: C.hot, alpha: 0.18 * (1 - tp) });
+      wobblyCircle(g, c.x, c.y, r, 0.04, time, 3 + i).stroke({ width: 0.004, color: C.hot, alpha: 0.85 * (1 - tp) });
+    });
   }
 
   /** A stylized eye inside a thin ring of light; breathes in READY, ~8 % elsewhere. */

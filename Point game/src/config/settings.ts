@@ -5,6 +5,8 @@ export const settings = {
     demoNoteMs: 600,
     /** Pause between entering GAME (or pressing the master button) and the first demo blink. */
     demoLeadMs: 900,
+    /** After the start tap: the clouds part and a "breathe in, pay attention" notice plays before the demo. */
+    introLeadMs: 5000,
     liftStrikeMs: 4000,
     retractMs: 600,
     collapseMs: 1500,
@@ -32,6 +34,9 @@ export const settings = {
     speedSwell: 0.18,
     introDroneLevel: 0.035,
     padLevel: 0.08,
+    /** "Get ready" notice: the breath swell and the three chimes. */
+    noticeLevel: 0.07,
+    noticePingLevel: 0.12,
   },
   display: {
     rotateDeg: 0,
@@ -48,10 +53,12 @@ export const settings = {
     /** Bottom layer image (portrait 9:16, in public/); '' = plain night gradient. */
     backdrop: 'assets/backdrop.png',
     /**
-     * Cloud cover (puffs, as in final-gate-lock): parts outward from the constellation at the reveal,
-     * rolls back in from the edges afterwards. `opacity` < 1 keeps it slightly see-through.
+     * Cloud cover (puffs, as in final-gate-lock): covers the INTRO, parts outward from the tap that
+     * starts the game (over partMs), rolls back in from the edges after the reveal.
+     * `opacity` < 1 keeps it slightly see-through.
      */
     clouds: {
+      partMs: 2600,
       count: 34,
       shroudAlpha: [0.45, 0.7] as [number, number],
       wispAlpha: [0.03, 0.06] as [number, number],

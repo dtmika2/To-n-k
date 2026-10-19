@@ -114,10 +114,25 @@ describe('full trace', () => {
     const ctx = testContext([0, 1, 2]);
     const sim = new Sim(ctx).down({ x: 0.5, y: 0.9 }).up();
     expect(sim.state.sub).toBe('DEMO');
-    sim.wait(TIMING.demoLeadMs + 3 * TIMING.demoStepMs);
+    sim.wait(TIMING.introLeadMs + 3 * TIMING.demoStepMs);
     const blinks = sim.effects.filter((e) => e.type === 'demoBlink').map((e) => (e as { point: number }).point);
     expect(blinks).toEqual([0, 1, 2]);
     expect(sim.state.sub).toBe('READY');
+  });
+
+  it('after the start tap the first blink waits for the long notice; master replays use the short lead', () => {
+    const ctx = testContext([0, 1, 2]);
+    const sim = new Sim(ctx).down({ x: 0.5, y: 0.9 }).up();
+    expect(sim.effects).toContainEqual({ type: 'demoStart', leadMs: TIMING.introLeadMs });
+    sim.wait(TIMING.introLeadMs - 100);
+    expect(sim.count('demoBlink')).toBe(0);
+    sim.wait(100);
+    expect(sim.count('demoBlink')).toBe(1);
+
+    sim.send({ type: 'DEMO_DONE' }).send({ type: 'MASTER_PRESSED' });
+    expect(sim.last).toContainEqual({ type: 'demoStart', leadMs: TIMING.demoLeadMs });
+    sim.wait(TIMING.demoLeadMs);
+    expect(sim.count('demoBlink')).toBe(2);
   });
 
   it('touches during the demo are ignored', () => {
@@ -403,7 +418,7 @@ describe('inactivity', () => {
     const sim = new Sim(testContext([0, 1, 2]));
     sim.down({ x: 0.1, y: 1.7 });
     expect(sim.state).toMatchObject({ mode: 'GAME', sub: 'DEMO' });
-    expect(sim.effects[0]).toEqual({ type: 'startGame' });
+    expect(sim.effects[0]).toEqual({ type: 'startGame', at: { x: 0.1, y: 1.7 } });
   });
 });
 

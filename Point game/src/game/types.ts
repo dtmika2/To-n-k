@@ -12,6 +12,7 @@ export interface GameContext {
   timing: {
     demoStepMs: number;
     demoLeadMs: number;
+    introLeadMs: number;
     demoNoteMs: number;
     retractMs: number;
     liftStrikeMs: number;
@@ -49,6 +50,8 @@ export interface GameState {
   lastInputAt: number;
   /** Index of the next demo step to blink. */
   demoStep: number;
+  /** Pause before the first blink of the current demo (long after the start tap, short on replays). */
+  demoLeadMs: number;
   /** Progress at the moment COLLAPSE started (for the rewind animation). */
   collapseFrom: number;
   /** IDLE: the clouds have started rolling back in. */
@@ -75,8 +78,9 @@ export type GameEvent =
   | { type: 'JUMP'; mode: Mode };
 
 export type Effect =
-  | { type: 'startGame' }
-  | { type: 'demoStart' }
+  /** `at`: the tap that started it (the clouds part from there); absent for debug jumps. */
+  | { type: 'startGame'; at?: Vec }
+  | { type: 'demoStart'; leadMs: number }
   | { type: 'demoBlink'; point: number; step: number; noteMs: number }
   | { type: 'ready' }
   /** A note for a point reached by the player: the start touch, a retouch or a newly reached point. */

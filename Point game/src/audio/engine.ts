@@ -1,3 +1,4 @@
+import { NOTICE } from '../config/notice.ts';
 import type { Settings } from '../config/settings.ts';
 import { liftIntensity } from '../game/reducer.ts';
 import type { Effect, GameContext, GameState } from '../game/types.ts';
@@ -274,6 +275,50 @@ export class AudioEngine {
     this.amp.gain.setTargetAtTime(0, this.t + noteMs / 1000, RELEASE_TC);
   }
 
+  /**
+   * "Get ready" sound under the visual notice: a soft A3 + E4 swell that rises with the breath, then
+   * three quiet chimes with the pulses, the last one higher.
+   */
+  private notice(leadMs: number): void {
+    const ac = this.ac!;
+    const t0 = this.t;
+    const L = leadMs / 1000;
+    const [i0, i1] = NOTICE.inhale;
+    const breath = ac.createGain();
+    breath.gain.setValueAtTime(0, t0);
+    breath.gain.setValueAtTime(0, t0 + i0 * L);
+    breath.gain.linearRampToValueAtTime(this.cfg.noticeLevel, t0 + i1 * L);
+    breath.gain.setTargetAtTime(0, t0 + i1 * L, 0.35);
+    breath.connect(this.bus);
+    for (const [freq, lvl] of [
+      [220, 1],
+      [329.63, 0.5],
+    ]) {
+      const o = ac.createOscillator();
+      o.frequency.value = freq;
+      o.detune.setValueAtTime(-30, t0 + i0 * L);
+      o.detune.linearRampToValueAtTime(20, t0 + i1 * L);
+      const og = ac.createGain();
+      og.gain.value = lvl;
+      o.connect(og).connect(breath);
+      o.start(t0);
+      o.stop(t0 + L + 1.5);
+    }
+    NOTICE.pulses.forEach((pk, i) => {
+      const at = t0 + pk * L;
+      const last = i === NOTICE.pulses.length - 1;
+      const o = ac.createOscillator();
+      o.frequency.value = last ? 659.25 : 440;
+      const g = ac.createGain();
+      g.gain.setValueAtTime(0, at);
+      g.gain.linearRampToValueAtTime(this.cfg.noticePingLevel * (last ? 1.2 : 1), at + 0.008);
+      g.gain.setTargetAtTime(0, at + 0.01, 0.18);
+      o.connect(g).connect(this.bus);
+      o.start(at);
+      o.stop(at + 1.5);
+    });
+  }
+
   /** INTRO attract demo note (full voice level, like the game demo). */
   onAttractNote(point: number, noteMs: number): void {
     if (!this.running) return;
@@ -281,13 +326,19 @@ export class AudioEngine {
   }
 
   onEffect(e: Effect): void {
-    if (!this.running) return;
+    // Effects may arrive while a first tap is still resuming the context; scheduling then is fine,
+    // because the context clock only starts running once it has resumed.
+    if (!this.ac) return;
     const f = (id: number) => this.freqs.get(id) ?? 220;
     switch (e.type) {
       case 'startGame':
         this.setDrone(false);
         break;
       case 'demoStart':
+        this.ampTo(0, 0.08);
+        this.setMode('silent');
+        if (e.leadMs >= NOTICE.minLeadMs) this.notice(e.leadMs);
+        break;
       case 'ready':
         this.ampTo(0, 0.08);
         this.setMode('silent');

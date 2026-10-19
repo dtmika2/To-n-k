@@ -5,12 +5,15 @@ import { cloudPuffTexture, rng } from './textures.ts';
 /**
  * Plan §7 layer 3, the cloud cover, built the way final-gate-lock builds its mist: big soft puffs that
  * drift, turn slowly and breathe. One `density` (0 = thin wisps, 1 = shrouded) blends every puff
- * between its wisp and shroud alpha. At the reveal the puffs are pushed outward from a point and thin
- * out; afterwards they roll back in from the edges. Unlike final-gate-lock there is no black veil, and
+ * between its wisp and shroud alpha. The tap that starts the game pushes the puffs outward from the
+ * finger and they thin out; after the reveal they roll back in from the edges, covering the INTRO
+ * again. Unlike final-gate-lock there is no black veil, and
  * the whole layer is capped at `opacity`, so the backdrop always shows through slightly.
  */
 
 export interface CloudConfig {
+  /** How long the clouds take to part when a tap starts the game. */
+  partMs: number;
   count: number;
   /** Puff alpha when shrouded, as a random range. */
   shroudAlpha: [number, number];
