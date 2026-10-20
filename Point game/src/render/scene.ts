@@ -8,7 +8,7 @@ import { noteToMidi } from '../pattern/notes.ts';
 import { ASPECT, type Pattern, type Vec } from '../pattern/types.ts';
 import { Atmosphere } from './atmosphere.ts';
 import { CloudCover, type CloudConfig } from './clouds.ts';
-import { figureProgress } from '../game/figure.ts';
+import { figureProgress, figureSurge } from '../game/figure.ts';
 import { almond, circle, easeOut, easeOutElastic, lerpColor, smooth, wobblyCircle } from './draw.ts';
 import { Eye, type EyeLook } from './eye.ts';
 import { Particles } from './particles.ts';
@@ -470,7 +470,8 @@ export class SceneRenderer {
 
   /**
    * The reveal figure: the line runs from eye to eye and draws the hidden number, a bright head
-   * shedding sparks; drawn it breathes gently through IDLE and fades as the clouds return.
+   * shedding sparks; drawn it breathes gently through IDLE and fades as the clouds return. Now and then
+   * a surge runs along it from eye to eye: where it is, the line frays, brightens and sheds sparks.
    */
   private drawFigure(s: GameState, now: number, dt: number): void {
     const f = figureProgress(s, now, this.ctx);
@@ -480,7 +481,22 @@ export class SceneRenderer {
     const done = Math.min(fig.length - 1, Math.floor(f.head));
     const part = f.head - done;
     const style = { color: C.gold, alpha: f.alpha * (0.85 + 0.15 * Math.sin(now / 900)), hot: 0.7 };
-    for (let i = 0; i < done; i++) this.strand(P(fig[i]), P(fig[i + 1]), now, 400 + i, style);
+    const surge = f.doneMs >= 0 ? figureSurge(f.doneMs, fig.length - 1) : null;
+    for (let i = 0; i < done; i++) {
+      // the surge's strength on this segment: 1 at its centre, fading over ~one segment either side
+      const w = surge === null ? 0 : smooth(1 - Math.abs(surge - (i + 0.5)) / 1.1);
+      const a = P(fig[i]);
+      const b = P(fig[i + 1]);
+      this.strand(a, b, now, 400 + i, {
+        color: lerpColor(C.gold, C.hot, 0.45 * w),
+        alpha: Math.min(1, style.alpha + 0.35 * w * f.alpha),
+        hot: style.hot + 0.9 * w,
+        u: 0.5 * w,
+      });
+      if (w > 0.2 && Math.random() < dt * 35 * w) {
+        this.dust.emit(now, { pos: lerpVec(a, b, Math.random()), speed: 0.05, life: 0.9, size: 0.0065, tint: Math.random() < 0.5 ? C.gold : C.hot, alpha: f.alpha });
+      }
+    }
     if (done < fig.length - 1 && part > 0) {
       const tip = lerpVec(P(fig[done]), P(fig[done + 1]), part);
       this.strand(P(fig[done]), tip, now, 400 + done, style);
@@ -560,6 +576,10 @@ export class SceneRenderer {
     const figure = figureProgress(s, now, this.ctx);
     const lit = new Map<number, number>();
     if (figure) this.ctx.figure.forEach((id, i) => i <= figure.head && lit.set(id, figure.alpha));
+    // a surge along the finished figure flares each eye as it passes
+    const surge = figure && figure.doneMs >= 0 ? figureSurge(figure.doneMs, this.ctx.figure.length - 1) : null;
+    const flare = new Map<number, number>();
+    if (surge !== null) this.ctx.figure.forEach((id, i) => flare.set(id, Math.max(flare.get(id) ?? 0, smooth(1 - Math.abs(surge - i) / 0.8))));
 
     for (const eye of this.eyes.values()) {
       const id = eye.id;
@@ -576,10 +596,11 @@ export class SceneRenderer {
       }
       const fl0 = lit.get(id);
       if (fl0 !== undefined) {
-        look.open = 0.7 * fl0;
+        const fx = flare.get(id) ?? 0;
+        look.open = (0.7 + 0.3 * fx) * fl0;
         look.closeTc = 0.8;
-        look.glow = Math.max(look.glow, (0.45 + 0.1 * Math.sin(now / 900 + id)) * fl0);
-        look.glowColor = C.gold;
+        look.glow = Math.max(look.glow, (0.45 + 0.1 * Math.sin(now / 900 + id) + 0.5 * fx) * fl0);
+        look.glowColor = lerpColor(C.gold, C.hot, 0.5 * fx);
       }
       if (awake.has(id)) {
         look.open = 0.42;
