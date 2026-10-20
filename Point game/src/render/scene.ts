@@ -304,6 +304,7 @@ export class SceneRenderer {
       case 'creativeStart':
         // opened from INTRO: the clouds part from the button; debug jumps land here shrouded too
         if (this.clouds.shrouded) this.clouds.part(e.at ?? this.centre, e.at ? this.cfg.clouds.partMs : 1200);
+        for (let k = 0; k < 34; k++) this.creativeSpark(now, 0.09 + Math.random() * 0.05); // a burst as it opens
         break;
       case 'cloudsReturn':
         this.clouds.roll(this.ctx.timing.cloudsReturnMs);
@@ -655,6 +656,28 @@ export class SceneRenderer {
     const ready = s.mode === 'GAME' && s.sub === 'READY';
     this.drawMaster(ready || (s.mode === 'GAME' && s.sub === 'LIFTED' && s.progress === 1), now, dt);
     this.drawCreativeButton(ready || s.mode === 'CREATIVE' || s.mode === 'INTRO', now, dt);
+    // in creative mode the button keeps sparkling, like the eyes' lashes, so the mode reads at a glance
+    if (s.mode === 'CREATIVE') {
+      const n = Math.floor(dt * 22) + (Math.random() < (dt * 22) % 1 ? 1 : 0);
+      for (let k = 0; k < n; k++) this.creativeSpark(now, 0.04 + Math.random() * 0.03);
+    }
+  }
+
+  /** One spark off the creative button's ring, drifting outward (lavender, gold like its stars, or white). */
+  private creativeSpark(now: number, speed: number): void {
+    const { pos, r } = this.ctx.creative;
+    const a = Math.random() * Math.PI * 2;
+    const [ux, uy] = [Math.cos(a), Math.sin(a)];
+    const pick = Math.random();
+    this.dust.emit(now, {
+      pos: { x: pos.x + ux * r, y: pos.y + uy * r },
+      speed: 0.015,
+      life: 1.2,
+      size: 0.012,
+      grow: 0.3,
+      tint: pick < 0.35 ? C.lavender : pick < 0.7 ? C.gold : C.hot,
+      drift: { x: ux * speed, y: uy * speed },
+    });
   }
 
   /**
