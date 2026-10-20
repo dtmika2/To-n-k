@@ -4,7 +4,8 @@ A memory game for a 75" portrait touch table: a PixiJS 8 + Web Audio PWA, run in
 
 ## Commands
 - `npm run dev` — Vite dev server on http://localhost:5173.
-  - URL flags: `?debug`, `?primitives`, `?unused` (marks decoy eyes), `?scale=`, `?rotate=`, `?octaves=`.
+  - URL flags: `?debug`, `?primitives`, `?unused` (marks decoy eyes), `?look=classic|vfx`, `?scale=`, `?rotate=`, `?octaves=`.
+  - `/vfx.html`: look-dev page, classic and vfx side by side with sliders.
 - `npm run verify` — typecheck, vitest, pattern validation and build. Run this before committing.
 - `npm run validate` / `npm run assign-pitches` — run these after changing `src/config/pattern.json`.
 - **Don't run the Playwright e2e/perf tests unless asked.**
@@ -25,7 +26,9 @@ A memory game for a 75" portrait touch table: a PixiJS 8 + Web Audio PWA, run in
   - The start eye may repeat; the end may not.
   - Each eye has its own note from A minor pentatonic D3–G6.
   - The `E` key opens the layout editor.
-- **Scene layers, bottom to top:** sky/backdrop, clouds (puff sprites), mist shader, puffs, strands, dust, eyes, reveal number, master button, fx.
+- **Scene layers, bottom to top:** sky/backdrop, clouds (puff sprites), mist shader, puffs, strands, beams, dust, eyes, reveal number, master button, rings, fx.
+- **Two looks in one build** (`settings.display.look`, `?look=`, `L` key live): `classic` and `vfx`. The vfx look swaps three primitives for shaders in `render/vfx/`: the iris (`portal.ts`, inside the same lid mask), the strands (`beam.ts`, via `render/strand.ts`), the rings (`ring.ts`) and the notice centre (`orb.ts` plus sparks). Beams and rings are each one dynamic mesh per frame (`batch.ts`). Everything else is shared; new visuals should work in both looks.
+- **Shader time:** never pass raw time into noise (hash precision; the kiosk runs for days). Use `wrap()` from `render/vfx/shaders.ts` with the periodic `tnoise`/`tfbm`, or `shaderTime()` for sin-only use.
 
 ## Gotchas
 - Pixi tessellates circles by their local radius, which is tiny in world units. Use the `circle()` / `wobblyCircle()` helpers in `render/draw.ts`.

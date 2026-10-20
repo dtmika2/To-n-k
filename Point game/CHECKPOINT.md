@@ -116,3 +116,9 @@ The owner confirmed without feedback, so the Phase 1 settings and behaviour were
   - After IDLE they roll back in from the edges over `cloudsReturnMs`.
   - There is no black veil, and `display.clouds.opacity` (0.85) keeps the cover slightly see-through over the backdrop.
   - The number is drawn only from the reveal on, and fades in as the clouds thin.
+- **Second look, "vfx"** (PLAN amendment 2026-10-20), `src/render/vfx/`:
+  - `?look=vfx` / `L` key / `settings.display.look`; the overlay shows the current look.
+  - `portal.ts` (iris shader per eye), `beam.ts` + `ring.ts` (one dynamic mesh each per frame, `batch.ts`), shared GLSL in `shaders.ts`.
+  - Strand geometry moved to `render/strand.ts`, shared by both looks.
+  - `/vfx.html` (`src/dev/vfxLab.ts`): classic vs vfx eye, strand and rings with sliders. Built as a second page; the service worker doesn't serve it as the app fallback.
+  - Not yet measured on the TV: check fps with `?debug` in both looks.

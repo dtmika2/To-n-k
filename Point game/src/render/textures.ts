@@ -80,9 +80,16 @@ const IRIS_PALETTES = [
   ['#c0429a', '#ffb0e0', '#fff0c8'],
 ];
 
+const irisRng = (seed: number) => rng(seed * 7919 + 13);
+
+/** The eye's iris colours: [deep, mid, hot]. Both looks use the same one, so each eye keeps its colour. */
+export function irisPalette(seed: number): readonly string[] {
+  return IRIS_PALETTES[Math.floor(irisRng(seed)() * IRIS_PALETTES.length)];
+}
+
 /** A nebula-like iris: coloured haze plus spiral arms of tiny stars, unique per seed. */
 export function irisTexture(seed: number, size = 128): Texture {
-  const r = rng(seed * 7919 + 13);
+  const r = irisRng(seed);
   const [c, g] = canvas(size, size);
   const h = size / 2;
   const pal = IRIS_PALETTES[Math.floor(r() * IRIS_PALETTES.length)];

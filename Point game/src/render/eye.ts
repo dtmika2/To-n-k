@@ -1,7 +1,8 @@
 import { Container, Graphics, Sprite, type Texture } from 'pixi.js';
 import type { Vec } from '../pattern/types.ts';
 import { lerpColor } from './draw.ts';
-import { irisTexture, makeWobble, rng } from './textures.ts';
+import { irisPalette, irisTexture, makeWobble, rng } from './textures.ts';
+import { PortalIris } from './vfx/portal.ts';
 
 /** What the scene wants an eye to look like this frame. */
 export interface EyeLook {
@@ -22,7 +23,8 @@ const LID_WARM = 0xf3d99a;
 /**
  * Plan §7 "organic points": an almond/blob outline perturbed by seeded noise that morphs slowly, wispy
  * lashes, size 0.85–1.15× and a random rotation (no eye has an "up"). The iris is a pre-rendered
- * nebula texture, two counter-rotating copies for the swirl, clipped by the lids.
+ * nebula texture, two counter-rotating copies for the swirl, clipped by the lids. In the "vfx" look a
+ * portal shader (vfx/portal.ts) replaces the iris and pupil inside the same lids.
  */
 export class Eye {
   readonly root = new Container();
@@ -33,6 +35,7 @@ export class Eye {
   private readonly irisA: Sprite;
   private readonly irisB: Sprite;
   private readonly pupil: Sprite;
+  private readonly portal: PortalIris;
   private readonly lids = new Graphics();
 
   private readonly w: number;
@@ -91,7 +94,9 @@ export class Eye {
     this.irisB.blendMode = 'add';
     this.pupil.width = this.pupil.height = this.h * 0.75;
     this.pupil.tint = 0xfff6e0;
-    this.iris.addChild(this.irisA, this.irisB, this.pupil);
+    this.portal = new PortalIris(seed, irisPalette(seed), this.h * 1.2, this.spin * 1.6);
+    this.portal.mesh.visible = false;
+    this.iris.addChild(this.irisA, this.irisB, this.pupil, this.portal.mesh);
     this.iris.mask = this.mask;
 
     this.root.addChild(this.glowSprite, this.sclera, this.iris, this.mask, this.lids);
@@ -106,7 +111,8 @@ export class Eye {
     this.open = this.minOpen;
   }
 
-  update(now: number, dt: number, look: EyeLook): void {
+  /** `vfx`: draw the portal instead of the nebula iris. */
+  update(now: number, dt: number, look: EyeLook, vfx = false): void {
     const target = Math.max(this.minOpen, look.open);
     const tc = target > this.open ? 0.06 : look.closeTc;
     this.open += (target - this.open) * (1 - Math.exp(-dt / tc));
@@ -144,12 +150,15 @@ export class Eye {
       this.mask.poly(outline, true).fill({ color: 0xffffff });
     }
     this.iris.visible = visible;
+    this.irisA.visible = this.irisB.visible = this.pupil.visible = !vfx;
+    this.portal.mesh.visible = vfx && visible;
     const midY = (upper[SAMPLES + 1] + lower[SAMPLES + 1]) / 2;
     this.iris.position.set(0, midY);
     this.irisA.rotation = time * this.spin;
     this.irisB.rotation = -time * this.spin * 1.7;
     const pulse = 0.85 + 0.15 * Math.sin(time * 3.1 + this.id);
     this.pupil.alpha = Math.min(1, 0.6 + look.glow * 0.5) * pulse;
+    if (vfx && visible) this.portal.update(now, look.glow * pulse, open);
 
     // lids and lashes
     const lidColor = lerpColor(LID, LID_WARM, Math.min(1, look.glow));

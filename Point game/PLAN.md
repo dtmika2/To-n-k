@@ -384,3 +384,12 @@ Goal: the owner can play the full rules on the real TV, hear the real sound, and
 - **Quiet tail.** After the "get ready" notice there is ½ s of quiet before the first eye opens (`NOTICE.tailMs`). `introLeadMs` is now 5.5 s.
 - **Reveal number.** The number is drawn above the eyes. Through IDLE it shrinks towards the centre and fades into the distance, gone as the clouds close.
 - **Hint while the start is pending.** With only the start eye touched and lifted (no connection yet), the hint button cancels the pending start and replays the demo.
+
+## Amendment (2026-10-20): second look, "vfx"
+
+- **Two looks, one link.** As in final-gate-lock, both looks ship in one build. `settings.display.look` sets the default (`classic`), `?look=vfx` overrides it per session, and `L` switches live, so the two can be compared on the table.
+- **vfx look** (League-style effects: additive light, scrolling noise, hot cores, bright rims):
+  - **Eyes:** the iris becomes a portal, a dark star-flecked void inside a hot rim with twisting arms and light streaks. It stays inside the same organic lids, and the void opens with them (a sleeping eye shows a small ring).
+  - **Lines:** every strand becomes an energy beam with light flowing from start to end. Fraying flickers and breaks it softly instead of cutting it into pieces.
+  - **"Get ready" centre:** instead of the soft dot, an energy orb (flame tongues around a white-hot core) gathers as the ring contracts. Sparks stream in from the ring; each pulse flares the orb and bursts sparks outward. The demo outro plays it in reverse: the same ring expands, the orb shrinks away and its sparks scatter outward with the ring.
+  - **Rings:** ripples, blink and notice rings and both buttons become rings of light with a full soft fill and no dashes (owner's pick from the lab, 2026-10-20). The eye rings (blink, reach, hint) and the touch ripple are gold; the others (wrong touch, notice, outro, reveal, buttons) are lavender. The beams and everything else keep their colours.

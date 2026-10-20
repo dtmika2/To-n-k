@@ -1,3 +1,5 @@
+import type { Look } from '../render/scene.ts';
+
 /** Tunables. Everything that is worth adjusting on the real TV lives here. */
 export const settings = {
   timing: {
@@ -41,6 +43,11 @@ export const settings = {
     noticePingLevel: 0.12,
   },
   display: {
+    /**
+     * Visual look: 'classic' (drawn lines, nebula irises) or 'vfx' (shader beams, portal irises, rings of
+     * light). Both ship in the same build; `?look=` overrides this and the L key switches it live.
+     */
+    look: 'classic' as Look,
     rotateDeg: 0,
     /** Resolution of the cloud/mist shader layer relative to the screen. */
     renderScale: 0.5,

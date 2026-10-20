@@ -32,7 +32,7 @@ export class DebugOverlay {
       `pointer ${s.pointer ? `${s.pointer.id}${s.pointer.ignored ? ' (ignored)' : ''}` : '—'}  hysteresis [${s.inside.join(',')}]`,
       ...(s.mode === 'CREATIVE' ? [`chain ${s.chain.join(' → ') || '—'}`] : []),
       `${fps.toFixed(0)} fps  ${extra}`,
-      `D overlay · P primitives · E editor · R reset · 1–5 INTRO/GAME/REVEAL/IDLE/CREATIVE`,
+      `D overlay · P primitives · L look · E editor · R reset · 1–5 INTRO/GAME/REVEAL/IDLE/CREATIVE`,
     ].join('\n');
   }
 }

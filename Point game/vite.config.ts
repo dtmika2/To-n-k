@@ -45,7 +45,12 @@ function savePattern(): Plugin {
 // BASE_PATH: where the site is served from (default: the root, as in the kiosk setup)
 export default defineConfig({
   base: process.env.BASE_PATH ?? '/',
-  build: { target: 'es2022', chunkSizeWarningLimit: 1500 },
+  build: {
+    target: 'es2022',
+    chunkSizeWarningLimit: 1500,
+    // vfx.html: look-dev page for the two visual looks (see src/dev/vfxLab.ts)
+    rollupOptions: { input: { main: resolve(import.meta.dirname, 'index.html'), vfx: resolve(import.meta.dirname, 'vfx.html') } },
+  },
   plugins: [
     savePattern(),
     VitePWA({
@@ -65,6 +70,7 @@ export default defineConfig({
         globPatterns: ['**/*.{js,css,html,json,png,jpg,jpeg,webp,svg,ico,woff2}'],
         maximumFileSizeToCacheInBytes: 20 * 1024 * 1024,
         navigateFallback: 'index.html',
+        navigateFallbackDenylist: [/\/vfx\.html/],
         cleanupOutdatedCaches: true,
       },
     }),

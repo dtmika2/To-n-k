@@ -100,3 +100,25 @@ body.show-cursor {
   font: 12px/1.4 Consolas, monospace;
   opacity: 0.85;
 }
+.vfx-panel {
+  position: fixed;
+  right: 8px;
+  top: 8px;
+  z-index: 11;
+  display: grid;
+  gap: 4px;
+  padding: 10px 12px;
+  font: 13px/1.45 system-ui, sans-serif;
+  color: #e8e6ff;
+  background: rgba(16, 14, 40, 0.85);
+  border: 1px solid #3a3570;
+  border-radius: 8px;
+  touch-action: auto;
+  user-select: none;
+}
+.vfx-panel label {
+  display: grid;
+  grid-template-columns: 90px 140px 40px;
+  align-items: center;
+  gap: 6px;
+}

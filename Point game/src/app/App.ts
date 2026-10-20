@@ -13,7 +13,7 @@ import { dist } from '../pattern/geometry.ts';
 import { noteToFreq } from '../pattern/notes.ts';
 import type { Pattern, Vec } from '../pattern/types.ts';
 import { DebugRenderer } from '../render/debugRenderer.ts';
-import { SceneRenderer } from '../render/scene.ts';
+import { SceneRenderer, type Look } from '../render/scene.ts';
 import { Viewport } from './viewport.ts';
 import { keepScreenAwake } from './wakeLock.ts';
 
@@ -25,6 +25,8 @@ export async function startApp(): Promise<void> {
   const rotateDeg = num('rotate', settings.display.rotateDeg);
   let renderScale = num('scale', settings.display.renderScale);
   const autoScale = settings.display.autoScale && !params.has('scale');
+  const lookParam = params.get('look');
+  let look: Look = lookParam === 'vfx' || lookParam === 'classic' ? lookParam : settings.display.look;
 
   let pattern = patternJson as Pattern;
   let ctx = buildContext(pattern, settings);
@@ -58,6 +60,7 @@ export async function startApp(): Promise<void> {
     eyeMinOpen: settings.display.eyeMinOpen,
     clouds: settings.display.clouds,
   });
+  scene.setLook(look);
   const primitives = new DebugRenderer(reveal);
   app.stage.addChild(scene.root, primitives.root);
   scene.setPattern(ctx, pattern);
@@ -164,6 +167,10 @@ export async function startApp(): Promise<void> {
     if (k === 'd') debugOn = !debugOn;
     else if (k === 'p') primitivesOnly = !primitivesOnly;
     else if (k === 'u') scene.markUnused = !scene.markUnused;
+    else if (k === 'l') {
+      look = look === 'vfx' ? 'classic' : 'vfx';
+      scene.setLook(look);
+    }
     else if (k === 'e') {
       editor.toggle(pattern);
       if (!editor.isOpen) primitives.refreshLabels();
@@ -215,7 +222,7 @@ export async function startApp(): Promise<void> {
       if (primitives.root.visible) primitives.render(state, now, attractView);
       checkPerf(now);
     }
-    overlay.update(state, ctx, now, app.ticker.FPS, `scale ${renderScale}${perfNote}  octaves ${scene.octaves}  audio ${audio.contextState}`);
+    overlay.update(state, ctx, now, app.ticker.FPS, `look ${look}  scale ${renderScale}${perfNote}  octaves ${scene.octaves}  audio ${audio.contextState}`);
   });
 
   keepScreenAwake();

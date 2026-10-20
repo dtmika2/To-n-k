@@ -3,17 +3,21 @@ import type { AttractView } from '../game/attract.ts';
 import { NOTICE, noticeProgress, noticeSpanMs } from '../config/notice.ts';
 import { liftIntensity } from '../game/reducer.ts';
 import type { Effect, GameContext, GameState } from '../game/types.ts';
-import { dist, lerpVec } from '../pattern/geometry.ts';
+import { lerpVec } from '../pattern/geometry.ts';
 import { noteToMidi } from '../pattern/notes.ts';
 import { ASPECT, type Pattern, type Vec } from '../pattern/types.ts';
 import { Atmosphere } from './atmosphere.ts';
 import { CloudCover, type CloudConfig } from './clouds.ts';
 import type { RevealConfig } from './debugRenderer.ts';
-import { almond, circle, easeOut, easeOutElastic, hash, lerpColor, smooth, wobblyCircle } from './draw.ts';
+import { almond, circle, easeOut, easeOutElastic, lerpColor, smooth, wobblyCircle } from './draw.ts';
 import { Eye, type EyeLook } from './eye.ts';
 import { Particles } from './particles.ts';
 import { Sky } from './sky.ts';
 import { softDotTexture } from './textures.ts';
+import { beamStrand, strandRuns, strokeStrand, type StrandStyle } from './strand.ts';
+import { BeamBatch } from './vfx/beam.ts';
+import { EnergyOrb } from './vfx/orb.ts';
+import { RingBatch } from './vfx/ring.ts';
 
 const C = {
   gold: 0xf3d99a,
@@ -23,6 +27,12 @@ const C = {
   lavender: 0x8f84ff,
   mist: 0xb8b8e0,
 };
+
+/**
+ * vfx look: rings are lavender with a full soft fill and no dashes, except the eye rings (gold in both
+ * looks) and the touch ripple (gold here). Beams and the rest keep their colours.
+ */
+const VFX_RING = { color: C.lavender, fill: 1 };
 
 interface Anim {
   start: number;
@@ -41,11 +51,16 @@ interface Ring extends Anim {
   to: number;
   width: number;
   alpha: number;
+  /** Colour in the vfx look. */
+  vfxColor: number;
 }
 interface Retract extends Anim {
   from: Vec;
   to: number;
 }
+
+/** The two visual looks, chosen per session (`?look=`, L key); see settings.display.look. */
+export type Look = 'classic' | 'vfx';
 
 export interface SceneConfig {
   reveal: RevealConfig;
@@ -59,7 +74,8 @@ export interface SceneConfig {
 /**
  * Phase 2 visuals (plan §7): sky, reveal number, cloud cover + mist, constellation strands with
  * stardust, organic eyes, master button and effects. State-driven each frame; effects add transient
- * animations.
+ * animations. The "vfx" look swaps three primitives for shaders: the iris (eye.ts), the strands (beams)
+ * and the rings; everything else is shared.
  */
 export class SceneRenderer {
   readonly root = new Container();
@@ -77,6 +93,15 @@ export class SceneRenderer {
   private readonly eyesLayer = new Container();
   private readonly fx = new Graphics();
   private readonly master = new Graphics();
+  private readonly beams = new BeamBatch();
+  private readonly ringFx = new RingBatch();
+  /** vfx look: the gathering orb at the centre of the "get ready" notice. */
+  private readonly orb = new EnergyOrb(C.gold, C.hot);
+  /** Index of the last notice pulse that burst sparks (vfx look). */
+  private noticeBurst = -1;
+  /** Whether the outro's opening spark burst has fired (vfx look). */
+  private outroBurst = false;
+  private look: Look = 'classic';
 
   /** Debug (`?unused`, U key): mark the eyes the sequence never uses with a red ring and cross. */
   markUnused = false;
@@ -132,12 +157,23 @@ export class SceneRenderer {
       this.atmosphere.sprite,
       this.puffs.container,
       this.strands,
+      this.beams.mesh,
       this.dust.container,
       this.eyesLayer,
       this.revealLayer,
       this.master,
+      this.ringFx.mesh,
+      this.orb.mesh,
       this.fx,
     );
+  }
+
+  setLook(look: Look): void {
+    this.look = look;
+  }
+
+  private get vfx(): boolean {
+    return this.look === 'vfx';
   }
 
   /** Noise octaves (performance tuning). */
@@ -218,14 +254,17 @@ export class SceneRenderer {
     return this.ctx.points.find((p) => p.id === id)!.r;
   }
 
+  /** Gold rings (the eye rings) stay gold in the vfx look; the others turn lavender unless `vfxColor` says otherwise. */
   private ring(now: number, pos: Vec, opts: Partial<Ring> & { to: number }): void {
-    this.rings.push({ start: now, dur: 800, pos, color: C.gold, from: 0, width: 0.004, alpha: 0.8, ...opts });
+    const color = opts.color ?? C.gold;
+    const vfxColor = color === C.gold ? C.gold : VFX_RING.color;
+    this.rings.push({ start: now, dur: 800, pos, color, from: 0, width: 0.004, alpha: 0.8, vfxColor, ...opts });
   }
 
   /** A touch: the mist ripples and parts. */
   ripple(pos: Vec, now: number): void {
     this.atmosphere.part(pos, now, 1, 0.1);
-    this.ring(now, pos, { to: 0.11, dur: 1100, color: C.mist, alpha: 0.35, width: 0.003 });
+    this.ring(now, pos, { to: 0.11, dur: 1100, color: C.mist, vfxColor: C.gold, alpha: 0.35, width: 0.003 });
   }
 
   /** The finger moving: the mist parts along its trail. */
@@ -279,6 +318,7 @@ export class SceneRenderer {
         break;
       case 'demoOutro':
         this.outro = { start: now, dur: e.ms };
+        this.outroBurst = false;
         break;
       case 'startGame':
         // like final-gate-lock's intro: the tap parts the clouds outward from the finger
@@ -344,6 +384,8 @@ export class SceneRenderer {
     }
     this.pendingPuffs = this.pendingPuffs.filter((q) => now < q.at);
 
+    this.beams.begin();
+    this.ringFx.begin(now);
     this.sky.update(now, dt);
     this.clouds.update(dt);
     this.updateReveal(s, now);
@@ -355,6 +397,8 @@ export class SceneRenderer {
     this.drawFx(s, now, dt);
     this.dust.update(now, dt);
     this.puffs.update(now, dt);
+    this.beams.end(now);
+    this.ringFx.end();
   }
 
   /**
@@ -386,48 +430,11 @@ export class SceneRenderer {
 
   // ── constellation ────────────────────────────────────────────
 
-  /** A luminous, slightly wavy strand; `u` (0…1) makes it jitter, gap and thin out. */
-  private strand(a: Vec, b: Vec, now: number, seed: number, o: { color: number; alpha: number; u?: number; hot?: number }): void {
-    const g = this.strands;
-    const u = o.u ?? 0;
-    const len = dist(a, b);
-    if (len < 1e-4) return;
-    const n = Math.max(6, Math.min(90, Math.ceil(len / 0.01)));
-    const nx = -(b.y - a.y) / len;
-    const ny = (b.x - a.x) / len;
-    const time = now / 1000;
-    const frame = Math.floor(now / 120);
-    const pts: (Vec | null)[] = [];
-    for (let i = 0; i <= n; i++) {
-      const s = i / n;
-      const env = Math.sin(Math.PI * s);
-      const wave = (0.0028 + u * 0.009) * env * Math.sin(2 * Math.PI * s * len * 5 - time * 1.7 + seed * 1.3);
-      const jitter = u * 0.006 * env * Math.sin(time * 13 + i * 2.3 + seed) * hash(seed * 31 + i, frame);
-      const gap = u > 0 && i < n && hash(seed * 97 + i, frame) < u * 0.5;
-      pts.push(gap ? null : { x: a.x + (b.x - a.x) * s + nx * (wave + jitter), y: a.y + (b.y - a.y) * s + ny * (wave + jitter) });
-    }
-    const runs: Vec[][] = [];
-    let run: Vec[] = [];
-    for (const p of pts) {
-      if (p) run.push(p);
-      else {
-        if (run.length > 1) runs.push(run);
-        run = [];
-      }
-    }
-    if (run.length > 1) runs.push(run);
-    const strokes: [number, number, number][] = [
-      [0.014 * (1 - 0.3 * u), o.color, 0.13 * o.alpha],
-      [0.0034 * (1 - 0.35 * u), o.color, 0.9 * o.alpha],
-    ];
-    if ((o.hot ?? 0) > 0) strokes.push([0.0014, C.hot, 0.7 * (o.hot ?? 0) * o.alpha]);
-    for (const [width, color, alpha] of strokes) {
-      for (const r of runs) {
-        g.moveTo(r[0].x, r[0].y);
-        for (let i = 1; i < r.length; i++) g.lineTo(r[i].x, r[i].y);
-        g.stroke({ width, color, alpha, cap: 'round', join: 'round' });
-      }
-    }
+  /** A luminous, slightly wavy strand (a beam in the vfx look); `u` (0…1) makes it jitter, gap and thin out. */
+  private strand(a: Vec, b: Vec, now: number, seed: number, o: StrandStyle): void {
+    const runs = strandRuns(a, b, now, seed, o.u ?? 0, !this.vfx);
+    if (this.vfx) beamStrand(this.beams, a, b, runs, seed, o);
+    else strokeStrand(this.strands, runs, o);
   }
 
   private drawConstellation(s: GameState, now: number, dt: number): void {
@@ -608,7 +615,7 @@ export class SceneRenderer {
         look.glow = 0.5 * (1 - t);
         look.glowColor = C.violet;
       }
-      eye.update(now, dt, look);
+      eye.update(now, dt, look, this.vfx);
     }
   }
 
@@ -621,11 +628,15 @@ export class SceneRenderer {
       const t = (now - r.start) / r.dur;
       if (t < 0) continue;
       const rad = r.from + (r.to - r.from) * easeOut(t);
+      if (this.vfx) {
+        this.ringFx.add(r.pos.x, r.pos.y, rad, { color: r.vfxColor, alpha: r.alpha * (1 - t), width: r.width * 0.5, fill: VFX_RING.fill * (1 - t) });
+        continue;
+      }
       circle(g, r.pos.x, r.pos.y, rad).stroke({ width: r.width * 3, color: r.color, alpha: r.alpha * 0.18 * (1 - t) });
       circle(g, r.pos.x, r.pos.y, rad).stroke({ width: r.width, color: r.color, alpha: r.alpha * (1 - t) });
     }
-    this.drawNotice(s, now);
-    this.drawOutro(now);
+    this.drawNotice(s, now, dt);
+    this.drawOutro(now, dt);
     if (this.markUnused) this.drawUnusedMarks();
 
     const ready = s.mode === 'GAME' && s.sub === 'READY';
@@ -645,8 +656,12 @@ export class SceneRenderer {
     const { pos, r } = this.ctx.creative;
     const g = this.master;
     const col = C.lavender;
-    circle(g, pos.x, pos.y, r).stroke({ width: 0.012, color: col, alpha: 0.14 * a });
-    circle(g, pos.x, pos.y, r).stroke({ width: 0.003, color: col, alpha: a });
+    if (this.vfx) {
+      this.ringFx.add(pos.x, pos.y, r, { color: VFX_RING.color, alpha: a, width: 0.0016, fill: VFX_RING.fill });
+    } else {
+      circle(g, pos.x, pos.y, r).stroke({ width: 0.012, color: col, alpha: 0.14 * a });
+      circle(g, pos.x, pos.y, r).stroke({ width: 0.003, color: col, alpha: a });
+    }
     const stars = [-90, 30, 150].map((deg, i) => {
       const ang = ((deg + 8 * Math.sin(now / 1400 + i)) * Math.PI) / 180;
       return { x: pos.x + Math.cos(ang) * r * 0.5, y: pos.y + Math.sin(ang) * r * 0.5 };
@@ -663,8 +678,9 @@ export class SceneRenderer {
    * over the constellation slowly contracts and brightens — breathe in — then three soft pulses ripple
    * out from the centre, and the demo starts.
    */
-  private drawNotice(s: GameState, now: number): void {
+  private drawNotice(s: GameState, now: number, dt: number): void {
     const p = noticeProgress(s, now);
+    this.orb.hide();
     if (p === null) return;
     const g = this.fx;
     const c = this.centre;
@@ -674,16 +690,65 @@ export class SceneRenderer {
     const rad = 0.42 + (0.07 - 0.42) * inhale;
     const time = now / 1000;
     // slight organic wobble, so the rings aren't perfectly even (glow and core share the shape)
-    wobblyCircle(g, c.x, c.y, rad, 0.035, time, 1).stroke({ width: 0.016, color: C.gold, alpha: 0.12 * a * (0.4 + inhale) });
-    wobblyCircle(g, c.x, c.y, rad, 0.035, time, 1).stroke({ width: 0.0035, color: C.gold, alpha: (0.25 + 0.6 * inhale) * a });
-    wobblyCircle(g, c.x, c.y, 0.02 + 0.025 * inhale, 0.08, time * 1.6, 2).fill({ color: C.hot, alpha: 0.5 * inhale * a });
+    if (this.vfx) {
+      this.ringFx.add(c.x, c.y, rad, { color: VFX_RING.color, alpha: (0.25 + 0.6 * inhale) * a, width: 0.002, wobble: 0.035, seed: 1, fill: VFX_RING.fill * inhale });
+    } else {
+      wobblyCircle(g, c.x, c.y, rad, 0.035, time, 1).stroke({ width: 0.016, color: C.gold, alpha: 0.12 * a * (0.4 + inhale) });
+      wobblyCircle(g, c.x, c.y, rad, 0.035, time, 1).stroke({ width: 0.0035, color: C.gold, alpha: (0.25 + 0.6 * inhale) * a });
+    }
+    if (this.vfx) this.noticeOrb(s, p, inhale, a, rad, now, dt);
+    else wobblyCircle(g, c.x, c.y, 0.02 + 0.025 * inhale, 0.08, time * 1.6, 2).fill({ color: C.hot, alpha: 0.5 * inhale * a });
     NOTICE.pulses.forEach((pk, i) => {
       const tp = ((p - pk) * noticeSpanMs(s.demoLeadMs)) / 500;
       if (tp < 0 || tp > 1) return;
       const r = 0.07 + 0.22 * easeOut(tp);
+      if (this.vfx) {
+        this.ringFx.add(c.x, c.y, r, { color: VFX_RING.color, alpha: 0.85 * (1 - tp), width: 0.002, wobble: 0.04, seed: 3 + i, fill: VFX_RING.fill * (1 - tp) });
+        return;
+      }
       wobblyCircle(g, c.x, c.y, r, 0.04, time, 3 + i).stroke({ width: 0.012, color: C.hot, alpha: 0.18 * (1 - tp) });
       wobblyCircle(g, c.x, c.y, r, 0.04, time, 3 + i).stroke({ width: 0.004, color: C.hot, alpha: 0.85 * (1 - tp) });
     });
+  }
+
+  /**
+   * vfx look, the notice's centre: an energy orb that gathers as the ring contracts. Sparks stream in
+   * from the ring, swirling slightly; each pulse flares the orb and bursts sparks outward.
+   */
+  private noticeOrb(s: GameState, p: number, inhale: number, a: number, rad: number, now: number, dt: number): void {
+    const c = this.centre;
+    let flare = 0;
+    if (p < NOTICE.pulses[0]) this.noticeBurst = -1;
+    NOTICE.pulses.forEach((pk, i) => {
+      const tp = ((p - pk) * noticeSpanMs(s.demoLeadMs)) / 500;
+      if (tp < 0 || tp > 1) return;
+      flare = Math.max(flare, 1 - tp);
+      if (this.noticeBurst < i) {
+        this.noticeBurst = i;
+        this.dust.burst(now, 22, { pos: c, speed: 0.32, life: 0.6, size: 0.008, tint: i === NOTICE.pulses.length - 1 ? C.hot : C.gold });
+      }
+    });
+    this.orb.show(now, c.x, c.y, 0.045 + 0.05 * inhale + 0.03 * flare, a * (0.2 + 0.55 * inhale) + 0.45 * flare * a);
+
+    // sparks drawn in from the contracting ring: they start on it and reach the centre as they fade
+    const rate = 110 * inhale * a * (1 - smooth((p - NOTICE.pulses[0]) / 0.05));
+    const n = Math.floor(rate * dt) + (Math.random() < (rate * dt) % 1 ? 1 : 0);
+    for (let k = 0; k < n; k++) {
+      const ang = Math.random() * Math.PI * 2;
+      const r0 = rad * (0.9 + Math.random() * 0.2);
+      const life = 0.7;
+      const v = (r0 / life) * 1.3; // particles drag, so start faster to arrive
+      const [ux, uy] = [Math.cos(ang), Math.sin(ang)];
+      this.dust.emit(now, {
+        pos: { x: c.x + ux * r0, y: c.y + uy * r0 },
+        speed: 0,
+        life,
+        size: 0.009,
+        grow: 0.35,
+        tint: Math.random() < 0.6 ? C.gold : C.hot,
+        drift: { x: -ux * v - uy * v * 0.35, y: -uy * v + ux * v * 0.35 },
+      });
+    }
   }
 
   private drawUnusedMarks(): void {
@@ -698,8 +763,8 @@ export class SceneRenderer {
     }
   }
 
-  /** After the demo's last blink: the breath goes out (a wobbling ring expands from the centre and fades). */
-  private drawOutro(now: number): void {
+  /** After the demo's last blink: the breath goes out (a wobbling ring expands from the centre and fades); the notice in reverse. */
+  private drawOutro(now: number, dt: number): void {
     if (!this.outro) return;
     const t = (now - this.outro.start) / this.outro.dur;
     if (t < 0 || t >= 1) {
@@ -711,9 +776,45 @@ export class SceneRenderer {
     const time = now / 1000;
     const out = easeOut(t);
     const fade = 1 - smooth(t);
+    if (this.vfx) {
+      this.outroOrb(now, dt, t, out, fade);
+      return;
+    }
     wobblyCircle(g, c.x, c.y, 0.07 + 0.38 * out, 0.035, time, 7).stroke({ width: 0.016, color: C.gold, alpha: 0.14 * fade });
     wobblyCircle(g, c.x, c.y, 0.07 + 0.38 * out, 0.035, time, 7).stroke({ width: 0.0035, color: C.gold, alpha: 0.75 * fade });
     wobblyCircle(g, c.x, c.y, 0.045 * (1 - out) + 0.005, 0.08, time * 1.6, 2).fill({ color: C.hot, alpha: 0.5 * fade });
+  }
+
+  /**
+   * vfx look, the outro as the notice in reverse: the same ring (shape, colour, fill) expands from where
+   * the inhale left it, the orb shrinks away, and its sparks scatter outward with the ring.
+   */
+  private outroOrb(now: number, dt: number, t: number, out: number, fade: number): void {
+    const c = this.centre;
+    const rad = 0.07 + 0.38 * out;
+    this.ringFx.add(c.x, c.y, rad, { color: VFX_RING.color, alpha: 0.85 * fade, width: 0.002, wobble: 0.035, seed: 1, fill: VFX_RING.fill * fade });
+    this.orb.show(now, c.x, c.y, 0.095 * (1 - out) + 0.01, 0.75 * fade);
+    if (!this.outroBurst) {
+      this.outroBurst = true;
+      this.dust.burst(now, 26, { pos: c, speed: 0.4, life: 0.8, size: 0.009, grow: 0.35, tint: C.gold });
+    }
+    // sparks released from the shrinking orb ride out towards the ring
+    const rate = 110 * (1 - t) * fade;
+    const n = Math.floor(rate * dt) + (Math.random() < (rate * dt) % 1 ? 1 : 0);
+    for (let k = 0; k < n; k++) {
+      const ang = Math.random() * Math.PI * 2;
+      const [ux, uy] = [Math.cos(ang), Math.sin(ang)];
+      const v = 0.35 + Math.random() * 0.2;
+      this.dust.emit(now, {
+        pos: { x: c.x + ux * 0.01, y: c.y + uy * 0.01 },
+        speed: 0,
+        life: 0.7,
+        size: 0.009,
+        grow: 0.35,
+        tint: Math.random() < 0.6 ? C.gold : C.hot,
+        drift: { x: ux * v + uy * v * 0.35, y: uy * v - ux * v * 0.35 },
+      });
+    }
   }
 
   /** A stylized eye inside a thin ring of light; breathes in READY, ~8 % elsewhere. */
@@ -724,8 +825,12 @@ export class SceneRenderer {
     const { pos, r } = this.ctx.master;
     const g = this.master;
     g.clear();
-    circle(g, pos.x, pos.y, r).stroke({ width: 0.012, color: C.gold, alpha: 0.14 * a });
-    circle(g, pos.x, pos.y, r).stroke({ width: 0.003, color: C.gold, alpha: a });
+    if (this.vfx) {
+      this.ringFx.add(pos.x, pos.y, r, { color: VFX_RING.color, alpha: a, width: 0.0016, fill: VFX_RING.fill });
+    } else {
+      circle(g, pos.x, pos.y, r).stroke({ width: 0.012, color: C.gold, alpha: 0.14 * a });
+      circle(g, pos.x, pos.y, r).stroke({ width: 0.003, color: C.gold, alpha: a });
+    }
     almond(g, pos.x, pos.y, 0.62 * r, 0.3 * r).stroke({ width: 0.0028, color: C.gold, alpha: a });
     circle(g, pos.x, pos.y, 0.2 * r).fill({ color: C.gold, alpha: 0.5 * a });
     circle(g, pos.x, pos.y, 0.09 * r).fill({ color: C.hot, alpha: a });
