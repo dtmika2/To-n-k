@@ -12,6 +12,7 @@ export function initialState(now: number): GameState {
     wrongStrikes: 0,
     liftStrikes: 0,
     liftTimerAt: null,
+    liftedOnEye: false,
     pointer: null,
     finger: null,
     tether: null,
@@ -151,6 +152,7 @@ export function createReducer(ctx: GameContext): Reducer {
   function lift(s: GameState, now: number, fx: Effect[]): void {
     setSub(s, 'LIFTED', now);
     s.liftTimerAt = now;
+    s.liftedOnEye = false;
     s.inside = [];
     fx.push({ type: 'lift' });
   }
@@ -158,6 +160,7 @@ export function createReducer(ctx: GameContext): Reducer {
   function startTracing(s: GameState, pos: Vec, now: number, fx: Effect[], kind: 'start' | 'retouch'): void {
     setSub(s, 'TRACING', now);
     s.liftTimerAt = null;
+    s.liftedOnEye = false;
     s.tether = pos;
     s.inside = [lastPoint(s)];
     fx.push({ type: 'playNote', point: lastPoint(s), kind });
@@ -369,7 +372,7 @@ export function createReducer(ctx: GameContext): Reducer {
           s.liftTimerAt += t.liftStrikeMs;
           s.liftStrikes++;
           fx.push({ type: 'liftStrike', count: s.liftStrikes });
-          if (s.liftStrikes >= 2) {
+          if (s.liftStrikes >= 2 || s.liftedOnEye) {
             collapse(s, now, fx);
           } else if (s.tether) {
             fx.push({ type: 'retract', from: s.tether, to: lastPoint(s) });
@@ -437,6 +440,11 @@ export function createReducer(ctx: GameContext): Reducer {
         if (s.mode === 'GAME' && s.sub === 'TRACING') {
           s.tether = s.finger; // the tether hangs where the finger left
           lift(s, now, fx);
+          // let go on the last correct eye (its generous radius): nothing hangs, so a single stage
+          if (s.finger && within(s.finger, lastPoint(s), ctx.hit.correctScale)) {
+            s.tether = null;
+            s.liftedOnEye = true;
+          }
         } else if (s.mode === 'CREATIVE' && s.chain.length > 0) {
           fx.push({ type: 'creativeRelease', chain: s.chain });
           s.chain = [];

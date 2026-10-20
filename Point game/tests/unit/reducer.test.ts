@@ -313,12 +313,35 @@ describe('lift strikes', () => {
 
   it('lift → 4 s → retouch → lift → 4 s → COLLAPSE (retouch does not reset counters)', () => {
     const sim = new Sim(testContext([0, 1, 2])).toReady();
-    sim.down(sim.pos(0)).moveTo(sim.pos(1), 6).up();
+    sim.down(sim.pos(0)).moveTo(sim.pos(1), 6).moveTo({ x: 0.6, y: 0.7 }, 4).up();
     sim.wait(TIMING.liftStrikeMs);
     expect(sim.state.liftStrikes).toBe(1);
-    sim.down(sim.pos(1)).up();
+    sim.down(sim.pos(1)).moveTo({ x: 0.6, y: 0.7 }, 4).up();
     sim.wait(TIMING.liftStrikeMs);
     expect(sim.state.sub).toBe('COLLAPSE');
+  });
+
+  it('let go right on the last eye → no tether; one stage: 4 s → COLLAPSE', () => {
+    const sim = new Sim(testContext([0, 1, 2])).toReady();
+    sim.down(sim.pos(0)).moveTo(sim.pos(1), 6).up(); // the finger rests on eye 1
+    expect(sim.state).toMatchObject({ sub: 'LIFTED', tether: null, liftedOnEye: true });
+    sim.wait(TIMING.liftStrikeMs - 50);
+    expect(sim.state.sub).toBe('LIFTED');
+    sim.wait(50);
+    expect(sim.state.sub).toBe('COLLAPSE');
+    expect(sim.count('retract')).toBe(0);
+  });
+
+  it('let go on the eye, retouch within 4 s → no strike; the next lift away gets two stages again', () => {
+    const sim = new Sim(testContext([0, 1, 2])).toReady();
+    sim.down(sim.pos(0)).moveTo(sim.pos(1), 6).up();
+    sim.wait(TIMING.liftStrikeMs - 100);
+    sim.down(sim.pos(1));
+    expect(sim.state).toMatchObject({ sub: 'TRACING', liftedOnEye: false, liftStrikes: 0 });
+    sim.moveTo({ x: 0.6, y: 0.7 }, 4).up();
+    sim.wait(TIMING.liftStrikeMs);
+    expect(sim.state.sub).toBe('LIFTED');
+    expect(sim.count('retract')).toBe(1);
   });
 
   it('a lift strike after a wrong strike only pulses the already retracted line', () => {
@@ -331,7 +354,7 @@ describe('lift strikes', () => {
 
   it('one lift strike plus one wrong strike → no collapse', () => {
     const sim = new Sim(testContext([0, 1, 2])).toReady();
-    sim.down(sim.pos(0)).moveTo(sim.pos(1), 6).up();
+    sim.down(sim.pos(0)).moveTo(sim.pos(1), 6).moveTo({ x: 0.6, y: 0.7 }, 4).up();
     sim.wait(TIMING.liftStrikeMs);
     expect(sim.state.liftStrikes).toBe(1);
     sim.down(sim.pos(1)).moveTo(sim.pos(3), 6);

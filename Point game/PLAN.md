@@ -409,3 +409,8 @@ Goal: the owner can play the full rules on the real TV, hear the real sound, and
 - **Hold.** The finished figure breathes gently through IDLE with its eyes half open and glowing, and fades as the clouds roll back in. Now and then (after a short rest, then with pauses of 1.3–4.5 s) a slow surge runs along it from eye to eye, taking 3.6 s: where it is, the line frays, brightens and sheds sparks, and each eye flares open as it passes.
 - Timing: `timing.revealFigureDelayMs`, `timing.revealFigureDrawMs`; the notes can be switched off (`audio.revealNotes`, also in the M menu). The validator checks the figure's ids.
 - **Creative mode reads at a glance (2026-10-20):** while it is on, the creative button keeps sparkling (lavender, gold and white sparks drifting off its ring, like the eyes' lashes), with a burst as it opens. Both looks.
+
+## Amendment (2026-10-20): letting go on the eye
+
+- **One stage instead of two.** If the finger lifts on the last correct eye (within its generous radius), there is no hanging tether to retract, so the first lift strike (4 s) collapses straight away. Lifting away from the eye keeps the two stages (4 s retract, 8 s collapse). A retouch within 4 s still costs nothing; after a wrong strike the line was already retracted, so it keeps the pulse then collapse.
+- **Gradual line changes.** The line's look (fray, colour, brightness) eases over about half a second instead of switching in one frame: the collapse starts from the frayed, cold line and keeps fraying as it rewinds, settling towards the end. The white flash of a lift strike stays instant.

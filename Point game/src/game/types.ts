@@ -44,6 +44,11 @@ export interface GameState {
   liftStrikes: number;
   /** Start of the current 4 s lift interval while LIFTED, else null. */
   liftTimerAt: number | null;
+  /**
+   * LIFTED with the finger let go on the last correct eye: there is no hanging tether to retract, so
+   * the first lift strike collapses straight away (one stage instead of two).
+   */
+  liftedOnEye: boolean;
   /** The locked pointer. `ignored`: after a wrong strike the physical pointer does nothing until it lifts. */
   pointer: { id: number; ignored: boolean } | null;
   /** Last known position of the locked pointer. */

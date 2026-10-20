@@ -126,6 +126,8 @@ export class SceneRenderer {
   /** The short outro after the demo's last blink. */
   private outro: Anim | null = null;
   private mist = 1;
+  /** The constellation line's look, eased towards each frame's target so state changes never pop. */
+  private readonly lineLook = { u: 0, cold: 0, warm: 0, alpha: 1, hot: 0.6 };
   private masterAlpha = 0.08;
   private lastNow = 0;
   private renderScale: number;
@@ -396,39 +398,45 @@ export class SceneRenderer {
     const P = (id: number) => this.pos(id);
     const inGame = s.mode === 'GAME';
 
-    let u = 0;
-    let color = C.gold;
-    let alpha = 1;
-    let hot = 0.6;
+    // the target look: fray u, coldness (gold → cold), warmth (→ white), alpha and the hot core
+    const target = { u: 0, cold: 0, warm: 0, alpha: 1, hot: 0.6 };
+    const collapseT = inGame && s.sub === 'COLLAPSE' ? Math.min(1, (now - s.subSince) / this.ctx.timing.collapseMs) : 0;
     if (s.mode === 'REVEAL') {
       const t = (now - s.modeSince) / this.ctx.timing.revealDisperseMs;
       const flare = t < 0.1 ? t / 0.1 : Math.max(0, 1 - (t - 0.1) / 0.55);
-      color = lerpColor(C.gold, C.hot, flare);
-      alpha = flare;
-      hot = flare;
+      Object.assign(target, { warm: flare, alpha: flare, hot: flare });
     } else if (inGame && s.sub === 'LIFTED') {
-      u = liftIntensity(s, now, this.ctx.timing.liftStrikeMs);
-      color = lerpColor(C.gold, C.cold, u);
-      alpha = 1 - 0.45 * u; // the mist creeps over the line
-      hot = 0.6 * (1 - u);
-      const pulse = Math.max(0, 1 - (now - this.strikePulseAt) / 500);
-      if (pulse > 0) {
-        color = lerpColor(color, C.hot, pulse);
-        alpha = Math.min(1, alpha + 0.5 * pulse);
-      }
+      const u = liftIntensity(s, now, this.ctx.timing.liftStrikeMs);
+      Object.assign(target, { u, cold: u, alpha: 1 - 0.45 * u, hot: 0.6 * (1 - u) }); // the mist creeps over the line
+    } else if (inGame && s.sub === 'COLLAPSE') {
+      // the unsettled line gives up: still frayed and cold as it rewinds, settling towards the end
+      Object.assign(target, { u: 0.8 * (1 - 0.6 * collapseT), cold: 1, alpha: 0.7, hot: 0 });
     } else if (!inGame) {
-      alpha = 0;
+      target.alpha = 0;
+    }
+    // eased (~0.5 s to settle), so the frayed line flows into the collapse (and the fray's reset after a
+    // lift strike, or a wrong strike's straight collapse) instead of jumping in one frame
+    const look = this.lineLook;
+    const k = 1 - Math.exp(-dt / 0.18);
+    for (const key of ['u', 'cold', 'warm', 'alpha', 'hot'] as const) look[key] += (target[key] - look[key]) * k;
+    const u = look.u;
+    let color = lerpColor(lerpColor(C.gold, C.cold, look.cold), C.hot, look.warm);
+    let alpha = look.alpha;
+    const hot = look.hot;
+    // the strike pulse stays instant: a flash on top
+    const pulse = inGame && s.sub === 'LIFTED' ? Math.max(0, 1 - (now - this.strikePulseAt) / 500) : 0;
+    if (pulse > 0) {
+      color = lerpColor(color, C.hot, pulse);
+      alpha = Math.min(1, alpha + 0.5 * pulse);
     }
 
     let segs = Math.max(0, s.progress - 1);
     let partial = 0;
     if (inGame && s.sub === 'COLLAPSE') {
-      const t = Math.min(1, (now - s.subSince) / this.ctx.timing.collapseMs);
+      const t = collapseT;
       const visible = Math.max(0, s.collapseFrom - 1) * (1 - easeOut(t * 0.9 + 0.1 * t * t));
       segs = Math.floor(visible);
       partial = visible - segs;
-      color = lerpColor(C.gold, C.cold, Math.min(1, t * 2));
-      hot = 0;
       if (segs + 1 < seq.length && (segs > 0 || partial > 0)) {
         const tip = lerpVec(P(seq[segs]), P(seq[segs + 1]), partial);
         if (Math.random() < dt * 40) this.dust.emit(now, { pos: tip, speed: 0.05, life: 0.8, size: 0.006, tint: C.cold });
@@ -439,7 +447,7 @@ export class SceneRenderer {
         const flash = this.segFlash.has(i) ? Math.max(0, 1 - (now - this.segFlash.get(i)!) / 900) : 0;
         this.strand(P(seq[i]), P(seq[i + 1]), now, i, { color: lerpColor(color, C.hot, flash), alpha: Math.min(1, alpha + flash * 0.5), u, hot: hot + flash });
       }
-      if (partial > 0) this.strand(P(seq[segs]), lerpVec(P(seq[segs]), P(seq[segs + 1]), partial), now, segs, { color, alpha, hot: 0 });
+      if (partial > 0) this.strand(P(seq[segs]), lerpVec(P(seq[segs]), P(seq[segs + 1]), partial), now, segs, { color, alpha, u, hot: 0 });
     }
 
     // unsettled lines shed cold particles
