@@ -122,3 +122,4 @@ The owner confirmed without feedback, so the Phase 1 settings and behaviour were
   - Strand geometry moved to `render/strand.ts`, shared by both looks.
   - `/vfx.html` (`src/dev/vfxLab.ts`): classic vs vfx eye, strand and rings with sliders. Built as a second page; the service worker doesn't serve it as the app fallback.
   - Not yet measured on the TV: check fps with `?debug` in both looks.
+- **Refined lids** (the default in both looks since 2026-10-20): `Eye.lidStyle = 'refined'` draws tapered brush-like lids with a soft halo and sheen, curved tapered lashes (small ones on the lower lid when open), the lid's shadow plus a rim of light inside the opening, in the iris's own colour (`Eye.lidColor = 'iris'`; also 'cream' or a fixed colour, with a picker in the lab). The inner shadow is feathered (stacked strokes). `/vfx.html` shows the old drawn lids · refined · refined + portal (eye seed picker; H hides the panel).

@@ -393,3 +393,9 @@ Goal: the owner can play the full rules on the real TV, hear the real sound, and
   - **Lines:** every strand becomes an energy beam with light flowing from start to end. Fraying flickers and breaks it softly instead of cutting it into pieces.
   - **"Get ready" centre:** instead of the soft dot, an energy orb (flame tongues around a white-hot core) gathers as the ring contracts. Sparks stream in from the ring; each pulse flares the orb and bursts sparks outward. The demo outro plays it in reverse: the same ring expands, the orb shrinks away and its sparks scatter outward with the ring.
   - **Rings:** ripples, blink and notice rings and both buttons become rings of light with a full soft fill and no dashes (owner's pick from the lab, 2026-10-20). The eye rings (blink, reach, hint) and the touch ripple are gold; the others (wrong touch, notice, outro, reveal, buttons) are lavender. The beams and everything else keep their colours.
+
+## Amendment (2026-10-20): refined eyes
+
+- **Lids** (both looks): brush-like tapered lid lines that swell in the middle and end in fine points, with a soft halo and a light sheen, in the iris's own colour (each eye its own colour family, warming slightly to gold as it glows).
+- **Lashes:** 9–12 curved lashes per eye that taper and fade to fine tips and curl towards the nearer corner; when the eye opens, a few small ones appear on the lower lid. They still sway and hang down when the eye closes.
+- **Opening:** the lid casts a soft, feathered shadow into the eye, with a thin rim of light just inside the edge, so the iris sits inside the eye. The shadow lightens as the eye closes, so sleeping slits keep their colour.

@@ -13,6 +13,8 @@ import { RingBatch } from '../render/vfx/ring.ts';
  */
 
 const WORLD_H = 1.25;
+/** Fixed lid colours to try (besides 'cream', 'iris' and a custom pick). */
+const LID_COLORS: Record<string, number> = { lavender: 0xa79eff, silver: 0xd8e2f0, gold: 0xf3d99a, rose: 0xffb0d8 };
 const COLORS: Record<string, number> = { gold: 0xf3d99a, lavender: 0x8f84ff, violet: 0xa060ff, cold: 0x7d8aa6, hot: 0xfffbe8 };
 
 const params = {
@@ -22,10 +24,16 @@ const params = {
   hot: 0.6,
   color: 'gold',
   ringColor: 'lavender',
+  lidColor: 'iris',
+  lidCustom: 0xd8b4ff,
   fill: 1,
   dashes: 0,
   backdrop: true,
+  seed: 7,
 };
+
+/** Rebuilds the eyes when the seed changes (set once the eyes exist). */
+let onSeed = () => {};
 
 async function main(): Promise<void> {
   const app = new Application();
@@ -46,24 +54,45 @@ async function main(): Promise<void> {
   }
 
   const dot = softDotTexture(64, 0.35);
-  const classicEye = new Eye(0, { x: 0.27, y: 0.22 }, 0.14, 7, dot, 0.2);
-  const vfxEye = new Eye(1, { x: 0.73, y: 0.22 }, 0.14, 7, dot, 0.2);
+  // eyes: current lids · refined lids · refined lids with the portal (all the same seed, so the same shape)
+  const eyesLayer = new Container();
+  let eyes: { eye: Eye; vfx: boolean }[] = [];
+  const buildEyes = () => {
+    for (const { eye } of eyes) eye.root.destroy({ children: true });
+    eyes = [0.18, 0.5, 0.82].map((x, i) => {
+      const eye = new Eye(i, { x, y: 0.22 }, 0.11, params.seed, dot, 0.2);
+      eye.lidStyle = i === 0 ? 'drawn' : 'refined';
+      eyesLayer.addChild(eye.root);
+      return { eye, vfx: i === 2 };
+    });
+  };
+  buildEyes();
+  onSeed = buildEyes;
   const lines = new Graphics();
   lines.blendMode = 'add';
   const beams = new BeamBatch();
   const rings = new RingBatch();
   const ringLines = new Graphics();
   ringLines.blendMode = 'add';
-  world.addChild(backdrop, lines, beams.mesh, classicEye.root, vfxEye.root, ringLines, rings.mesh);
+  world.addChild(backdrop, lines, beams.mesh, eyesLayer, ringLines, rings.mesh);
 
   const layout = () => {
-    const s = Math.min(window.innerWidth, window.innerHeight / WORLD_H);
+    const panel = document.querySelector<HTMLElement>('.vfx-panel');
+    const side = panel && panel.style.display !== 'none' && window.innerWidth > window.innerHeight / WORLD_H + panel.offsetWidth ? panel.offsetWidth + 16 : 0;
+    const w = window.innerWidth - side;
+    const s = Math.min(w, window.innerHeight / WORLD_H);
     world.scale.set(s);
-    world.position.set((window.innerWidth - s) / 2, (window.innerHeight - s * WORLD_H) / 2);
+    world.position.set((w - s) / 2, (window.innerHeight - s * WORLD_H) / 2);
   };
   window.addEventListener('resize', layout);
-  layout();
   buildPanel();
+  layout();
+  window.addEventListener('keydown', (e) => {
+    if (e.key.toLowerCase() !== 'h') return;
+    const panel = document.querySelector<HTMLElement>('.vfx-panel')!;
+    panel.style.display = panel.style.display === 'none' ? '' : 'none';
+    layout();
+  });
 
   let last = performance.now();
   app.ticker.add(() => {
@@ -75,8 +104,11 @@ async function main(): Promise<void> {
     backdrop.visible = params.backdrop;
 
     const look = { open: params.open, closeTc: 0.16, glow: params.glow, glowColor: color, shudder: 0 };
-    classicEye.update(now, dt, look, false);
-    vfxEye.update(now, dt, look, true);
+    const lidColor = params.lidColor === 'cream' || params.lidColor === 'iris' ? params.lidColor : params.lidColor === 'custom' ? params.lidCustom : LID_COLORS[params.lidColor];
+    for (const { eye, vfx } of eyes) {
+      eye.lidColor = lidColor;
+      eye.update(now, dt, look, vfx);
+    }
 
     const style = { color, alpha: 1, u: params.u, hot: params.hot };
     lines.clear();
@@ -125,8 +157,17 @@ function buildPanel(): void {
     panel.append(row);
   };
   const title = document.createElement('div');
-  title.textContent = 'classic ← → vfx';
+  title.textContent = 'eyes: current · new lids · new lids + portal; below: classic ← → vfx (H hides this)';
   panel.append(title);
+  const seedRow = document.createElement('label');
+  const seedInput = document.createElement('input');
+  Object.assign(seedInput, { type: 'number', min: '1', max: '999', value: String(params.seed) });
+  seedInput.addEventListener('change', () => {
+    params.seed = Math.max(1, Math.round(Number(seedInput.value)) || 1);
+    onSeed();
+  });
+  seedRow.append('eye seed', seedInput);
+  panel.append(seedRow);
   slider('open', 'eye open');
   slider('glow', 'glow');
   slider('u', 'fray (u)');
@@ -147,7 +188,20 @@ function buildPanel(): void {
   bd.addEventListener('change', () => (params.backdrop = bd.checked));
   const bdRow = document.createElement('label');
   bdRow.append('backdrop', bd);
-  panel.append(colorSelect('color', 'colour'), colorSelect('ringColor', 'vfx rings'), bdRow);
+  const lidSel = document.createElement('select');
+  for (const name of ['cream', 'iris', ...Object.keys(LID_COLORS), 'custom']) lidSel.append(new Option(name, name, false, name === params.lidColor));
+  lidSel.addEventListener('change', () => (params.lidColor = lidSel.value));
+  const lidPick = document.createElement('input');
+  lidPick.type = 'color';
+  lidPick.value = '#' + params.lidCustom.toString(16).padStart(6, '0');
+  lidPick.addEventListener('input', () => {
+    params.lidCustom = parseInt(lidPick.value.slice(1), 16);
+    params.lidColor = 'custom';
+    lidSel.value = 'custom';
+  });
+  const lidRow = document.createElement('label');
+  lidRow.append('new lids', lidSel, lidPick);
+  panel.append(colorSelect('color', 'colour'), colorSelect('ringColor', 'vfx rings'), lidRow, bdRow);
   document.body.append(panel);
 }
 
