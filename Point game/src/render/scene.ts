@@ -1,4 +1,4 @@
-import { Assets, Container, Graphics, Sprite, Text, type Renderer, type Texture } from 'pixi.js';
+import { Assets, Container, Graphics, type Renderer, type Texture } from 'pixi.js';
 import type { AttractView } from '../game/attract.ts';
 import { NOTICE, noticeProgress, noticeSpanMs } from '../config/notice.ts';
 import { liftIntensity } from '../game/reducer.ts';
@@ -8,7 +8,7 @@ import { noteToMidi } from '../pattern/notes.ts';
 import { ASPECT, type Pattern, type Vec } from '../pattern/types.ts';
 import { Atmosphere } from './atmosphere.ts';
 import { CloudCover, type CloudConfig } from './clouds.ts';
-import type { RevealConfig } from './debugRenderer.ts';
+import { figureProgress } from '../game/figure.ts';
 import { almond, circle, easeOut, easeOutElastic, lerpColor, smooth, wobblyCircle } from './draw.ts';
 import { Eye, type EyeLook } from './eye.ts';
 import { Particles } from './particles.ts';
@@ -64,7 +64,6 @@ interface Retract extends Anim {
 export type Look = 'classic' | 'vfx';
 
 export interface SceneConfig {
-  reveal: RevealConfig;
   stars: number;
   octaves: number;
   renderScale: number;
@@ -73,7 +72,7 @@ export interface SceneConfig {
 }
 
 /**
- * Phase 2 visuals (plan §7): sky, reveal number, cloud cover + mist, constellation strands with
+ * Phase 2 visuals (plan §7): sky, cloud cover + mist, constellation strands, the reveal figure, with
  * stardust, organic eyes, master button and effects. State-driven each frame; effects add transient
  * animations. The "vfx" look swaps primitives for shaders: the iris and lids (eye.ts, the lids into
  * lidLight), the strands (beams), the rings and the notice centre; everything else is shared.
@@ -83,9 +82,6 @@ export class SceneRenderer {
   private readonly dot: Texture;
   private readonly softDot: Texture;
   private readonly sky: Sky;
-  private readonly revealLayer = new Container();
-  private revealNode: Sprite | Text | null = null;
-  private readonly revealGlow: Sprite;
   private readonly clouds: CloudCover;
   private readonly atmosphere: Atmosphere;
   private readonly strands = new Graphics();
@@ -139,15 +135,6 @@ export class SceneRenderer {
     this.dot = softDotTexture(64, 0.35);
     this.softDot = softDotTexture(128, 0);
     this.sky = new Sky(this.dot, cfg.stars);
-    this.revealGlow = new Sprite(this.softDot);
-    this.revealGlow.anchor.set(0.5);
-    this.revealGlow.blendMode = 'add';
-    this.revealGlow.tint = 0xffd9a0;
-    this.revealLayer.addChild(this.revealGlow);
-    this.revealLayer.visible = false;
-    // scaled about the screen centre, so the number recedes into the distance there
-    this.revealLayer.pivot.set(0.5, ASPECT / 2);
-    this.revealLayer.position.set(0.5, ASPECT / 2);
     this.clouds = new CloudCover(cfg.clouds);
     this.atmosphere = new Atmosphere(pixi, this.softDot, cfg.octaves);
     this.strands.blendMode = 'add';
@@ -164,7 +151,6 @@ export class SceneRenderer {
       this.dust.container,
       this.eyesLayer,
       this.lidLight.mesh,
-      this.revealLayer,
       this.master,
       this.ringFx.mesh,
       this.orb.mesh,
@@ -203,29 +189,6 @@ export class SceneRenderer {
     } catch {
       console.warn(`[dream-pattern] backdrop "${url}" did not load; using the gradient`);
     }
-  }
-
-  async loadReveal(): Promise<void> {
-    let node: Sprite | Text;
-    const { imageUrl, widthFraction, placeholderText } = this.cfg.reveal;
-    try {
-      const tex = await Assets.load<Texture>(imageUrl);
-      node = new Sprite(tex);
-      node.scale.set(widthFraction / tex.width);
-    } catch {
-      node = new Text({
-        text: placeholderText,
-        style: { fontFamily: 'Georgia, serif', fontSize: 600, fill: 0xfff4dc, fontWeight: '700' },
-      });
-      node.scale.set((widthFraction * 1.4) / node.height);
-    }
-    node.anchor.set(0.5);
-    node.position.set(0.5, ASPECT / 2);
-    this.revealNode = node;
-    this.revealLayer.addChild(node);
-    this.revealGlow.position.set(0.5, ASPECT / 2);
-    const size = Math.max(node.width, node.height) * 1.9;
-    this.revealGlow.width = this.revealGlow.height = size;
   }
 
   setPattern(ctx: GameContext, pattern: Pattern): void {
@@ -331,7 +294,7 @@ export class SceneRenderer {
         this.clouds.part(e.at ?? this.centre, this.cfg.clouds.partMs);
         break;
       case 'startReveal':
-        for (const p of this.ctx.points) this.blink(p.id, now, 4200, 0.35, 1.3);
+        for (const p of this.ctx.points) this.blink(p.id, now, 2600, 0.35, 0.9);
         this.ring(now, this.centre, { from: 0.05, to: 0.9, dur: 2200, color: C.hot, alpha: 0.6, width: 0.006 });
         this.clouds.part(this.centre, this.ctx.timing.revealDisperseMs); // pushes the lingering wisps aside
         break;
@@ -395,9 +358,9 @@ export class SceneRenderer {
     this.lidLight.begin();
     this.sky.update(now, dt);
     this.clouds.update(dt);
-    this.updateReveal(s, now);
     this.updateAtmosphere(s, now, dt);
     this.drawConstellation(s, now, dt);
+    this.drawFigure(s, now, dt);
     this.drawAttract(attract, now, dt);
     this.drawCreative(s, now, dt);
     this.updateEyes(s, now, dt);
@@ -407,26 +370,6 @@ export class SceneRenderer {
     this.beams.end(now);
     this.ringFx.end();
     this.lidLight.end(now);
-  }
-
-  /**
-   * The number is drawn above the eyes, only from the reveal on: it fades in over revealDisperseMs,
-   * then through IDLE it slowly shrinks and fades into the distance, gone as the clouds close again.
-   */
-  private updateReveal(s: GameState, now: number): void {
-    const show = s.mode === 'REVEAL' || s.mode === 'IDLE';
-    this.revealLayer.visible = show && !!this.revealNode;
-    if (!show) return;
-    const t = this.ctx.timing;
-    if (s.mode === 'REVEAL') {
-      this.revealLayer.alpha = smooth((now - s.modeSince) / t.revealDisperseMs);
-      this.revealLayer.scale.set(1);
-    } else {
-      const k = Math.min(1, (now - s.modeSince) / (t.revealHoldMs + t.cloudsReturnMs));
-      this.revealLayer.scale.set(1 - 0.7 * smooth(k));
-      this.revealLayer.alpha = 1 - smooth((k - 0.15) / 0.8);
-    }
-    this.revealGlow.alpha = 0.28 + 0.08 * Math.sin(now / 1300);
   }
 
   private updateAtmosphere(s: GameState, now: number, dt: number): void {
@@ -525,6 +468,36 @@ export class SceneRenderer {
     }
   }
 
+  /**
+   * The reveal figure: the line runs from eye to eye and draws the hidden number, a bright head
+   * shedding sparks; drawn it breathes gently through IDLE and fades as the clouds return.
+   */
+  private drawFigure(s: GameState, now: number, dt: number): void {
+    const f = figureProgress(s, now, this.ctx);
+    if (!f || f.head < 0) return;
+    const fig = this.ctx.figure;
+    const P = (id: number) => this.pos(id);
+    const done = Math.min(fig.length - 1, Math.floor(f.head));
+    const part = f.head - done;
+    const style = { color: C.gold, alpha: f.alpha * (0.85 + 0.15 * Math.sin(now / 900)), hot: 0.7 };
+    for (let i = 0; i < done; i++) this.strand(P(fig[i]), P(fig[i + 1]), now, 400 + i, style);
+    if (done < fig.length - 1 && part > 0) {
+      const tip = lerpVec(P(fig[done]), P(fig[done + 1]), part);
+      this.strand(P(fig[done]), tip, now, 400 + done, style);
+      circle(this.strands, tip.x, tip.y, 0.007).fill({ color: C.hot, alpha: 0.9 * f.alpha });
+      if (Math.random() < dt * 50) this.dust.emit(now, { pos: tip, speed: 0.05, life: 0.9, size: 0.0065, tint: Math.random() < 0.5 ? C.gold : C.hot });
+    }
+  }
+
+  /** A figure eye is reached: it opens with a ring and a burst of stardust (the note plays in the audio). */
+  onFigureNote(point: number, now: number): void {
+    const r = this.radius(point);
+    const p = this.pos(point);
+    this.blink(point, now, 900, 0.5);
+    this.ring(now, p, { from: r, to: r * 2.6, dur: 1000, color: C.gold, alpha: 0.8 });
+    this.dust.burst(now, 16, { pos: p, speed: 0.12, life: 1, size: 0.007, tint: C.hot, grow: 0.2 });
+  }
+
   /** The tether from the last point to the finger, shedding stardust. */
   private liveTether(from: Vec, finger: Vec, now: number, dt: number): void {
     this.strand(from, finger, now, 77, { color: C.hot, alpha: 0.85, hot: 1 });
@@ -583,6 +556,10 @@ export class SceneRenderer {
     // during the "get ready" notice every eye glows up with the breath, as if the table holds it
     const notice = noticeProgress(s, now);
     const held = notice === null ? 0 : smooth((notice - NOTICE.inhale[0]) / (NOTICE.inhale[1] - NOTICE.inhale[0])) * (1 - smooth((notice - 0.9) / 0.1));
+    // reveal figure: the eyes the line has reached stay open and glowing (fading with the figure)
+    const figure = figureProgress(s, now, this.ctx);
+    const lit = new Map<number, number>();
+    if (figure) this.ctx.figure.forEach((id, i) => i <= figure.head && lit.set(id, figure.alpha));
 
     for (const eye of this.eyes.values()) {
       const id = eye.id;
@@ -596,6 +573,13 @@ export class SceneRenderer {
       if (held > 0) {
         look.glow = Math.max(look.glow, 0.1 + 0.4 * held);
         look.glowColor = lerpColor(C.lavender, C.gold, held);
+      }
+      const fl0 = lit.get(id);
+      if (fl0 !== undefined) {
+        look.open = 0.7 * fl0;
+        look.closeTc = 0.8;
+        look.glow = Math.max(look.glow, (0.45 + 0.1 * Math.sin(now / 900 + id)) * fl0);
+        look.glowColor = C.gold;
       }
       if (awake.has(id)) {
         look.open = 0.42;

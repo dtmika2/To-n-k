@@ -10,7 +10,7 @@ npm run build
 npm run serve            # → http://localhost:4173 — check it in a normal browser first
 ```
 
-Put the real number image at `public/assets/reveal-number.png` before building. It needs a transparent background and should be at least 1500 px tall. Without it, the app shows a placeholder "5".
+The hidden number needs no image: after a solve, the eyes listed in `src/config/pattern.json` under `"figure"` are joined in order and draw it. To change the number, change that list (eye ids, in drawing order) and run `npm run validate`.
 
 ## Start it
 

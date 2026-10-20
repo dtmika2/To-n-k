@@ -20,12 +20,16 @@ export interface GameContext {
     collapseMs: number;
     revealDisperseMs: number;
     revealHoldMs: number;
+    revealFigureDelayMs: number;
+    revealFigureDrawMs: number;
     cloudsReturnMs: number;
     inactivityMs: number;
     creativeFadeMs: number;
   };
   hit: { correctScale: number; wrongScale: number; exitHysteresis: number; masterScale: number; creativeScale: number };
   allowSkipDemo: boolean;
+  /** The reveal figure (pattern.json "figure"); empty = none. See game/figure.ts. */
+  figure: number[];
 }
 
 export interface GameState {

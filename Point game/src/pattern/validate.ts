@@ -37,6 +37,14 @@ export function validatePattern(pattern: Pattern, s: ValidatorSettings): Validat
     if (sequence[i] === sequence[i - 1]) errors.push(`point ${sequence[i]} follows itself at step ${i}`);
   }
 
+  // The reveal figure: known eyes, joined in order (it is only drawn, never traced, so no segment rules).
+  const figure = pattern.figure ?? [];
+  if (pattern.figure && figure.length < 2) errors.push('figure needs at least two points');
+  for (const id of figure) if (!byId.has(id)) errors.push(`figure uses unknown id ${id}`);
+  for (let i = 1; i < figure.length; i++) {
+    if (figure[i] === figure[i - 1]) errors.push(`figure: point ${figure[i]} follows itself at step ${i}`);
+  }
+
   // Points overlapping each other or the master/creative buttons.
   for (let i = 0; i < points.length; i++) {
     const a = points[i];

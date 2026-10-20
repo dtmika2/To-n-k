@@ -4,8 +4,10 @@ import patternJson from '../config/pattern.json';
 import { settings } from '../config/settings.ts';
 import { DebugOverlay } from '../debug/overlay.ts';
 import { Editor } from '../debug/editor.ts';
+import { Menu } from '../debug/menu.ts';
 import { AttractPlayer, type AttractView } from '../game/attract.ts';
 import { buildContext } from '../game/context.ts';
+import { figureProgress } from '../game/figure.ts';
 import { createReducer, initialState } from '../game/reducer.ts';
 import type { GameEvent, Mode } from '../game/types.ts';
 import { attachPointerInput } from '../input/pointer.ts';
@@ -24,7 +26,7 @@ export async function startApp(): Promise<void> {
   const num = (key: string, fallback: number) => (params.has(key) ? Number(params.get(key)) : fallback);
   const rotateDeg = num('rotate', settings.display.rotateDeg);
   let renderScale = num('scale', settings.display.renderScale);
-  const autoScale = settings.display.autoScale && !params.has('scale');
+  let autoScale = settings.display.autoScale && !params.has('scale');
   const lookParam = params.get('look');
   let look: Look = lookParam === 'vfx' || lookParam === 'classic' ? lookParam : settings.display.look;
 
@@ -46,14 +48,8 @@ export async function startApp(): Promise<void> {
   });
   document.getElementById('stage')!.appendChild(app.canvas);
 
-  const reveal = {
-    imageUrl: import.meta.env.BASE_URL + settings.reveal.image,
-    widthFraction: settings.reveal.widthFraction,
-    placeholderText: settings.reveal.placeholderText,
-  };
   const viewport = new Viewport();
   const scene = new SceneRenderer(app.renderer, {
-    reveal,
     stars: settings.display.stars,
     octaves: num('octaves', settings.display.noiseOctaves),
     renderScale,
@@ -61,16 +57,12 @@ export async function startApp(): Promise<void> {
     clouds: settings.display.clouds,
   });
   scene.setLook(look);
-  const primitives = new DebugRenderer(reveal);
+  const primitives = new DebugRenderer();
   app.stage.addChild(scene.root, primitives.root);
   scene.setPattern(ctx, pattern);
   primitives.setPattern(ctx, pattern);
   const backdrop = settings.display.backdrop;
-  await Promise.all([
-    scene.loadReveal(),
-    primitives.loadReveal(),
-    scene.loadBackdrop(backdrop && import.meta.env.BASE_URL + backdrop),
-  ]);
+  await scene.loadBackdrop(backdrop && import.meta.env.BASE_URL + backdrop);
 
   const audio = new AudioEngine(freqsOf(pattern), ctx, settings.audio);
   const overlay = new DebugOverlay();
@@ -114,13 +106,112 @@ export async function startApp(): Promise<void> {
   let debugOn = params.has('debug');
   let primitivesOnly = params.has('primitives');
   scene.markUnused = params.has('unused');
+  const setLook = (l: Look) => {
+    look = l;
+    scene.setLook(look);
+  };
+
+  // M: menu overlay, with the key legend and live switches (all of them also work by key, or are tunables)
+  const menu = new Menu(
+    [
+      { keys: 'M / Esc', what: 'open / close this menu' },
+      { keys: 'D', what: 'debug overlay: state, timers and fps; hit radii drawn over the scene' },
+      { keys: 'P', what: 'primitives only (the Phase 1 debug drawing)' },
+      { keys: 'L', what: 'switch the look: vfx ⇄ classic (also ?look=)' },
+      { keys: 'U', what: 'mark the decoy eyes, which are never in the sequence (also ?unused)' },
+      { keys: 'E', what: 'layout editor: drag eyes, mouse wheel or [ ] for the radius, Backspace undoes while recording' },
+      { keys: 'R', what: 'reset to the intro' },
+      { keys: '1 – 5', what: 'jump to INTRO · GAME · REVEAL · IDLE · CREATIVE' },
+    ],
+    [
+      {
+        title: 'View',
+        controls: [
+          { kind: 'choice', label: 'Look', key: 'L', options: ['vfx', 'classic'], get: () => look, set: (v) => setLook(v as Look) },
+          { kind: 'toggle', label: 'Debug overlay', key: 'D', get: () => debugOn, set: (v) => ((debugOn = v), applyView()) },
+          { kind: 'toggle', label: 'Primitives only', key: 'P', get: () => primitivesOnly, set: (v) => ((primitivesOnly = v), applyView()) },
+          { kind: 'toggle', label: 'Mark decoy eyes', key: 'U', get: () => scene.markUnused, set: (v) => (scene.markUnused = v) },
+        ],
+      },
+      {
+        title: 'Sound',
+        controls: [
+          { kind: 'range', label: 'Volume', min: 0, max: 1, step: 0.01, get: () => settings.audio.masterGain, set: (v) => audio.setMasterGain(v) },
+          {
+            kind: 'toggle',
+            label: 'Glide hint',
+            hint: 'While tracing, the note bends towards the next eye’s note as the finger nears it.',
+            get: () => settings.audio.glideHint,
+            set: (v) => (settings.audio.glideHint = v),
+          },
+          {
+            kind: 'toggle',
+            label: 'Figure notes',
+            hint: 'At the reveal, each eye of the number plays its note as the line reaches it.',
+            get: () => settings.audio.revealNotes,
+            set: (v) => (settings.audio.revealNotes = v),
+          },
+          {
+            kind: 'toggle',
+            label: 'Intro drone',
+            hint: 'The very quiet drone under the intro.',
+            get: () => settings.audio.introDrone,
+            set: (v) => {
+              if (!v) audio.setDrone(false);
+              settings.audio.introDrone = v;
+              if (v && state.mode === 'INTRO') audio.setDrone(true);
+            },
+          },
+        ],
+      },
+      {
+        title: 'Game',
+        controls: [
+          {
+            kind: 'toggle',
+            label: 'Tap skips the demo',
+            hint: 'A tap during the demo ends it and goes straight to READY.',
+            get: () => ctx.allowSkipDemo,
+            set: (v) => {
+              settings.game.allowSkipDemo = v; // kept when the layout editor rebuilds the context
+              ctx.allowSkipDemo = v;
+            },
+          },
+        ],
+      },
+      {
+        title: 'Performance',
+        controls: [
+          {
+            kind: 'toggle',
+            label: 'Auto render scale',
+            hint: 'Lower the mist shader resolution step by step while the frame rate stays under 55 fps.',
+            get: () => autoScale,
+            set: (v) => (autoScale = v),
+          },
+          {
+            kind: 'range',
+            label: 'Render scale',
+            min: settings.display.minRenderScale,
+            max: 1,
+            step: 0.05,
+            hint: 'Resolution of the mist shader relative to the screen.',
+            get: () => renderScale,
+            set: (v) => ((renderScale = v), layout()),
+          },
+          { kind: 'range', label: 'Noise octaves', min: 1, max: 6, step: 1, hint: 'Detail of the mist noise (performance vs. detail).', get: () => scene.octaves, set: (v) => (scene.octaves = v) },
+        ],
+      },
+    ],
+  );
+
   const applyView = () => {
     overlay.setVisible(debugOn);
     primitives.debug = debugOn;
     primitives.setOverlay(!primitivesOnly);
     scene.root.visible = !primitivesOnly && !editor.isOpen;
     primitives.root.visible = primitivesOnly || debugOn || editor.isOpen;
-    document.body.classList.toggle('show-cursor', debugOn || editor.isOpen);
+    document.body.classList.toggle('show-cursor', debugOn || editor.isOpen || menu.isOpen);
   };
   applyView();
 
@@ -164,13 +255,11 @@ export async function startApp(): Promise<void> {
   window.addEventListener('keydown', (e) => {
     if (editor.isOpen && editor.key(e.key)) return;
     const k = e.key.toLowerCase();
-    if (k === 'd') debugOn = !debugOn;
+    if (k === 'm' || (k === 'escape' && menu.isOpen)) menu.toggle(k === 'm' ? !menu.isOpen : false);
+    else if (k === 'd') debugOn = !debugOn;
     else if (k === 'p') primitivesOnly = !primitivesOnly;
     else if (k === 'u') scene.markUnused = !scene.markUnused;
-    else if (k === 'l') {
-      look = look === 'vfx' ? 'classic' : 'vfx';
-      scene.setLook(look);
-    }
+    else if (k === 'l') setLook(look === 'vfx' ? 'classic' : 'vfx');
     else if (k === 'e') {
       editor.toggle(pattern);
       if (!editor.isOpen) primitives.refreshLabels();
@@ -178,6 +267,7 @@ export async function startApp(): Promise<void> {
     else if (k === 'r') dispatch({ type: 'JUMP', mode: 'INTRO' });
     else if (JUMP_KEYS[k]) dispatch({ type: 'JUMP', mode: JUMP_KEYS[k] });
     applyView();
+    menu.sync();
   });
 
   // Performance: if the frame rate stays low, lower the shader resolution step by step.
@@ -198,6 +288,27 @@ export async function startApp(): Promise<void> {
     }
   };
 
+  // Reveal figure: each eye plays its note (and lights up) as the line reaches it. Jumping straight to
+  // IDLE (debug) shows the finished figure silently.
+  let figureNotes = -1;
+  const figureTick = (now: number) => {
+    const f = figureProgress(state, now, ctx);
+    if (!f) {
+      figureNotes = -1;
+      return;
+    }
+    const reached = Math.min(ctx.figure.length - 1, Math.floor(f.head + 1e-6));
+    if (state.mode !== 'REVEAL' && figureNotes < 0) {
+      figureNotes = reached;
+      return;
+    }
+    while (figureNotes < reached) {
+      const id = ctx.figure[++figureNotes];
+      scene.onFigureNote(id, now);
+      if (settings.audio.revealNotes) audio.onAttractNote(id, 700);
+    }
+  };
+
   app.ticker.add(() => {
     const now = performance.now();
     if (!lastSample) speed *= 0.9;
@@ -205,6 +316,7 @@ export async function startApp(): Promise<void> {
       primitives.renderEditor(editor.view(), now);
     } else {
       dispatch({ type: 'TICK' });
+      figureTick(now);
       let attractView: AttractView | null = null;
       if (state.mode === 'INTRO') {
         const a = attract.update(now);

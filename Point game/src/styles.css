@@ -122,3 +122,85 @@ body.show-cursor {
   align-items: center;
   gap: 6px;
 }
+.menu-panel {
+  position: fixed;
+  right: 8px;
+  top: 8px;
+  z-index: 12;
+  width: 380px;
+  max-height: calc(100% - 16px);
+  overflow: auto;
+  padding: 10px 14px 12px;
+  font: 13px/1.45 system-ui, sans-serif;
+  color: #e8e6ff;
+  background: rgba(16, 14, 40, 0.94);
+  border: 1px solid #3a3570;
+  border-radius: 8px;
+  cursor: default;
+  touch-action: auto;
+}
+.menu-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.menu-head h3 {
+  margin: 0;
+  font-size: 16px;
+}
+.menu-head button {
+  font: inherit;
+  padding: 2px 8px;
+  color: #fff;
+  background: #3d3770;
+  border: 1px solid #6a5fc0;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.menu-panel h4 {
+  margin: 12px 0 4px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #a79eff;
+}
+.menu-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-height: 28px;
+}
+.menu-range {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.menu-range output {
+  width: 34px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.menu-panel kbd,
+.menu-key {
+  font: 12px Consolas, monospace;
+  color: #f3d99a;
+}
+.menu-panel kbd {
+  padding: 0 4px;
+  border: 1px solid #4a4580;
+  border-radius: 3px;
+}
+.menu-keys {
+  width: 100%;
+  border-collapse: collapse;
+}
+.menu-keys td {
+  padding: 3px 0;
+  vertical-align: top;
+}
+.menu-key {
+  width: 64px;
+  white-space: nowrap;
+}

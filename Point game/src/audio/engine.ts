@@ -28,6 +28,7 @@ export class AudioEngine {
   private vibLfo!: OscillatorNode;
   private vibDepth!: GainNode;
   private droneGain: GainNode | null = null;
+  private master: GainNode | null = null;
 
   private mode: VoiceMode = 'silent';
   private modeAt = 0;
@@ -75,6 +76,7 @@ export class AudioEngine {
 
     const master = ac.createGain();
     master.gain.value = this.cfg.masterGain;
+    this.master = master;
     master.connect(limiter);
 
     const lowpass = ac.createBiquadFilter();
@@ -232,6 +234,12 @@ export class AudioEngine {
         o.stop(t + 12);
       }
     }
+  }
+
+  /** Overall volume (0…1), live (the operator menu). */
+  setMasterGain(v: number): void {
+    this.cfg.masterGain = v;
+    if (this.ac && this.master) this.master.gain.setTargetAtTime(v, this.ac.currentTime, 0.05);
   }
 
   /** Very quiet A2 + E3 drone for the attract mode. */

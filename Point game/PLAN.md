@@ -401,3 +401,10 @@ Goal: the owner can play the full rules on the real TV, hear the real sound, and
 - **Opening:** the lid casts a soft, feathered shadow into the eye, with a thin rim of light just inside the edge, so the iris sits inside the eye. The shadow lightens as the eye closes, so sleeping slits keep their colour.
 - **vfx look:** the lids and lashes are made of light (a thin white-hot core in the iris's colour, with light travelling along them and brief bright pulses). As an eye opens wide, most lash tips throw a spark outward; while it glows open, single tips glint now and then.
 - **Default look (2026-10-20):** `vfx` is now the default (`settings.display.look`); `?look=classic` or `L` still shows the classic look.
+
+## Amendment (2026-10-20): the number is drawn by the eyes
+
+- **No number image.** The reveal no longer fades in a picture of the number (`reveal-number.png` is not needed any more).
+- **The figure.** `pattern.json` lists the eyes that form the number, in drawing order (`"figure"`, now `12 4 13 1 2 10 15`, a "5" drawn in one stroke). After the solve, while the clouds part and the Leo lines flare and fade, a bright line runs from eye to eye (from 3.4 s, once the Leo lines have faded, over 4 s, at even speed along the line). Each eye opens with a gold ring and a burst of stardust as it is reached, and plays its note.
+- **Hold.** The finished figure breathes gently through IDLE with its eyes half open and glowing, and fades as the clouds roll back in.
+- Timing: `timing.revealFigureDelayMs`, `timing.revealFigureDrawMs`; the notes can be switched off (`audio.revealNotes`, also in the M menu). The validator checks the figure's ids.

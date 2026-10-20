@@ -1,6 +1,7 @@
-import { Assets, Container, Graphics, Sprite, Text, type Texture } from 'pixi.js';
+import { Container, Graphics, Text } from 'pixi.js';
 import { liftIntensity } from '../game/reducer.ts';
 import type { AttractView } from '../game/attract.ts';
+import { figureProgress } from '../game/figure.ts';
 import type { Effect, GameContext, GameState } from '../game/types.ts';
 import { lerpVec } from '../pattern/geometry.ts';
 import { ASPECT, type Pattern, type Vec } from '../pattern/types.ts';
@@ -46,16 +47,9 @@ export interface EditorView {
   hit: GameContext['hit'];
 }
 
-export interface RevealConfig {
-  imageUrl: string;
-  widthFraction: number;
-  placeholderText: string;
-}
-
 export class DebugRenderer {
   readonly root = new Container();
   private readonly bg = new Graphics();
-  private readonly revealLayer = new Container();
   private readonly g = new Graphics();
   private readonly labels = new Container();
   private labelTexts = new Map<number, Text>();
@@ -75,36 +69,16 @@ export class DebugRenderer {
   /** Drawn faintly over the real scene (D key) instead of as the whole picture. */
   private overlay = false;
 
-  constructor(private readonly reveal: RevealConfig) {
+  constructor() {
     this.bg.rect(0, 0, 1, ASPECT).fill({ color: C.bg });
-    this.root.addChild(this.bg, this.revealLayer, this.g, this.labels);
+    this.root.addChild(this.bg, this.g, this.labels);
     this.labels.visible = false;
   }
 
   setOverlay(on: boolean): void {
     this.overlay = on;
     this.bg.visible = !on;
-    this.revealLayer.visible = !on;
     this.root.alpha = on ? 0.55 : 1;
-  }
-
-  async loadReveal(): Promise<void> {
-    let node: Sprite | Text;
-    try {
-      const tex = await Assets.load<Texture>(this.reveal.imageUrl);
-      node = new Sprite(tex);
-      node.scale.set(this.reveal.widthFraction / tex.width);
-    } catch {
-      node = new Text({
-        text: this.reveal.placeholderText,
-        style: { fontFamily: 'Georgia, serif', fontSize: 600, fill: C.white, fontWeight: '700' },
-      });
-      node.scale.set((this.reveal.widthFraction * 1.4) / node.height);
-    }
-    node.anchor.set(0.5);
-    node.position.set(0.5, ASPECT / 2);
-    this.revealLayer.addChild(node);
-    this.revealLayer.alpha = 0;
   }
 
   setPattern(ctx: GameContext, pattern: Pattern): void {
@@ -201,15 +175,19 @@ export class DebugRenderer {
     this.retracts = this.retracts.filter(alive);
   }
 
+  /** The reveal figure as plain lines, as far as it is drawn. */
   private drawReveal(s: GameState, now: number): void {
-    const t = this.ctx.timing;
-    let a = 0;
-    if (s.mode === 'REVEAL') a = Math.min(1, (now - s.modeSince) / t.revealDisperseMs);
-    else if (s.mode === 'IDLE') {
-      a = 1;
-      if (s.cloudsReturning) a = 1 - Math.min(1, (now - s.modeSince - t.revealHoldMs) / t.cloudsReturnMs);
+    const f = figureProgress(s, now, this.ctx);
+    if (!f || f.head < 0) return;
+    const fig = this.ctx.figure;
+    const P = (id: number) => this.pos.get(id)!;
+    const g = this.g;
+    g.moveTo(P(fig[0]).x, P(fig[0]).y);
+    for (let i = 1; i < fig.length && i - 1 < f.head; i++) {
+      const p = lerpVec(P(fig[i - 1]), P(fig[i]), Math.min(1, f.head - (i - 1)));
+      g.lineTo(p.x, p.y);
     }
-    this.revealLayer.alpha = a;
+    g.stroke({ width: LINE_W * 1.5, color: C.gold, alpha: f.alpha });
   }
 
   private drawRipple(r: Ripple, now: number): void {
@@ -388,9 +366,8 @@ export class DebugRenderer {
     this.setOverlay(false);
     const g = this.g;
     g.clear();
-    this.revealLayer.alpha = 0;
     this.labels.visible = true;
-    g.rect(0, 0, 1, ASPECT).fill({ color: 0x0a0a14 }); // covers the reveal layer while editing
+    g.rect(0, 0, 1, ASPECT).fill({ color: 0x0a0a14 });
     for (let i = 1; i < 10; i++) g.moveTo(i / 10, 0).lineTo(i / 10, ASPECT).stroke({ width: 0.001, color: 0x2a2a44 });
     for (let i = 1; i < 10; i++) g.moveTo(0, (i / 10) * ASPECT).lineTo(1, (i / 10) * ASPECT).stroke({ width: 0.001, color: 0x2a2a44 });
     const pts = view.pattern.points.map((p) => ({ id: p.id, pos: { x: p.x, y: p.y * ASPECT }, r: p.r }));

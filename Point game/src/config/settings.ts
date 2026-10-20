@@ -16,6 +16,13 @@ export const settings = {
     collapseMs: 1500,
     revealDisperseMs: 5000,
     revealHoldMs: 15000,
+    /**
+     * The reveal figure (the number drawn by joining eyes): starts this long into the reveal (after the
+     * Leo lines' flare has faded, at 0.65 × revealDisperseMs), draws over revealFigureDrawMs (it may run
+     * on into IDLE).
+     */
+    revealFigureDelayMs: 3400,
+    revealFigureDrawMs: 4000,
     cloudsReturnMs: 3000,
     inactivityMs: 30000,
     /** Creative mode: how long a drawing takes to fade after the finger lifts. */
@@ -31,6 +38,8 @@ export const settings = {
     vibratoHz: 5.5,
     vibratoCents: 8,
     glideHint: true,
+    /** Each eye of the reveal figure plays its note as the line reaches it. */
+    revealNotes: true,
     introDrone: true,
     /** Theremin level while sustaining a note (before the master gain). */
     voiceLevel: 0.32,
@@ -76,7 +85,6 @@ export const settings = {
     },
   },
   game: { allowSkipDemo: false },
-  reveal: { image: 'assets/reveal-number.png', widthFraction: 0.45, placeholderText: '5' },
   /** Master button, in normalized portrait coordinates (x across, y down); r is in portrait-width units. */
   master: { x: 0.5, y: 0.06, r: 0.045 },
   /** Creative-mode button (free play), bottom centre; same units as master. */

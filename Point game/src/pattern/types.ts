@@ -13,6 +13,8 @@ export interface PatternPoint {
 export interface Pattern {
   points: PatternPoint[];
   sequence: number[];
+  /** The reveal figure: eye ids joined in order after a solve, drawing the hidden number. */
+  figure?: number[];
 }
 
 export interface Vec {

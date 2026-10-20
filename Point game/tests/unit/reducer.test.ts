@@ -30,6 +30,7 @@ function testContext(sequence: number[], timing: Partial<GameContext['timing']> 
     timing: { ...TIMING, ...timing },
     hit: { ...settings.hit },
     allowSkipDemo: false,
+    figure: [],
   };
 }
 

@@ -11,5 +11,6 @@ export function buildContext(pattern: Pattern, s: Pick<Settings, 'timing' | 'hit
     timing: { ...s.timing },
     hit: { ...s.hit },
     allowSkipDemo: s.game.allowSkipDemo,
+    figure: [...(pattern.figure ?? [])],
   };
 }

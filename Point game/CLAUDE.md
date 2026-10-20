@@ -5,6 +5,7 @@ A memory game for a 75" portrait touch table: a PixiJS 8 + Web Audio PWA, run in
 ## Commands
 - `npm run dev` — Vite dev server on http://localhost:5173.
   - URL flags: `?debug`, `?primitives`, `?unused` (marks decoy eyes), `?look=classic|vfx`, `?scale=`, `?rotate=`, `?octaves=`.
+  - `M` opens the menu overlay (`src/debug/menu.ts`): the key legend plus live switches. New keys and safe live tunables belong there too.
   - `/vfx.html`: look-dev page, classic and vfx side by side with sliders.
 - `npm run verify` — typecheck, vitest, pattern validation and build. Run this before committing.
 - `npm run validate` / `npm run assign-pitches` — run these after changing `src/config/pattern.json`.
@@ -26,7 +27,8 @@ A memory game for a 75" portrait touch table: a PixiJS 8 + Web Audio PWA, run in
   - The start eye may repeat; the end may not.
   - Each eye has its own note from A minor pentatonic D3–G6.
   - The `E` key opens the layout editor.
-- **Scene layers, bottom to top:** sky/backdrop, clouds (puff sprites), mist shader, puffs, strands, beams, dust, eyes, reveal number, master button, rings, fx.
+- **Scene layers, bottom to top:** sky/backdrop, clouds (puff sprites), mist shader, puffs, strands, beams, dust, eyes, lid light, master button, rings, orb, fx.
+- **Reveal:** no number image. After a solve the eyes in pattern.json `"figure"` are joined in order and draw the number; timing in `game/figure.ts` (`figureProgress`), shared by the scene, the debug drawing and the audio (each figure eye plays its note as the line reaches it).
 - **Two looks in one build** (`settings.display.look`, `?look=`, `L` key live): `classic` and `vfx`. The vfx look swaps three primitives for shaders in `render/vfx/`: the iris (`portal.ts`, inside the same lid mask), the strands (`beam.ts`, via `render/strand.ts`), the rings (`ring.ts`), the notice centre (`orb.ts` plus sparks) and the lids (`lidLight.ts`, lids and lashes of light; lash tips spark). Beams and rings are each one dynamic mesh per frame (`batch.ts`). Everything else is shared; new visuals should work in both looks.
 - **Shader time:** never pass raw time into noise (hash precision; the kiosk runs for days). Use `wrap()` from `render/vfx/shaders.ts` with the periodic `tnoise`/`tfbm`, or `shaderTime()` for sin-only use.
 
