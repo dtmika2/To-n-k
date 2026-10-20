@@ -1,5 +1,7 @@
-# Builds final-gate-lock and publishes it to GitHub Pages (https://<owner>.github.io/<repo>/)
-# on every push to main. Can also be started by hand from the Actions tab.
+# Builds final-gate-lock and Point game and publishes them to GitHub Pages on every push to main:
+#   final-gate-lock → https://<owner>.github.io/<repo>/
+#   Point game      → https://<owner>.github.io/<repo>/point-game/
+# Can also be started by hand from the Actions tab.
 name: Deploy to GitHub Pages
 
 on:
@@ -30,13 +32,27 @@ jobs:
         with:
           node-version: 24
           cache: npm
-          cache-dependency-path: final-gate-lock/package-lock.json
+          cache-dependency-path: |
+            final-gate-lock/package-lock.json
+            Point game/package-lock.json
       - run: npm ci
       - run: npm run typecheck
       - run: npm test
       - run: npm run build
         env:
           BASE_PATH: /${{ github.event.repository.name }}/
+      # Point game, served from a subfolder of the same site
+      - name: Point game — install, check, build
+        working-directory: Point game
+        run: |
+          npm ci
+          npm run typecheck
+          npm test
+          npm run validate
+          npm run build
+        env:
+          BASE_PATH: /${{ github.event.repository.name }}/point-game/
+      - run: cp -r "../Point game/dist" dist/point-game
       - uses: actions/upload-pages-artifact@v3
         with:
           path: final-gate-lock/dist

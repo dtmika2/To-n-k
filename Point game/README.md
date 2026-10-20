@@ -2,6 +2,8 @@
 
 A touch-table memory game: trace the pattern of the sleeping eyes to part the clouds. The design is in `PLAN.md`, the build status in `CHECKPOINT.md`, and the kiosk setup in `kiosk/README.md`.
 
+**Public link** (built by `.github/workflows/pages.yml` on every push to `main`): **https://dtmika2.github.io/To-n-k/point-game/**. Flags work there too, e.g. `…/point-game/?look=classic`; the look-dev page is `…/point-game/vfx.html`. After the first visit it also works offline.
+
 ```
 npm install
 npm run dev          # development, http://localhost:5173  (?debug for the overlay)

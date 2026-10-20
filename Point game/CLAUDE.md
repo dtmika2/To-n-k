@@ -10,6 +10,7 @@ A memory game for a 75" portrait touch table: a PixiJS 8 + Web Audio PWA, run in
 - `npm run verify` — typecheck, vitest, pattern validation and build. Run this before committing.
 - `npm run validate` / `npm run assign-pitches` — run these after changing `src/config/pattern.json`.
 - **Don't run the Playwright e2e/perf tests unless asked.**
+- **Public build:** every push to `main` publishes https://dtmika2.github.io/To-n-k/point-game/ (repo-root `.github/workflows/pages.yml`, `BASE_PATH=/To-n-k/point-game/`; asset URLs must go through `import.meta.env.BASE_URL`). The workflow runs typecheck, tests and validate first. Building locally with that base in Git Bash needs `MSYS_NO_PATHCONV=1`.
 
 ## Workflow
 - Work directly on `main`, with no branches.

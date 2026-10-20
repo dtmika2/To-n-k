@@ -57,7 +57,8 @@ export default defineConfig({
         globPatterns: ['**/*.{js,css,html,json,woff,woff2,png,jpg,jpeg,webp,ogg,mp3,wav,svg,ico}'],
         maximumFileSizeToCacheInBytes: 20 * 1024 * 1024,
         navigateFallback: 'index.html',
-        navigateFallbackDenylist: [/\/wheel\.html/],
+        // wheel.html is its own page; point-game/ is the other app published on the same site
+        navigateFallbackDenylist: [/\/wheel\.html/, /\/point-game\//],
         cleanupOutdatedCaches: true,
       },
     }),

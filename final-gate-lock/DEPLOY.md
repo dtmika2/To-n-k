@@ -24,7 +24,8 @@ screen), rebuild and redeploy. Sound files go in `public/sfx/` (see the README t
 ## 2. Install on the tablet
 
 The site is published by GitHub Pages on every push to `main` (`.github/workflows/pages.yml`):
-**https://dtmika2.github.io/To-n-k/**.
+**https://dtmika2.github.io/To-n-k/**. The same workflow publishes the Point game (Dream Pattern) at
+**https://dtmika2.github.io/To-n-k/point-game/**; the lock's service worker leaves that folder alone.
 
 1. Open **https://dtmika2.github.io/To-n-k/install.html** in **Chrome** on the Tab S11.
 2. Wait until it says *All files saved: works offline* and the **Install** button lights up.
