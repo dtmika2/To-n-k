@@ -47,7 +47,7 @@ export const settings = {
      * Visual look: 'classic' (drawn lines, nebula irises) or 'vfx' (shader beams, portal irises, rings of
      * light). Both ship in the same build; `?look=` overrides this and the L key switches it live.
      */
-    look: 'classic' as Look,
+    look: 'vfx' as Look,
     rotateDeg: 0,
     /** Resolution of the cloud/mist shader layer relative to the screen. */
     renderScale: 0.5,

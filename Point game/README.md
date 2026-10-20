@@ -13,4 +13,4 @@ npm run assign-pitches           # re-assign notes after changing the sequence
 
 Operator keys: `D` debug overlay · `P` primitives · `L` switch look (or `?look=classic|vfx`) · `U` mark unused eyes (or `?unused`) · `E` layout editor · `R` reset · `1`–`5` jump to a state.
 
-Two visual looks ship in the same build: `classic` (default, `settings.display.look`) and `vfx` (shader beams, portal irises, rings of light). `/vfx.html` shows them side by side with sliders.
+Two visual looks ship in the same build: `vfx` (default, `settings.display.look`: shader beams, portal irises, lids of light, rings of light) and `classic`. `/vfx.html` shows them side by side with sliders.

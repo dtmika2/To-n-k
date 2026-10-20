@@ -399,3 +399,5 @@ Goal: the owner can play the full rules on the real TV, hear the real sound, and
 - **Lids** (both looks): brush-like tapered lid lines that swell in the middle and end in fine points, with a soft halo and a light sheen, in the iris's own colour (each eye its own colour family, warming slightly to gold as it glows).
 - **Lashes:** 9–12 curved lashes per eye that taper and fade to fine tips and curl towards the nearer corner; when the eye opens, a few small ones appear on the lower lid. They still sway and hang down when the eye closes.
 - **Opening:** the lid casts a soft, feathered shadow into the eye, with a thin rim of light just inside the edge, so the iris sits inside the eye. The shadow lightens as the eye closes, so sleeping slits keep their colour.
+- **vfx look:** the lids and lashes are made of light (a thin white-hot core in the iris's colour, with light travelling along them and brief bright pulses). As an eye opens wide, most lash tips throw a spark outward; while it glows open, single tips glint now and then.
+- **Default look (2026-10-20):** `vfx` is now the default (`settings.display.look`); `?look=classic` or `L` still shows the classic look.

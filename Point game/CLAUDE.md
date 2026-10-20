@@ -27,7 +27,7 @@ A memory game for a 75" portrait touch table: a PixiJS 8 + Web Audio PWA, run in
   - Each eye has its own note from A minor pentatonic D3–G6.
   - The `E` key opens the layout editor.
 - **Scene layers, bottom to top:** sky/backdrop, clouds (puff sprites), mist shader, puffs, strands, beams, dust, eyes, reveal number, master button, rings, fx.
-- **Two looks in one build** (`settings.display.look`, `?look=`, `L` key live): `classic` and `vfx`. The vfx look swaps three primitives for shaders in `render/vfx/`: the iris (`portal.ts`, inside the same lid mask), the strands (`beam.ts`, via `render/strand.ts`), the rings (`ring.ts`) and the notice centre (`orb.ts` plus sparks). Beams and rings are each one dynamic mesh per frame (`batch.ts`). Everything else is shared; new visuals should work in both looks.
+- **Two looks in one build** (`settings.display.look`, `?look=`, `L` key live): `classic` and `vfx`. The vfx look swaps three primitives for shaders in `render/vfx/`: the iris (`portal.ts`, inside the same lid mask), the strands (`beam.ts`, via `render/strand.ts`), the rings (`ring.ts`), the notice centre (`orb.ts` plus sparks) and the lids (`lidLight.ts`, lids and lashes of light; lash tips spark). Beams and rings are each one dynamic mesh per frame (`batch.ts`). Everything else is shared; new visuals should work in both looks.
 - **Shader time:** never pass raw time into noise (hash precision; the kiosk runs for days). Use `wrap()` from `render/vfx/shaders.ts` with the periodic `tnoise`/`tfbm`, or `shaderTime()` for sin-only use.
 
 ## Gotchas

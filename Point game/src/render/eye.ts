@@ -3,6 +3,8 @@ import type { Vec } from '../pattern/types.ts';
 import { lerpColor } from './draw.ts';
 import { irisPalette, irisTexture, makeWobble, rng } from './textures.ts';
 import { cssHex } from './vfx/shaders.ts';
+import type { Particles } from './particles.ts';
+import type { LidLightBatch } from './vfx/lidLight.ts';
 import { PortalIris } from './vfx/portal.ts';
 
 /** What the scene wants an eye to look like this frame. */
@@ -84,6 +86,10 @@ export class Eye {
   lidStyle: LidStyle = 'refined';
   /** Colour of the refined lids (the iris's own colour in the game); they warm slightly towards gold as the eye glows. */
   lidColor: LidColor = 'iris';
+  /** vfx look: where the lids and lashes are drawn as light (shared by all eyes); null = drawn shapes. */
+  lidLight: LidLightBatch | null = null;
+  /** vfx look: the particle pool the lash tips spark into; null = no sparks. */
+  sparks: Particles | null = null;
 
   private readonly w: number;
   private readonly h: number;
@@ -91,6 +97,8 @@ export class Eye {
   private readonly tilt: number;
   private readonly lashes: Lash[] = [];
   private readonly upperLashes: Lash[] = [];
+  /** vfx look: this frame's lash tips (world) and their outward direction, for the sparks. */
+  private readonly tips: { x: number; y: number; dx: number; dy: number }[] = [];
   private readonly lowerLashes: Lash[] = [];
   /** Iris palette as colours: deep, mid, hot. */
   private readonly pal: [number, number, number];
@@ -179,6 +187,7 @@ export class Eye {
 
   /** `vfx`: draw the portal instead of the nebula iris. */
   update(now: number, dt: number, look: EyeLook, vfx = false): void {
+    const before = this.open;
     const target = Math.max(this.minOpen, look.open);
     const tc = target > this.open ? 0.06 : look.closeTc;
     this.open += (target - this.open) * (1 - Math.exp(-dt / tc));
@@ -228,7 +237,9 @@ export class Eye {
     if (vfx && visible) this.portal.update(now, look.glow * pulse, open);
 
     if (refined) {
-      this.drawRefined(time, look, upper, lower, outline, midY, visible);
+      const light = vfx ? this.lidLight : null;
+      this.drawRefined(time, look, upper, lower, outline, midY, visible, light);
+      if (light && this.sparks) this.spark(now, dt, look, before);
       return;
     }
     this.innerShade.clear();
@@ -271,7 +282,7 @@ export class Eye {
    * (a few small ones on the lower lid when open), and inside the opening the lid's soft shadow plus a
    * thin rim of light, so the iris sits in the eye. Colours come from the eye's iris palette.
    */
-  private drawRefined(time: number, look: EyeLook, upper: number[], lower: number[], outline: number[], midY: number, visible: boolean): void {
+  private drawRefined(time: number, look: EyeLook, upper: number[], lower: number[], outline: number[], midY: number, visible: boolean, light: LidLightBatch | null): void {
     const open = this.open;
     const [, mid, hot] = this.pal;
     const glow = Math.min(1, look.glow);
@@ -304,17 +315,25 @@ export class Eye {
       }
     }
 
-    // halo under the lid lines: stacked widening layers with small alphas add up to a soft falloff
     const gl = this.lidGlow;
     gl.clear();
+    const g = this.lids;
+    g.clear();
+    const dirY = 1 - 2 * Math.min(1, open * 1.6); // lashes hang down when closed, lift when open
+    const lowerK = Math.max(0, Math.min(1, (open - 0.3) / 0.3));
+    if (light) {
+      // light in the halo colour (the iris's saturated tone): the shader adds the white core itself
+      this.drawLight(light, time, upper, lower, visible, dirY, lowerK, haloColor, lidAlpha, glow);
+      return;
+    }
+
+    // halo under the lid lines: stacked widening layers with small alphas add up to a soft falloff
     const haloAlpha = 0.045 + 0.07 * glow;
     for (const k of [0.05, 0.09, 0.14, 0.2]) {
       taperedStroke(gl, upper, (i) => profile(i, h * k, h * k * 0.1)).fill({ color: haloColor, alpha: haloAlpha });
       if (visible) taperedStroke(gl, lower, (i) => profile(i, h * k * 0.6, h * k * 0.06)).fill({ color: haloColor, alpha: haloAlpha * 0.8 });
     }
 
-    const g = this.lids;
-    g.clear();
     // upper lid: swells in the middle, fine points at the corners, with a lighter sheen along its middle
     taperedStroke(g, upper, (i) => profile(i, h * 0.065, h * 0.006)).fill({ color: lidColor, alpha: lidAlpha });
     taperedStroke(g, upper, (i) => profile(i, h * 0.022, 0)).fill({ color: lerpColor(lidColor, 0xffffff, 0.6), alpha: lidAlpha * 0.8 });
@@ -323,10 +342,8 @@ export class Eye {
       taperedStroke(g, lower, (i) => profile(i, h * 0.045, h * 0.005)).fill({ color: lidColor, alpha: lidAlpha * 0.9 * k });
     }
 
-    // lashes: hang down when closed, lift when open (as the drawn lids), as curved tapered strokes
-    const dirY = 1 - 2 * Math.min(1, open * 1.6);
+    // lashes as curved tapered strokes
     for (const lash of this.upperLashes) this.lash(g, upper, lash, dirY, h * 0.75, time, lidColor, lidAlpha * 0.9);
-    const lowerK = Math.max(0, Math.min(1, (open - 0.3) / 0.3));
     if (visible && lowerK > 0) {
       for (const lash of this.lowerLashes) this.lash(g, lower, lash, 1, h * 0.5, time, lidColor, lidAlpha * 0.6 * lowerK);
     }
@@ -334,6 +351,15 @@ export class Eye {
 
   /** One curved lash from the lid curve `line` at `lash.t`, tapering from base to tip. */
   private lash(g: Graphics, line: number[], lash: Lash, dirY: number, scale: number, time: number, color: number, alpha: number): void {
+    const pts = this.lashPoints(line, lash, dirY, scale, time);
+    const w0 = this.h * 0.022;
+    const taper = (k: number) => w0 * Math.pow(1 - k / LASH_SAMPLES, 1.4);
+    taperedStroke(g, pts, taper).fill({ color, alpha: alpha * 0.5 });
+    taperedStroke(g, pts.slice(0, (Math.ceil(LASH_SAMPLES * 0.6) + 1) * 2), (k) => taper(k) * 0.8).fill({ color, alpha: alpha * 0.6 });
+  }
+
+  /** A lash's curve as x,y pairs (eye-local), base first. */
+  private lashPoints(line: number[], lash: Lash, dirY: number, scale: number, time: number): number[] {
     const i = Math.round(((lash.t + 1) / 2) * SAMPLES);
     const bx = line[i * 2];
     const by = line[i * 2 + 1];
@@ -356,9 +382,68 @@ export class Eye {
       const c = s * s;
       pts.push(a * bx + b * cx + c * ex, a * by + b * cy + c * ey);
     }
-    const w0 = this.h * 0.022;
-    const taper = (k: number) => w0 * Math.pow(1 - k / LASH_SAMPLES, 1.4);
-    taperedStroke(g, pts, taper).fill({ color, alpha: alpha * 0.5 });
-    taperedStroke(g, pts.slice(0, (Math.ceil(LASH_SAMPLES * 0.6) + 1) * 2), (k) => taper(k) * 0.8).fill({ color, alpha: alpha * 0.6 });
+    return pts;
+  }
+
+  /** Eye-local x,y pairs → world (the batch is drawn in the eyes' parent space). */
+  private toWorld(pts: readonly number[]): number[] {
+    const c = Math.cos(this.root.rotation);
+    const s = Math.sin(this.root.rotation);
+    const out: number[] = [];
+    for (let i = 0; i < pts.length; i += 2) out.push(this.root.x + pts[i] * c - pts[i + 1] * s, this.root.y + pts[i] * s + pts[i + 1] * c);
+    return out;
+  }
+
+  /**
+   * vfx look: lids and lashes made of light, in the light batch. The lids fade towards their corners,
+   * the lashes towards their tips; the tips are kept (world) for the sparks.
+   */
+  private drawLight(light: LidLightBatch, time: number, upper: number[], lower: number[], visible: boolean, dirY: number, lowerK: number, color: number, alpha: number, glow: number): void {
+    const h = this.h;
+    const lidT = (i: number) => -1 + (2 * i) / SAMPLES;
+    const swell = (i: number) => Math.pow(Math.max(0, 1 - lidT(i) * lidT(i)), 0.7);
+    const corners = (i: number) => 0.25 + 0.75 * Math.min(1, (1 - Math.abs(lidT(i))) * 4);
+    const style = { color, alpha, glow, seed: this.id * 7.3 };
+    light.add(this.toWorld(upper), (i) => h * (0.04 + 0.17 * swell(i)), corners, style);
+    if (visible) {
+      const k = Math.min(1, (this.open - 0.03) / 0.15);
+      light.add(this.toWorld(lower), (i) => h * (0.03 + 0.11 * swell(i)), (i) => corners(i) * k * 0.85, style);
+    }
+    this.tips.length = 0;
+    const lash = (line: number[], l: Lash, dir: number, scale: number, a: number) => {
+      const pts = this.toWorld(this.lashPoints(line, l, dir, scale, time));
+      const last = LASH_SAMPLES * 2;
+      this.tips.push({ x: pts[last], y: pts[last + 1], dx: pts[last] - pts[last - 2], dy: pts[last + 1] - pts[last - 1] });
+      light.add(pts, (k) => h * (0.008 + 0.04 * Math.pow(1 - k / LASH_SAMPLES, 1.3)), (k) => (1 - 0.7 * (k / LASH_SAMPLES)) * a, style);
+    };
+    for (const l of this.upperLashes) lash(upper, l, dirY, h * 0.75, 0.55);
+    if (visible && lowerK > 0) for (const l of this.lowerLashes) lash(lower, l, 1, h * 0.5, 0.4 * lowerK);
+  }
+
+  /**
+   * vfx look: the lash tips spark. As the eye opens wide, most tips throw a spark outward; while it
+   * glows open, single tips glint now and then.
+   */
+  private spark(now: number, dt: number, look: EyeLook, before: number): void {
+    const sparks = this.sparks!;
+    if (this.tips.length === 0) return;
+    const color = this.pal[1];
+    const emit = (tip: (typeof this.tips)[number], speed: number, life: number) => {
+      const l = Math.hypot(tip.dx, tip.dy) || 1;
+      sparks.emit(now, {
+        pos: { x: tip.x, y: tip.y },
+        speed: 0.015,
+        life,
+        size: 0.0075,
+        grow: 0.3,
+        tint: Math.random() < 0.5 ? 0xfffbe8 : color,
+        drift: { x: (tip.dx / l) * speed, y: (tip.dy / l) * speed },
+      });
+    };
+    if (before < 0.55 && this.open >= 0.55) {
+      for (const tip of this.tips) if (Math.random() < 0.75) emit(tip, 0.07, 1.0);
+    }
+    const rate = 3 * Math.min(1, look.glow) * Math.max(0, this.open - 0.4);
+    if (Math.random() < rate * dt) emit(this.tips[Math.floor(Math.random() * this.tips.length)], 0.03, 0.8);
   }
 }

@@ -4,7 +4,9 @@ import { circle, easeOut } from '../render/draw.ts';
 import { Eye } from '../render/eye.ts';
 import { beamStrand, strandRuns, strokeStrand } from '../render/strand.ts';
 import { softDotTexture } from '../render/textures.ts';
+import { Particles } from '../render/particles.ts';
 import { BeamBatch } from '../render/vfx/beam.ts';
+import { LidLightBatch } from '../render/vfx/lidLight.ts';
 import { RingBatch } from '../render/vfx/ring.ts';
 
 /**
@@ -54,14 +56,20 @@ async function main(): Promise<void> {
   }
 
   const dot = softDotTexture(64, 0.35);
-  // eyes: current lids · refined lids · refined lids with the portal (all the same seed, so the same shape)
+  // eyes: old drawn lids · refined lids · vfx (portal, lids of light, sparking lashes); all the same seed
   const eyesLayer = new Container();
+  const lidLight = new LidLightBatch();
+  const sparks = new Particles(dot, 300, 'add');
   let eyes: { eye: Eye; vfx: boolean }[] = [];
   const buildEyes = () => {
     for (const { eye } of eyes) eye.root.destroy({ children: true });
     eyes = [0.18, 0.5, 0.82].map((x, i) => {
       const eye = new Eye(i, { x, y: 0.22 }, 0.11, params.seed, dot, 0.2);
       eye.lidStyle = i === 0 ? 'drawn' : 'refined';
+      if (i === 2) {
+        eye.lidLight = lidLight;
+        eye.sparks = sparks;
+      }
       eyesLayer.addChild(eye.root);
       return { eye, vfx: i === 2 };
     });
@@ -74,7 +82,7 @@ async function main(): Promise<void> {
   const rings = new RingBatch();
   const ringLines = new Graphics();
   ringLines.blendMode = 'add';
-  world.addChild(backdrop, lines, beams.mesh, eyesLayer, ringLines, rings.mesh);
+  world.addChild(backdrop, lines, beams.mesh, sparks.container, eyesLayer, lidLight.mesh, ringLines, rings.mesh);
 
   const layout = () => {
     const panel = document.querySelector<HTMLElement>('.vfx-panel');
@@ -105,10 +113,13 @@ async function main(): Promise<void> {
 
     const look = { open: params.open, closeTc: 0.16, glow: params.glow, glowColor: color, shudder: 0 };
     const lidColor = params.lidColor === 'cream' || params.lidColor === 'iris' ? params.lidColor : params.lidColor === 'custom' ? params.lidCustom : LID_COLORS[params.lidColor];
+    lidLight.begin();
     for (const { eye, vfx } of eyes) {
       eye.lidColor = lidColor;
       eye.update(now, dt, look, vfx);
     }
+    lidLight.end(now);
+    sparks.update(now, dt);
 
     const style = { color, alpha: 1, u: params.u, hot: params.hot };
     lines.clear();
@@ -157,7 +168,7 @@ function buildPanel(): void {
     panel.append(row);
   };
   const title = document.createElement('div');
-  title.textContent = 'eyes: current · new lids · new lids + portal; below: classic ← → vfx (H hides this)';
+  title.textContent = 'eyes: old lids · classic · vfx; below: classic ← → vfx (H hides this)';
   panel.append(title);
   const seedRow = document.createElement('label');
   const seedInput = document.createElement('input');

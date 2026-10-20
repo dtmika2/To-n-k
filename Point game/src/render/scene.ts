@@ -16,6 +16,7 @@ import { Sky } from './sky.ts';
 import { softDotTexture } from './textures.ts';
 import { beamStrand, strandRuns, strokeStrand, type StrandStyle } from './strand.ts';
 import { BeamBatch } from './vfx/beam.ts';
+import { LidLightBatch } from './vfx/lidLight.ts';
 import { EnergyOrb } from './vfx/orb.ts';
 import { RingBatch } from './vfx/ring.ts';
 
@@ -74,8 +75,8 @@ export interface SceneConfig {
 /**
  * Phase 2 visuals (plan §7): sky, reveal number, cloud cover + mist, constellation strands with
  * stardust, organic eyes, master button and effects. State-driven each frame; effects add transient
- * animations. The "vfx" look swaps three primitives for shaders: the iris (eye.ts), the strands (beams)
- * and the rings; everything else is shared.
+ * animations. The "vfx" look swaps primitives for shaders: the iris and lids (eye.ts, the lids into
+ * lidLight), the strands (beams), the rings and the notice centre; everything else is shared.
  */
 export class SceneRenderer {
   readonly root = new Container();
@@ -95,6 +96,8 @@ export class SceneRenderer {
   private readonly master = new Graphics();
   private readonly beams = new BeamBatch();
   private readonly ringFx = new RingBatch();
+  /** vfx look: every eye's lids and lashes as light (eye.ts draws into it). */
+  private readonly lidLight = new LidLightBatch();
   /** vfx look: the gathering orb at the centre of the "get ready" notice. */
   private readonly orb = new EnergyOrb(C.gold, C.hot);
   /** Index of the last notice pulse that burst sparks (vfx look). */
@@ -160,6 +163,7 @@ export class SceneRenderer {
       this.beams.mesh,
       this.dust.container,
       this.eyesLayer,
+      this.lidLight.mesh,
       this.revealLayer,
       this.master,
       this.ringFx.mesh,
@@ -236,6 +240,8 @@ export class SceneRenderer {
     this.creativeLinks = [];
     for (const p of ctx.points) {
       const eye = new Eye(p.id, p.pos, p.r, seeds.get(p.id) ?? p.id + 1, this.dot, this.cfg.eyeMinOpen);
+      eye.lidLight = this.lidLight;
+      eye.sparks = this.dust;
       this.eyes.set(p.id, eye);
       this.eyesLayer.addChild(eye.root);
     }
@@ -386,6 +392,7 @@ export class SceneRenderer {
 
     this.beams.begin();
     this.ringFx.begin(now);
+    this.lidLight.begin();
     this.sky.update(now, dt);
     this.clouds.update(dt);
     this.updateReveal(s, now);
@@ -399,6 +406,7 @@ export class SceneRenderer {
     this.puffs.update(now, dt);
     this.beams.end(now);
     this.ringFx.end();
+    this.lidLight.end(now);
   }
 
   /**
