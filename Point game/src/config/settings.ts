@@ -68,7 +68,7 @@ export const settings = {
     stars: 600,
     /** Eyes never close further than this (0 = closed lid line, 1 = wide open). */
     eyeMinOpen: 0.2,
-    /** Bottom layer image (portrait 9:16, in public/); '' = plain night gradient. */
+    /** Bottom layer image (portrait 9:16, in public/; 2160×3840 to stay sharp at 4K); '' = plain night gradient. */
     backdrop: 'assets/backdrop.png',
     /**
      * Cloud cover (puffs, as in final-gate-lock): covers the INTRO, parts outward from the tap that

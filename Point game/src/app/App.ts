@@ -24,7 +24,7 @@ const JUMP_KEYS: Record<string, Mode> = { '1': 'INTRO', '2': 'GAME', '3': 'REVEA
 export async function startApp(): Promise<void> {
   const params = new URLSearchParams(location.search);
   const num = (key: string, fallback: number) => (params.has(key) ? Number(params.get(key)) : fallback);
-  const rotateDeg = num('rotate', settings.display.rotateDeg);
+  let rotateDeg = num('rotate', settings.display.rotateDeg);
   let renderScale = num('scale', settings.display.renderScale);
   let autoScale = settings.display.autoScale && !params.has('scale');
   const lookParam = params.get('look');
@@ -72,10 +72,12 @@ export async function startApp(): Promise<void> {
   audio.unlock();
 
   const layout = () => {
+    const pixelRatio = window.devicePixelRatio || 1;
+    if (app.renderer.resolution !== pixelRatio) app.renderer.resize(window.innerWidth, window.innerHeight, pixelRatio);
     viewport.update(window.innerWidth, window.innerHeight, rotateDeg);
     viewport.apply(scene.root);
     viewport.apply(primitives.root);
-    scene.resize(viewport.scale * (window.devicePixelRatio || 1), renderScale);
+    scene.resize(viewport.scale * pixelRatio, renderScale);
   };
   window.addEventListener('resize', layout);
   layout();
@@ -110,6 +112,10 @@ export async function startApp(): Promise<void> {
     look = l;
     scene.setLook(look);
   };
+  const rotate = () => {
+    rotateDeg = (rotateDeg + 90) % 360;
+    layout();
+  };
 
   // M: menu overlay, with the key legend and live switches (all of them also work by key, or are tunables)
   const menu = new Menu(
@@ -118,6 +124,7 @@ export async function startApp(): Promise<void> {
       { keys: 'D', what: 'debug overlay: state, timers and fps; hit radii drawn over the scene' },
       { keys: 'P', what: 'primitives only (the Phase 1 debug drawing)' },
       { keys: 'L', what: 'switch the look: vfx ⇄ classic (also ?look=)' },
+      { keys: 'T', what: 'turn the picture and touch 90° clockwise (also ?rotate=)' },
       { keys: 'U', what: 'mark the decoy eyes, which are never in the sequence (also ?unused)' },
       { keys: 'E', what: 'layout editor: drag eyes, mouse wheel or [ ] for the radius, Backspace undoes while recording' },
       { keys: 'R', what: 'reset to the intro' },
@@ -128,6 +135,14 @@ export async function startApp(): Promise<void> {
         title: 'View',
         controls: [
           { kind: 'choice', label: 'Look', key: 'L', options: ['vfx', 'classic'], get: () => look, set: (v) => setLook(v as Look) },
+          {
+            kind: 'button',
+            label: 'Rotate',
+            key: 'T',
+            hint: 'Turns the picture and touch 90° clockwise. Back to the start after a reload.',
+            text: () => `${rotateDeg}° ⟳`,
+            press: rotate,
+          },
           { kind: 'toggle', label: 'Debug overlay', key: 'D', get: () => debugOn, set: (v) => ((debugOn = v), applyView()) },
           { kind: 'toggle', label: 'Primitives only', key: 'P', get: () => primitivesOnly, set: (v) => ((primitivesOnly = v), applyView()) },
           { kind: 'toggle', label: 'Mark decoy eyes', key: 'U', get: () => scene.markUnused, set: (v) => (scene.markUnused = v) },
@@ -260,6 +275,7 @@ export async function startApp(): Promise<void> {
     else if (k === 'p') primitivesOnly = !primitivesOnly;
     else if (k === 'u') scene.markUnused = !scene.markUnused;
     else if (k === 'l') setLook(look === 'vfx' ? 'classic' : 'vfx');
+    else if (k === 't') rotate();
     else if (k === 'e') {
       editor.toggle(pattern);
       if (!editor.isOpen) primitives.refreshLabels();
@@ -310,6 +326,9 @@ export async function startApp(): Promise<void> {
   };
 
   app.ticker.add(() => {
+    // Moving to a screen with another pixel ratio (a 4K TV, say) may not change the CSS size, and then no
+    // resize event fires. Without this the canvas keeps the old screen's resolution and looks pixelated.
+    if ((window.devicePixelRatio || 1) !== app.renderer.resolution) layout();
     const now = performance.now();
     if (!lastSample) speed *= 0.9;
     if (editor.isOpen) {
@@ -334,7 +353,15 @@ export async function startApp(): Promise<void> {
       if (primitives.root.visible) primitives.render(state, now, attractView);
       checkPerf(now);
     }
-    overlay.update(state, ctx, now, app.ticker.FPS, `look ${look}  scale ${renderScale}${perfNote}  octaves ${scene.octaves}  audio ${audio.contextState}`);
+    const pixelRatio = window.devicePixelRatio || 1;
+    const screenPx = `${Math.round(screen.width * pixelRatio)}×${Math.round(screen.height * pixelRatio)}`;
+    overlay.update(
+      state,
+      ctx,
+      now,
+      app.ticker.FPS,
+      `canvas ${app.canvas.width}×${app.canvas.height}  screen ${screenPx}  look ${look}  scale ${renderScale}${perfNote}  octaves ${scene.octaves}  audio ${audio.contextState}`,
+    );
   });
 
   keepScreenAwake();

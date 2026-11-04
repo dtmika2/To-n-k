@@ -12,6 +12,7 @@ export interface KeyHelp {
 export type MenuControl =
   | { kind: 'toggle'; label: string; key?: string; hint?: string; get(): boolean; set(v: boolean): void }
   | { kind: 'choice'; label: string; key?: string; options: readonly string[]; get(): string; set(v: string): void }
+  | { kind: 'button'; label: string; key?: string; hint?: string; text(): string; press(): void }
   | { kind: 'range'; label: string; min: number; max: number; step: number; hint?: string; get(): number; set(v: number): void };
 
 export interface MenuSection {
@@ -100,6 +101,16 @@ export class Menu {
       sel.addEventListener('change', () => c.set(sel.value));
       this.syncers.push(() => (sel.value = c.get()));
       row.append(sel);
+    } else if (c.kind === 'button') {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      const show = () => (btn.textContent = c.text());
+      btn.addEventListener('click', () => {
+        c.press();
+        show();
+      });
+      this.syncers.push(show);
+      row.append(btn);
     } else {
       const wrap = document.createElement('span');
       wrap.className = 'menu-range';

@@ -37,8 +37,9 @@ To quit kiosk Chrome, press Alt+F4. Then close the "Dream Pattern server" window
 
 | Key | Action |
 |---|---|
-| `D` | debug overlay: state, strikes, timers, FPS, render scale, and hit radii over the scene |
+| `D` | debug overlay: state, strikes, timers, FPS, canvas and screen size in real pixels, render scale, and hit radii over the scene |
 | `P` | switch to the plain debug primitives (Phase 1 look) and back |
+| `T` | turn the picture and touch 90° clockwise, until the next reload; also a button in the `M` menu, and `?rotate=` in the URL |
 | `U` | mark the unused (decoy) eyes with a red ring and cross; also `?unused` in the URL |
 | `E` | layout editor (drag points, change radii, record the sequence, export `pattern.json`) |
 | `R` | back to the intro |

@@ -148,7 +148,8 @@ body.show-cursor {
   margin: 0;
   font-size: 16px;
 }
-.menu-head button {
+.menu-head button,
+.menu-row button {
   font: inherit;
   padding: 2px 8px;
   color: #fff;
