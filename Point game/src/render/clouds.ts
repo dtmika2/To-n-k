@@ -24,8 +24,22 @@ export interface CloudConfig {
   tints: number[];
 }
 
+/** Depth mode: how the puffs split into layers that drift between the bands of eyes. */
+export interface CloudLayers {
+  /** Share of the puffs between the far and mid eyes, and between the mid and near eyes. */
+  mid: number;
+  front: number;
+  /** The shroud's alpha above the eyes, as a share of normal, so it can't bury them during the INTRO. */
+  overCap: number;
+  /** The least alpha of the puffs above the eyes, so veils still cross them when the clouds have parted. */
+  veilAlpha: [number, number];
+}
+
 interface Puff {
   s: Sprite;
+  /** Depth mode: 0 back, 1 mid, 2 front. */
+  layer: number;
+  aVeil: number;
   x: number;
   y: number;
   vx: number;
@@ -42,7 +56,14 @@ interface Puff {
 const MARGIN = 0.2; // world units beyond the edges where puffs wrap
 
 export class CloudCover {
+  /** Under every eye. Holds all the puffs unless depth mode is on. */
   readonly root = new Container();
+  /** Depth mode: above the far eyes. */
+  readonly mid = new Container();
+  /** Depth mode: above the far and mid eyes. */
+  readonly front = new Container();
+  private layered = false;
+  private readonly overCap: number;
   private readonly puffs: Puff[] = [];
   private readonly rand: () => number;
   /** Current density, 0 (wisps) … 1 (shrouded). */
@@ -51,10 +72,13 @@ export class CloudCover {
   private rate = 2;
   private t = 0;
 
-  constructor(cfg: CloudConfig, seed = 9) {
+  constructor(cfg: CloudConfig, layers: CloudLayers, seed = 9) {
     this.rand = rng(seed);
+    this.overCap = layers.overCap;
     const R = this.rand;
     const between = (a: number, b: number) => a + R() * (b - a);
+    // its own generator, so the clouds drift exactly as before when depth mode is off
+    const L = rng(seed * 7 + 1);
     const textures = [0, 1, 2, 3].map((v) => cloudPuffTexture(v));
     for (let i = 0; i < cfg.count; i++) {
       const s = new Sprite(textures[i % 4]);
@@ -64,8 +88,11 @@ export class CloudCover {
       s.width = s.height = size;
       s.rotation = R() * Math.PI * 2;
       const wisp = i % 4 === 0; // a quarter of the puffs linger as thin wisps
+      const roll = L();
       this.puffs.push({
         s,
+        layer: roll < layers.front ? 2 : roll < layers.front + layers.mid ? 1 : 0,
+        aVeil: layers.veilAlpha[0] + L() * (layers.veilAlpha[1] - layers.veilAlpha[0]),
         x: between(-0.08, 1.08),
         y: between(-0.08, ASPECT + 0.08),
         vx: between(0.005, 0.012) * (R() < 0.5 ? -1 : 1),
@@ -79,7 +106,15 @@ export class CloudCover {
       });
       this.root.addChild(s);
     }
-    this.root.alpha = cfg.opacity;
+    this.root.alpha = this.mid.alpha = this.front.alpha = cfg.opacity;
+    this.apply();
+  }
+
+  /** Depth mode: send the puffs to their layers, or all back under the eyes in their original order. */
+  setLayered(on: boolean): void {
+    this.layered = on;
+    const layers = [this.root, this.mid, this.front];
+    for (const p of this.puffs) layers[on ? p.layer : 0].addChild(p.s);
     this.apply();
   }
 
@@ -153,7 +188,8 @@ export class CloudCover {
   private apply(): void {
     for (const p of this.puffs) {
       const breathe = 0.85 + 0.15 * Math.sin(this.t * 0.35 + p.phase);
-      const a = (p.aThin + (p.aShroud - p.aThin) * this.density) * breathe;
+      const base = p.aThin + (p.aShroud - p.aThin) * this.density;
+      const a = (this.layered && p.layer > 0 ? Math.max(base * this.overCap, p.aVeil) : base) * breathe;
       p.s.alpha = a;
       p.s.visible = a > 0.004;
       p.s.position.set(p.x, p.y);

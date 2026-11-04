@@ -414,3 +414,12 @@ Goal: the owner can play the full rules on the real TV, hear the real sound, and
 
 - **One stage instead of two.** If the finger lifts on the last correct eye (within its generous radius), there is no hanging tether to retract, so the first lift strike (4 s) collapses straight away. Lifting away from the eye keeps the two stages (4 s retract, 8 s collapse). A retouch within 4 s still costs nothing; after a wrong strike the line was already retracted, so it keeps the pulse then collapse.
 - **Gradual line changes.** The line's look (fray, colour, brightness) eases over about half a second instead of switching in one frame: the collapse starts from the frayed, cold line and keeps fraying as it rewinds, settling towards the end. The white flash of a lift strike stays instant.
+
+## Amendment (2026-11-04): experimental depth mode
+
+- **Off by default.** Switched with `Z`, the Depth toggle in the M menu, or `?depth`. It changes only the look: the hit radii and the rules stay the same.
+- **Depth.** Each eye gets a depth from its seed, shared evenly between far, mid and near bands. Further eyes are smaller and hazier, shifted towards a dim mist tone; the haze clears as an eye glows, so a far eye still reads when it blinks.
+- **Orbiting particles.** Three per eye, on tilted paths close around it (1.2–1.76 × its radius): smaller around further eyes, bigger in front, dimmer on the far side, and gone while passing behind the eye.
+- **Clouds and mist between the eyes.** Some puffs drift above the far eyes and some above the mid eyes, capped so the INTRO shroud cannot bury them, and with a minimum alpha so veils still cross them during play. Part of the mist is drawn again above the far eyes from the same texture, so the finger still parts it.
+- **Lines.** Width and brightness follow the depth along the line, and the finger counts as nearest. A line passes over the eyes further than it (or about level with it) and under the nearer ones, always staying under its own two end eyes, and it passes through the clouds between the bands. The eyes are sorted individually for this, not by band.
+- Tunables: `display.depth` in `settings.ts`.

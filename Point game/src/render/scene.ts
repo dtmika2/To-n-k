@@ -8,14 +8,16 @@ import { noteToMidi } from '../pattern/notes.ts';
 import { ASPECT, type Pattern, type Vec } from '../pattern/types.ts';
 import { Atmosphere } from './atmosphere.ts';
 import { CloudCover, type CloudConfig } from './clouds.ts';
+import { assignDepths, atDepth, bandOf, eyesBelow, lineLayer, splitByLayer, type DepthConfig } from './depth.ts';
 import { figureProgress, figureSurge } from '../game/figure.ts';
 import { almond, circle, easeOut, easeOutElastic, lerpColor, smooth, wobblyCircle } from './draw.ts';
 import { Eye, type EyeLook } from './eye.ts';
+import { Orbiters } from './orbiters.ts';
 import { Particles } from './particles.ts';
 import { Sky } from './sky.ts';
 import { softDotTexture } from './textures.ts';
 import { beamStrand, strandRuns, strokeStrand, type StrandStyle } from './strand.ts';
-import { BeamBatch } from './vfx/beam.ts';
+import { BeamBatch, type BeamPoint } from './vfx/beam.ts';
 import { LidLightBatch } from './vfx/lidLight.ts';
 import { EnergyOrb } from './vfx/orb.ts';
 import { RingBatch } from './vfx/ring.ts';
@@ -70,6 +72,20 @@ export interface SceneConfig {
   eyeMinOpen: number;
   eyeGrow: number;
   clouds: CloudConfig;
+  depth: DepthConfig;
+}
+
+/**
+ * One step of the draw order: lines, then an eye with its particles. In depth mode there is one per eye,
+ * furthest first, plus a last one for lines above every eye, so a line can pass over the eyes further
+ * than it and under the nearer ones. With depth mode off, everything uses the first layer.
+ */
+interface DepthLayer {
+  strands: Graphics;
+  beams: BeamBatch;
+  eyes: Container;
+  lidLight: LidLightBatch;
+  orbiters: Orbiters;
 }
 
 /**
@@ -85,16 +101,12 @@ export class SceneRenderer {
   private readonly sky: Sky;
   private readonly clouds: CloudCover;
   private readonly atmosphere: Atmosphere;
-  private readonly strands = new Graphics();
+  private readonly layers: DepthLayer[];
   private readonly dust: Particles;
   private readonly puffs: Particles;
-  private readonly eyesLayer = new Container();
   private readonly fx = new Graphics();
   private readonly master = new Graphics();
-  private readonly beams = new BeamBatch();
   private readonly ringFx = new RingBatch();
-  /** vfx look: every eye's lids and lashes as light (eye.ts draws into it). */
-  private readonly lidLight = new LidLightBatch();
   /** vfx look: the gathering orb at the centre of the "get ready" notice. */
   private readonly orb = new EnergyOrb(C.gold, C.hot);
   /** Index of the last notice pulse that burst sparks (vfx look). */
@@ -108,6 +120,13 @@ export class SceneRenderer {
 
   private ctx!: GameContext;
   private eyes = new Map<number, Eye>();
+  /** Each eye's depth, 0 (far) … 1 (near); used only while depth mode is on. */
+  private depths = new Map<number, number>();
+  /** The eyes furthest first, and their depths in the same order. */
+  private eyeOrder: number[] = [];
+  private eyeZs: number[] = [];
+  private maxRadius = 0;
+  private depthOn: boolean;
   private centre: Vec = { x: 0.5, y: ASPECT / 2 };
 
   private blinks: Blink[] = [];
@@ -140,27 +159,69 @@ export class SceneRenderer {
     this.dot = softDotTexture(64, 0.35);
     this.softDot = softDotTexture(128, 0);
     this.sky = new Sky(this.dot, cfg.stars);
-    this.clouds = new CloudCover(cfg.clouds);
+    this.clouds = new CloudCover(cfg.clouds, cfg.depth.clouds);
     this.atmosphere = new Atmosphere(pixi, this.softDot, cfg.octaves);
-    this.strands.blendMode = 'add';
+    this.layers = [this.makeLayer()];
     this.fx.blendMode = 'add';
     this.dust = new Particles(this.dot, 600, 'add');
     this.puffs = new Particles(this.softDot, 120, 'normal');
-    this.root.addChild(
-      this.sky.root,
-      this.clouds.root,
-      this.atmosphere.sprite,
-      this.puffs.container,
-      this.strands,
-      this.beams.mesh,
-      this.dust.container,
-      this.eyesLayer,
-      this.lidLight.mesh,
-      this.master,
-      this.ringFx.mesh,
-      this.orb.mesh,
-      this.fx,
-    );
+    this.depthOn = cfg.depth.enabled;
+    this.applyLayering();
+  }
+
+  /** Experimental depth mode (Z key): eyes at different distances. Visual only. */
+  get depth(): boolean {
+    return this.depthOn;
+  }
+  set depth(on: boolean) {
+    this.depthOn = on;
+    this.applyLayering();
+  }
+
+  private makeLayer(): DepthLayer {
+    const strands = new Graphics();
+    strands.blendMode = 'add';
+    return { strands, beams: new BeamBatch(), eyes: new Container(), lidLight: new LidLightBatch(), orbiters: new Orbiters(this.dot) };
+  }
+
+  /** Builds the draw order, and puts the eyes and clouds in their layers, for the current mode. */
+  private applyLayering(): void {
+    const on = this.depthOn;
+    const cfg = this.cfg.depth;
+    this.clouds.setLayered(on);
+    this.atmosphere.setVeil(on ? cfg.mistOver : 0);
+    const order = on ? this.eyeOrder : [...this.eyes.keys()];
+    order.forEach((id, k) => {
+      const eye = this.eyes.get(id)!;
+      const z = this.z(id);
+      const layer = this.layers[on ? k : 0];
+      layer.eyes.addChild(eye.root);
+      eye.lidLight = layer.lidLight;
+      eye.setDepth(on ? atDepth(cfg.eyeScale, z) : 1, on ? atDepth(cfg.haze, z) : 0);
+    });
+    this.root.removeChildren();
+    this.root.addChild(this.sky.root, this.clouds.root, this.atmosphere.sprite, this.puffs.container);
+    if (on) {
+      // the clouds and the mist veil go in where the eyes pass from one band to the next
+      const midStart = this.eyeZs.filter((z) => bandOf(z) < 1).length;
+      const nearStart = this.eyeZs.filter((z) => bandOf(z) < 2).length;
+      for (let k = 0; k <= order.length; k++) {
+        if (k === midStart) this.root.addChild(this.atmosphere.veil, this.clouds.mid);
+        if (k === nearStart) this.root.addChild(this.clouds.front);
+        const l = this.layers[k];
+        this.root.addChild(l.strands, l.beams.mesh, l.orbiters.back, l.eyes, l.lidLight.mesh, l.orbiters.front);
+      }
+      this.root.addChild(this.dust.container);
+    } else {
+      const l = this.layers[0];
+      this.root.addChild(l.strands, l.beams.mesh, this.dust.container, l.eyes, l.lidLight.mesh);
+    }
+    this.root.addChild(this.master, this.ringFx.mesh, this.orb.mesh, this.fx);
+  }
+
+  /** An eye's depth. */
+  private z(id: number): number {
+    return this.depths.get(id) ?? 1;
   }
 
   setLook(look: Look): void {
@@ -215,14 +276,27 @@ export class SceneRenderer {
     const hi = Math.max(...midi.map(([, m]) => m));
     this.pitch = new Map(midi.map(([id, m]) => [id, hi > lo ? (m - lo) / (hi - lo) : 0.5]));
     this.creativeLinks = [];
+    const seedOf = (id: number) => seeds.get(id) ?? id + 1;
+    this.depths = assignDepths(ctx.points.map((p) => ({ id: p.id, seed: seedOf(p.id) })));
+    this.eyeOrder = ctx.points.map((p) => p.id).sort((a, b) => this.z(a) - this.z(b) || a - b);
+    this.eyeZs = this.eyeOrder.map((id) => this.z(id));
+    this.maxRadius = Math.max(0, ...ctx.points.map((p) => p.r));
+    while (this.layers.length <= ctx.points.length) this.layers.push(this.makeLayer());
+    for (const l of this.layers) l.orbiters.clear();
     for (const p of ctx.points) {
-      const eye = new Eye(p.id, p.pos, p.r, seeds.get(p.id) ?? p.id + 1, this.dot, this.cfg.eyeMinOpen);
-      eye.lidLight = this.lidLight;
+      const eye = new Eye(p.id, p.pos, p.r, seedOf(p.id), this.dot, this.cfg.eyeMinOpen);
       eye.sparks = this.dust;
       eye.setSize(1 + this.grow);
       this.eyes.set(p.id, eye);
-      this.eyesLayer.addChild(eye.root);
     }
+    const depth = this.cfg.depth;
+    this.eyeOrder.forEach((id, k) => {
+      const z = this.z(id);
+      const haze = atDepth(depth.haze, z);
+      const tint = lerpColor(this.eyes.get(id)!.color, C.mist, haze);
+      this.layers[k].orbiters.add(id, this.pos(id), seedOf(id), depth.orbitersPerEye, tint, atDepth(depth.eyeScale, z), 1 - 0.4 * haze);
+    });
+    this.applyLayering();
     const used = [...new Set(ctx.sequence)].map((id) => this.pos(id));
     this.centre = {
       x: used.reduce((a, p) => a + p.x, 0) / used.length,
@@ -236,7 +310,8 @@ export class SceneRenderer {
 
   /** The eye's visual radius, which the rings start from. The hit radii live in the reducer. */
   private radius(id: number): number {
-    return this.ctx.points.find((p) => p.id === id)!.r * (1 + this.grow);
+    const scale = this.depthOn ? atDepth(this.cfg.depth.eyeScale, this.z(id)) : 1;
+    return this.ctx.points.find((p) => p.id === id)!.r * (1 + this.grow) * scale;
   }
 
   /** Gold rings (the eye rings) stay gold in the vfx look; the others turn lavender unless `vfxColor` says otherwise. */
@@ -370,9 +445,11 @@ export class SceneRenderer {
     }
     this.pendingPuffs = this.pendingPuffs.filter((q) => now < q.at);
 
-    this.beams.begin();
+    for (const l of this.layers) {
+      l.beams.begin();
+      l.lidLight.begin();
+    }
     this.ringFx.begin(now);
-    this.lidLight.begin();
     this.sky.update(now, dt);
     this.clouds.update(dt);
     this.updateAtmosphere(s, now, dt);
@@ -381,12 +458,15 @@ export class SceneRenderer {
     this.drawAttract(attract, now, dt);
     this.drawCreative(s, now, dt);
     this.updateEyes(s, now, dt);
+    if (this.depthOn) for (const l of this.layers) l.orbiters.update(now / 1000, (id) => this.radius(id));
     this.drawFx(s, now, dt);
     this.dust.update(now, dt);
     this.puffs.update(now, dt);
-    this.beams.end(now);
+    for (const l of this.layers) {
+      l.beams.end(now);
+      l.lidLight.end(now);
+    }
     this.ringFx.end();
-    this.lidLight.end(now);
   }
 
   private updateAtmosphere(s: GameState, now: number, dt: number): void {
@@ -401,15 +481,48 @@ export class SceneRenderer {
   /** A luminous, slightly wavy strand (a beam in the vfx look); `u` (0…1) makes it jitter, gap and thin out. */
   private strand(a: Vec, b: Vec, now: number, seed: number, o: StrandStyle): void {
     const runs = strandRuns(a, b, now, seed, o.u ?? 0, !this.vfx);
-    if (this.vfx) beamStrand(this.beams, a, b, runs, seed, o);
-    else strokeStrand(this.strands, runs, o);
+    if (!this.depthOn) {
+      this.drawRuns(this.layers[0], a, b, runs, seed, o);
+      return;
+    }
+    // depth mode: the line swells towards the viewer, and passes over the eyes and clouds further than
+    // it and under the nearer ones
+    const cfg = this.cfg.depth;
+    const za = o.za ?? 1;
+    const zb = o.zb ?? za;
+    const zAt = (s: number) => za + (zb - za) * s;
+    // how far from each end the line stays under that end's eye: the widest an eye of that depth can be
+    const reach = (z: number) => 1.3 * this.maxRadius * (1 + this.grow) * atDepth(cfg.eyeScale, z);
+    const [reachA, reachB] = [reach(za), reach(zb)];
+    const layerOf = (p: BeamPoint) =>
+      lineLayer(this.eyeZs, zAt(p.s), [
+        { z: za, dist: Math.hypot(p.x - a.x, p.y - a.y), reach: reachA },
+        { z: zb, dist: Math.hypot(p.x - b.x, p.y - b.y), reach: reachB },
+      ]);
+    for (const run of runs) {
+      for (const p of run) {
+        p.w = atDepth(cfg.lineWidth, zAt(p.s));
+        p.a = atDepth(cfg.lineAlpha, zAt(p.s));
+      }
+      for (const piece of splitByLayer(run, layerOf)) this.drawRuns(this.layers[piece.layer], a, b, [piece.pts], seed, o);
+    }
+  }
+
+  private drawRuns(layer: DepthLayer, a: Vec, b: Vec, runs: BeamPoint[][], seed: number, o: StrandStyle): void {
+    if (this.vfx) beamStrand(layer.beams, a, b, runs, seed, o);
+    else strokeStrand(layer.strands, runs, o);
+  }
+
+  /** Where the bright tips of the lines are drawn: over everything, as the finger is on the glass. */
+  private get tipLayer(): Graphics {
+    return this.layers[this.depthOn ? eyesBelow(this.eyeZs, 1) : 0].strands;
   }
 
   private drawConstellation(s: GameState, now: number, dt: number): void {
-    const g = this.strands;
-    g.clear();
+    for (const l of this.layers) l.strands.clear();
     const seq = this.ctx.sequence;
     const P = (id: number) => this.pos(id);
+    const Z = (id: number) => this.z(id);
     const inGame = s.mode === 'GAME';
 
     // the target look: fray u, coldness (gold → cold), warmth (→ white), alpha and the hot core
@@ -459,9 +572,12 @@ export class SceneRenderer {
     if (alpha > 0.001) {
       for (let i = 0; i < segs; i++) {
         const flash = this.segFlash.has(i) ? Math.max(0, 1 - (now - this.segFlash.get(i)!) / 900) : 0;
-        this.strand(P(seq[i]), P(seq[i + 1]), now, i, { color: lerpColor(color, C.hot, flash), alpha: Math.min(1, alpha + flash * 0.5), u, hot: hot + flash });
+        this.strand(P(seq[i]), P(seq[i + 1]), now, i, { color: lerpColor(color, C.hot, flash), alpha: Math.min(1, alpha + flash * 0.5), u, hot: hot + flash, za: Z(seq[i]), zb: Z(seq[i + 1]) });
       }
-      if (partial > 0) this.strand(P(seq[segs]), lerpVec(P(seq[segs]), P(seq[segs + 1]), partial), now, segs, { color, alpha, u, hot: 0 });
+      if (partial > 0) {
+        const [za, zb] = [Z(seq[segs]), Z(seq[segs + 1])];
+        this.strand(P(seq[segs]), lerpVec(P(seq[segs]), P(seq[segs + 1]), partial), now, segs, { color, alpha, u, hot: 0, za, zb: za + (zb - za) * partial });
+      }
     }
 
     // unsettled lines shed cold particles
@@ -475,18 +591,21 @@ export class SceneRenderer {
     if (inGame && s.tether && s.progress > 0 && (s.sub === 'TRACING' || s.sub === 'LIFTED')) {
       const last = P(seq[s.progress - 1]);
       if (s.sub === 'TRACING') {
-        this.liveTether(last, s.tether, now, dt);
+        this.liveTether(last, s.tether, now, dt, Z(seq[s.progress - 1]));
       } else {
-        this.strand(last, s.tether, now, 77, { color, alpha: alpha * 0.8, u, hot: 0 });
+        this.strand(last, s.tether, now, 77, { color, alpha: alpha * 0.8, u, hot: 0, za: Z(seq[s.progress - 1]), zb: 1 });
       }
     }
 
     for (const r of this.retracts) {
       const t = Math.min(1, (now - r.start) / r.dur);
       const to = P(r.to);
-      const tip = lerpVec(r.from, to, easeOutElastic(t));
-      this.strand(to, tip, now, 88, { color: C.cold, alpha: 0.85 * (1 - t * 0.5), hot: 0 });
-      circle(g, tip.x, tip.y, 0.006 + 0.01 * (1 - t)).fill({ color: C.hot, alpha: 1 - t });
+      const pull = easeOutElastic(t);
+      const tip = lerpVec(r.from, to, pull);
+      // the tip leaves the finger (nearest) and returns to the eye's depth
+      const zTip = 1 + (Z(r.to) - 1) * Math.min(1, pull);
+      this.strand(to, tip, now, 88, { color: C.cold, alpha: 0.85 * (1 - t * 0.5), hot: 0, za: Z(r.to), zb: zTip });
+      circle(this.tipLayer, tip.x, tip.y, 0.006 + 0.01 * (1 - t)).fill({ color: C.hot, alpha: 1 - t });
       if (Math.random() < dt * 60) this.dust.emit(now, { pos: tip, speed: 0.08, life: 0.5, size: 0.005, tint: C.hot });
     }
   }
@@ -515,6 +634,8 @@ export class SceneRenderer {
         alpha: Math.min(1, style.alpha + 0.35 * w * f.alpha),
         hot: style.hot + 0.9 * w,
         u: 0.5 * w,
+        za: this.z(fig[i]),
+        zb: this.z(fig[i + 1]),
       });
       if (w > 0.2 && Math.random() < dt * 35 * w) {
         this.dust.emit(now, { pos: lerpVec(a, b, Math.random()), speed: 0.05, life: 0.9, size: 0.0065, tint: Math.random() < 0.5 ? C.gold : C.hot, alpha: f.alpha });
@@ -522,8 +643,9 @@ export class SceneRenderer {
     }
     if (done < fig.length - 1 && part > 0) {
       const tip = lerpVec(P(fig[done]), P(fig[done + 1]), part);
-      this.strand(P(fig[done]), tip, now, 400 + done, style);
-      circle(this.strands, tip.x, tip.y, 0.007).fill({ color: C.hot, alpha: 0.9 * f.alpha });
+      const [za, zb] = [this.z(fig[done]), this.z(fig[done + 1])];
+      this.strand(P(fig[done]), tip, now, 400 + done, { ...style, za, zb: za + (zb - za) * part });
+      circle(this.tipLayer, tip.x, tip.y, 0.007).fill({ color: C.hot, alpha: 0.9 * f.alpha });
       if (Math.random() < dt * 50) this.dust.emit(now, { pos: tip, speed: 0.05, life: 0.9, size: 0.0065, tint: Math.random() < 0.5 ? C.gold : C.hot });
     }
   }
@@ -538,8 +660,8 @@ export class SceneRenderer {
   }
 
   /** The tether from the last point to the finger, shedding stardust. */
-  private liveTether(from: Vec, finger: Vec, now: number, dt: number): void {
-    this.strand(from, finger, now, 77, { color: C.hot, alpha: 0.85, hot: 1 });
+  private liveTether(from: Vec, finger: Vec, now: number, dt: number, zFrom: number): void {
+    this.strand(from, finger, now, 77, { color: C.hot, alpha: 0.85, hot: 1, za: zFrom, zb: 1 });
     const n = Math.random() < (dt * 70) % 1 ? Math.ceil(dt * 70) : Math.floor(dt * 70);
     for (let k = 0; k < n; k++) {
       const pos = lerpVec(from, finger, Math.random());
@@ -552,11 +674,20 @@ export class SceneRenderer {
     if (!v) return;
     const [a, b, c] = v.points.map((id) => this.pos(id));
     const at = (x: number) => (x <= 1 ? lerpVec(a, b, x) : lerpVec(b, c, x - 1));
-    if (v.tail < 1 && v.head > v.tail) this.strand(at(v.tail), at(Math.min(1, v.head)), now, 201, { color: C.gold, alpha: 0.95, hot: 0.6 });
-    if (v.head > 1 && v.head > Math.max(1, v.tail)) this.strand(at(Math.max(1, v.tail)), at(v.head), now, 202, { color: C.gold, alpha: 0.95, hot: 0.6 });
+    const [za, zb, zc] = v.points.map((id) => this.z(id));
+    const zAt = (x: number) => (x <= 1 ? za + (zb - za) * x : zb + (zc - zb) * (x - 1));
+    const line = { color: C.gold, alpha: 0.95, hot: 0.6 };
+    if (v.tail < 1 && v.head > v.tail) {
+      const end = Math.min(1, v.head);
+      this.strand(at(v.tail), at(end), now, 201, { ...line, za: zAt(v.tail), zb: zAt(end) });
+    }
+    if (v.head > 1 && v.head > Math.max(1, v.tail)) {
+      const start = Math.max(1, v.tail);
+      this.strand(at(start), at(v.head), now, 202, { ...line, za: zAt(start), zb: zAt(v.head) });
+    }
     if (v.head < 2) {
       const tip = at(v.head);
-      circle(this.strands, tip.x, tip.y, 0.006).fill({ color: C.hot, alpha: 0.9 });
+      circle(this.tipLayer, tip.x, tip.y, 0.006).fill({ color: C.hot, alpha: 0.9 });
     }
     if (v.tail > 0 && Math.random() < dt * 45) {
       this.dust.emit(now, { pos: at(v.tail), speed: 0.04, life: 0.9, size: 0.006, tint: C.gold, alpha: 0.8 });
@@ -573,13 +704,14 @@ export class SceneRenderer {
       const color = lerpColor(C.lavender, C.gold, tone);
       const from = this.pos(l.from);
       const to = this.pos(l.to);
-      this.strand(from, to, now, l.seed, { color, alpha: 1 - u, u, hot: 0.5 * (1 - u) });
+      this.strand(from, to, now, l.seed, { color, alpha: 1 - u, u, hot: 0.5 * (1 - u), za: this.z(l.from), zb: this.z(l.to) });
       if (u > 0 && Math.random() < dt * 14 * (1 - u)) {
         this.dust.emit(now, { pos: lerpVec(from, to, Math.random()), speed: 0.03, life: 1.2, size: 0.006, tint: color, alpha: 0.7, drift: { x: 0, y: 0.01 } });
       }
     }
     if (s.mode === 'CREATIVE' && s.tether && s.chain.length > 0) {
-      this.liveTether(this.pos(s.chain[s.chain.length - 1]), s.tether, now, dt);
+      const last = s.chain[s.chain.length - 1];
+      this.liveTether(this.pos(last), s.tether, now, dt, this.z(last));
     }
   }
 

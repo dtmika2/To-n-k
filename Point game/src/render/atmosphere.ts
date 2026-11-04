@@ -86,6 +86,11 @@ const TRAIL_CLOSE_MS = 2600; // how slowly the mist closes in behind the finger
 
 export class Atmosphere {
   readonly sprite: Sprite;
+  /**
+   * Depth mode: the same texture again, above the far eyes, carrying part of the mist's opacity. No
+   * extra shader pass at 4K, and the finger's trail still parts it, clearing the far eye being traced.
+   */
+  readonly veil: Sprite;
   private rt: RenderTexture;
   private maskRt: RenderTexture;
   private readonly mesh: Mesh<MeshGeometry, Shader>;
@@ -133,8 +138,22 @@ export class Atmosphere {
     }
 
     this.sprite = new Sprite(this.rt);
-    this.sprite.width = 1;
-    this.sprite.height = ASPECT;
+    this.veil = new Sprite(this.rt);
+    this.fit();
+  }
+
+  private fit(): void {
+    for (const s of [this.sprite, this.veil]) {
+      s.texture = this.rt;
+      s.width = 1;
+      s.height = ASPECT;
+    }
+  }
+
+  /** Depth mode: how much of the mist's opacity goes above the far eyes (0 = all of it under them). */
+  setVeil(share: number): void {
+    this.sprite.alpha = 1 - share;
+    this.veil.alpha = share;
   }
 
   /** Portrait size in device pixels × renderScale. */
@@ -149,11 +168,9 @@ export class Atmosphere {
     this.maskRt = RenderTexture.create({ width: Math.max(8, Math.round(w / 4)), height: Math.max(8, Math.round(h / 4)), resolution: 1 });
     this.mesh.shader!.resources.uMask = this.maskRt.source;
     this.mesh.scale.set(w, h);
-    this.sprite.texture = this.rt;
+    this.fit();
     oldRt.destroy(true);
     oldMask.destroy(true);
-    this.sprite.width = 1;
-    this.sprite.height = ASPECT;
   }
 
   /** The finger (or a tap) pushes the mist aside here; it closes back in slowly. */

@@ -1,7 +1,7 @@
 import type { Graphics } from 'pixi.js';
 import { dist } from '../pattern/geometry.ts';
 import type { Vec } from '../pattern/types.ts';
-import { hash } from './draw.ts';
+import { hash, taperedStroke } from './draw.ts';
 import type { BeamBatch, BeamPoint } from './vfx/beam.ts';
 
 export interface StrandStyle {
@@ -11,6 +11,9 @@ export interface StrandStyle {
   u?: number;
   /** White-hot core strength. */
   hot?: number;
+  /** Depth mode: the depth (0 far … 1 near) at the strand's start and end. */
+  za?: number;
+  zb?: number;
 }
 
 const HOT = 0xfffbe8;
@@ -57,6 +60,12 @@ export function strokeStrand(g: Graphics, runs: readonly BeamPoint[][], o: Stran
   if ((o.hot ?? 0) > 0) strokes.push([0.0014, HOT, 0.7 * (o.hot ?? 0) * o.alpha]);
   for (const [width, color, alpha] of strokes) {
     for (const r of runs) {
+      if (r[0].w !== undefined) {
+        // depth mode: the width changes along the line, which a stroke can't do
+        const meanAlpha = r.reduce((sum, p) => sum + (p.a ?? 1), 0) / r.length;
+        taperedStroke(g, r.flatMap((p) => [p.x, p.y]), (i) => (width / 2) * (r[i].w ?? 1)).fill({ color, alpha: alpha * meanAlpha });
+        continue;
+      }
       g.moveTo(r[0].x, r[0].y);
       for (let i = 1; i < r.length; i++) g.lineTo(r[i].x, r[i].y);
       g.stroke({ width, color, alpha, cap: 'round', join: 'round' });

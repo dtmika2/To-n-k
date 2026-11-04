@@ -55,6 +55,7 @@ export async function startApp(): Promise<void> {
     renderScale,
     eyeMinOpen: settings.display.eyeMinOpen,
     eyeGrow: settings.display.eyeGrow,
+    depth: { ...settings.display.depth, enabled: settings.display.depth.enabled || params.has('depth') },
     clouds: settings.display.clouds,
   });
   scene.setLook(look);
@@ -126,6 +127,7 @@ export async function startApp(): Promise<void> {
       { keys: 'P', what: 'primitives only (the Phase 1 debug drawing)' },
       { keys: 'L', what: 'switch the look: vfx ⇄ classic (also ?look=)' },
       { keys: 'T', what: 'turn the picture and touch 90° clockwise (also ?rotate=)' },
+      { keys: 'Z', what: 'depth (experimental): eyes at different distances, with clouds passing between them (also ?depth)' },
       { keys: 'U', what: 'mark the decoy eyes, which are never in the sequence (also ?unused)' },
       { keys: 'E', what: 'layout editor: drag eyes, mouse wheel or [ ] for the radius, Backspace undoes while recording' },
       { keys: 'R', what: 'reset to the intro' },
@@ -153,6 +155,14 @@ export async function startApp(): Promise<void> {
             hint: 'How much bigger the eyes look. Only the look changes: the touch areas stay the same.',
             get: () => Math.round(scene.eyeGrow * 100),
             set: (v) => (scene.eyeGrow = v / 100),
+          },
+          {
+            kind: 'toggle',
+            label: 'Depth',
+            key: 'Z',
+            hint: 'Experimental: eyes at different distances, with orbiting particles and clouds passing between them. Only the look changes.',
+            get: () => scene.depth,
+            set: (v) => (scene.depth = v),
           },
           { kind: 'toggle', label: 'Debug overlay', key: 'D', get: () => debugOn, set: (v) => ((debugOn = v), applyView()) },
           { kind: 'toggle', label: 'Primitives only', key: 'P', get: () => primitivesOnly, set: (v) => ((primitivesOnly = v), applyView()) },
@@ -287,6 +297,7 @@ export async function startApp(): Promise<void> {
     else if (k === 'u') scene.markUnused = !scene.markUnused;
     else if (k === 'l') setLook(look === 'vfx' ? 'classic' : 'vfx');
     else if (k === 't') rotate();
+    else if (k === 'z') scene.depth = !scene.depth;
     else if (k === 'e') {
       editor.toggle(pattern);
       if (!editor.isOpen) primitives.refreshLabels();

@@ -68,10 +68,24 @@ export const settings = {
     stars: 600,
     /** Eyes never close further than this (0 = closed lid line, 1 = wide open). */
     eyeMinOpen: 0.2,
-    /** Eyes look this much bigger (0.3 = +30 %), also in the M menu. Visual only: the hit radii stay as they are. */
-    eyeGrow: 0.3,
+    /** Eyes look this much bigger (0.4 = +40 %), also in the M menu. Visual only: the hit radii stay as they are. */
+    eyeGrow: 0.4,
     /** Bottom layer image (portrait 9:16, in public/; 2160×3840 to stay sharp at 4K); '' = plain night gradient. */
     backdrop: 'assets/backdrop.png',
+    /**
+     * Experimental depth mode (Z key, M menu, `?depth`): eyes at different distances. Ranges are
+     * [far, near]. Visual only: the hit radii don't change. See render/depth.ts.
+     */
+    depth: {
+      enabled: false,
+      eyeScale: [0.72, 1.2] as [number, number],
+      haze: [0.5, 0] as [number, number],
+      lineWidth: [0.6, 1.35] as [number, number],
+      lineAlpha: [0.75, 1] as [number, number],
+      orbitersPerEye: 3,
+      mistOver: 0.4,
+      clouds: { mid: 0.25, front: 0.15, overCap: 0.35, veilAlpha: [0.1, 0.16] as [number, number] },
+    },
     /**
      * Cloud cover (puffs, as in final-gate-lock): covers the INTRO, parts outward from the tap that
      * starts the game (over partMs), rolls back in from the edges after the reveal.

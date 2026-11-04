@@ -6,6 +6,10 @@ export interface BeamPoint {
   x: number;
   y: number;
   s: number;
+  /** Width multiplier at this point (depth mode). */
+  w?: number;
+  /** Alpha multiplier at this point (depth mode). */
+  a?: number;
 }
 
 export interface BeamStyle {
@@ -104,11 +108,13 @@ export class BeamBatch {
       const dx = c.x - a.x;
       const dy = c.y - a.y;
       const l = Math.hypot(dx, dy) || 1;
-      const nx = (-dy / l) * hw;
-      const ny = (dx / l) * hw;
+      const w = hw * (p.w ?? 1);
+      const nx = (-dy / l) * w;
+      const ny = (dx / l) * w;
       const along = p.s * len;
-      this.batch.vertex(p.x + nx, p.y + ny, along, 1, r, g, b, o.alpha, o.u, o.hot, o.seed, len);
-      this.batch.vertex(p.x - nx, p.y - ny, along, -1, r, g, b, o.alpha, o.u, o.hot, o.seed, len);
+      const alpha = o.alpha * (p.a ?? 1);
+      this.batch.vertex(p.x + nx, p.y + ny, along, 1, r, g, b, alpha, o.u, o.hot, o.seed, len);
+      this.batch.vertex(p.x - nx, p.y - ny, along, -1, r, g, b, alpha, o.u, o.hot, o.seed, len);
       if (i < n - 1) {
         const v = first + i * 2;
         this.batch.index(v, v + 1, v + 2, v + 1, v + 3, v + 2);

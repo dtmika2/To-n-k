@@ -82,7 +82,7 @@ void main() {
 let quad: MeshGeometry | null = null;
 
 interface PortalUniforms {
-  uniforms: { uTime: number; uAngle: number; uDrift: Float32Array; uGlow: number; uOpen: number; uAlpha: number };
+  uniforms: { uTime: number; uAngle: number; uDrift: Float32Array; uGlow: number; uOpen: number; uAlpha: number; uDeep: Float32Array; uMid: Float32Array; uHot: Float32Array };
   update(): void;
 }
 
@@ -90,6 +90,7 @@ interface PortalUniforms {
 export class PortalIris {
   readonly mesh: Mesh<MeshGeometry, Shader>;
   private readonly group: PortalUniforms;
+  private readonly colors: [deep: number[], mid: number[], hot: number[]];
 
   /** `spin`: swirl speed in rad/s (signed). */
   constructor(seed: number, palette: readonly string[], radius: number, private readonly spin: number) {
@@ -99,6 +100,7 @@ export class PortalIris {
       indices: new Uint32Array([0, 1, 2, 0, 2, 3]),
     });
     const [deep, mid, hot] = palette.map((c) => rgb(cssHex(c)));
+    this.colors = [deep, mid, hot];
     const shader = Shader.from({
       gl: { vertex: VERTEX, fragment: FRAGMENT },
       resources: {
@@ -119,6 +121,15 @@ export class PortalIris {
     this.group = shader.resources.portal as PortalUniforms;
     this.mesh = new Mesh({ geometry: quad, shader });
     this.mesh.scale.set(radius);
+  }
+
+  /** Depth mode: shift the palette towards `color` by `haze` (0…1). Applied by the next `update`. */
+  setHaze(haze: number, color: number): void {
+    const target = rgb(color);
+    const { uDeep, uMid, uHot } = this.group.uniforms;
+    [uDeep, uMid, uHot].forEach((u, i) => {
+      for (let k = 0; k < 3; k++) u[k] = this.colors[i][k] + (target[k] - this.colors[i][k]) * haze;
+    });
   }
 
   /** `open`: the eye's openness 0…1 (the void grows with it). */

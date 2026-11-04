@@ -1,6 +1,6 @@
 import { Container, Graphics, Sprite, type Texture } from 'pixi.js';
 import type { Vec } from '../pattern/types.ts';
-import { lerpColor } from './draw.ts';
+import { lerpColor, smooth, taperedStroke } from './draw.ts';
 import { irisPalette, irisTexture, makeWobble, rng } from './textures.ts';
 import { cssHex } from './vfx/shaders.ts';
 import type { Particles } from './particles.ts';
@@ -23,6 +23,13 @@ const SAMPLES = 22;
 const LID = 0xe9dcff;
 const LID_WARM = 0xf3d99a;
 const LASH_SAMPLES = 7;
+/** Depth mode: far eyes shift towards this dim mist tone, as distant things do in a painting. */
+const HAZE = 0x5a5680;
+/** The same, as a tint multiplying the sprites that carry their own colours. */
+const HAZE_TINT = 0x8a86a8;
+const PUPIL_TINT = 0xfff6e0;
+/** A glow this strong clears the haze entirely, so a far eye still reads when it blinks. */
+const HAZE_CLEAR_GLOW = 0.6;
 
 /** Lid drawing: 'drawn' = the original constant-width strokes; 'refined' = tapered, glowing, iris-tinted. */
 export type LidStyle = 'drawn' | 'refined';
@@ -36,30 +43,6 @@ interface Lash {
   bend: number;
 }
 
-/**
- * Fill a stroke whose half-width varies along it (`halfWidth(i)` for point i): offsets on both sides
- * along the averaged normal, joined into one polygon. Tapers to points where the width is 0.
- */
-function taperedStroke(g: Graphics, pts: readonly number[], halfWidth: (i: number) => number): Graphics {
-  const n = pts.length / 2;
-  const left: number[] = [];
-  const right: number[] = [];
-  for (let i = 0; i < n; i++) {
-    const a = Math.max(0, i - 1);
-    const b = Math.min(n - 1, i + 1);
-    const dx = pts[b * 2] - pts[a * 2];
-    const dy = pts[b * 2 + 1] - pts[a * 2 + 1];
-    const l = Math.hypot(dx, dy) || 1;
-    const w = halfWidth(i);
-    const nx = (-dy / l) * w;
-    const ny = (dx / l) * w;
-    left.push(pts[i * 2] + nx, pts[i * 2 + 1] + ny);
-    right.push(pts[i * 2] - nx, pts[i * 2 + 1] - ny);
-  }
-  const poly = [...left];
-  for (let i = n - 1; i >= 0; i--) poly.push(right[i * 2], right[i * 2 + 1]);
-  return g.poly(poly, true);
-}
 
 /**
  * Plan §7 "organic points": an almond/blob outline perturbed by seeded noise that morphs slowly, wispy
@@ -106,6 +89,11 @@ export class Eye {
   private readonly wobB: (x: number) => number;
   private readonly spin: number;
   private sizeScale = 1;
+  private baseSize = 1;
+  private depthScale = 1;
+  private depthHaze = 0;
+  /** This frame's haze: `depthHaze`, eased off by the glow. */
+  private haze = 0;
   open = 0;
 
   constructor(
@@ -167,7 +155,7 @@ export class Eye {
     this.irisB.alpha = 0.55;
     this.irisB.blendMode = 'add';
     this.pupil.width = this.pupil.height = this.h * 0.75;
-    this.pupil.tint = 0xfff6e0;
+    this.pupil.tint = PUPIL_TINT;
     this.portal = new PortalIris(seed, irisPalette(seed), this.h * 1.2, this.spin * 1.6);
     this.portal.mesh.visible = false;
     this.iris.addChild(this.irisA, this.irisB, this.pupil, this.portal.mesh, this.innerShade);
@@ -183,8 +171,37 @@ export class Eye {
 
   /** How big the eye looks, as a multiple of its built size. Visual only: hit radii don't use it. */
   setSize(k: number): void {
-    this.sizeScale = k;
-    this.root.scale.set(k);
+    this.baseSize = k;
+    this.applySize();
+  }
+
+  /** Depth mode: `scale` on top of setSize, and how hazy the eye is while it isn't glowing. */
+  setDepth(scale: number, haze: number): void {
+    this.depthScale = scale;
+    this.depthHaze = haze;
+    this.applySize();
+  }
+
+  private applySize(): void {
+    this.sizeScale = this.baseSize * this.depthScale;
+    this.root.scale.set(this.sizeScale);
+  }
+
+  /** The iris's mid colour, for what belongs to this eye (its orbiting particles). */
+  get color(): number {
+    return this.pal[1];
+  }
+
+  private hazed(color: number): number {
+    return lerpColor(color, HAZE, this.haze);
+  }
+
+  private setHaze(haze: number): void {
+    if (haze === this.haze) return;
+    this.haze = haze;
+    this.irisA.tint = this.irisB.tint = lerpColor(0xffffff, HAZE_TINT, haze);
+    this.pupil.tint = lerpColor(PUPIL_TINT, HAZE_TINT, haze);
+    this.portal.setHaze(haze, HAZE);
   }
 
   /** Snap the lids shut, as far as they go (flinch). */
@@ -203,8 +220,9 @@ export class Eye {
 
     this.root.x = this.home.x + Math.sin(now * 0.09) * look.shudder;
 
-    this.glowSprite.tint = look.glowColor;
-    this.glowSprite.alpha = Math.min(1, look.glow);
+    this.setHaze(this.depthHaze * (1 - smooth(look.glow / HAZE_CLEAR_GLOW)));
+    this.glowSprite.tint = this.hazed(look.glowColor);
+    this.glowSprite.alpha = Math.min(1, look.glow) * (1 - 0.5 * this.haze);
     const gs = this.w * (3 + 1.2 * look.glow);
     this.glowSprite.width = this.glowSprite.height = gs;
 
@@ -229,7 +247,7 @@ export class Eye {
     this.sclera.clear();
     this.mask.clear();
     if (visible) {
-      this.sclera.poly(outline, true).fill({ color: refined ? lerpColor(0x0a0720, this.pal[0], 0.1) : 0x0a0720, alpha: 0.92 });
+      this.sclera.poly(outline, true).fill({ color: this.hazed(refined ? lerpColor(0x0a0720, this.pal[0], 0.1) : 0x0a0720), alpha: 0.92 });
       this.mask.poly(outline, true).fill({ color: 0xffffff });
     }
     this.iris.visible = visible;
@@ -291,14 +309,15 @@ export class Eye {
    */
   private drawRefined(time: number, look: EyeLook, upper: number[], lower: number[], outline: number[], midY: number, visible: boolean, light: LidLightBatch | null): void {
     const open = this.open;
-    const [, mid, hot] = this.pal;
+    const mid = this.hazed(this.pal[1]);
+    const hot = this.hazed(this.pal[2]);
     const glow = Math.min(1, look.glow);
     const base = this.lidColor === 'cream' ? lerpColor(LID, hot, 0.55) : this.lidColor === 'iris' ? lerpColor(mid, 0xffffff, 0.2) : this.lidColor;
     // a glowing eye warms its lids towards gold, lightly, so the chosen colour stays readable
     const lidColor = lerpColor(base, LID_WARM, glow * 0.35);
     // cream lids keep a halo in the iris colour; the others glow in their own colour
     const haloColor = lerpColor(this.lidColor === 'cream' || this.lidColor === 'iris' ? mid : base, LID_WARM, glow * 0.35);
-    const lidAlpha = 0.55 + 0.45 * Math.min(1, look.glow + open * 0.5);
+    const lidAlpha = (0.55 + 0.45 * Math.min(1, look.glow + open * 0.5)) * (1 - 0.35 * this.haze);
     const h = this.h;
     const profile = (i: number, max: number, min: number) => {
       const t = -1 + (2 * i) / SAMPLES;

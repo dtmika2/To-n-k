@@ -45,6 +45,31 @@ export function almond(g: Graphics, x: number, y: number, hw: number, hh: number
   return g.poly(pts, true);
 }
 
+/**
+ * Fill a stroke whose half-width varies along it (`halfWidth(i)` for point i): offsets on both sides
+ * along the averaged normal, joined into one polygon. Tapers to points where the width is 0.
+ */
+export function taperedStroke(g: Graphics, pts: readonly number[], halfWidth: (i: number) => number): Graphics {
+  const n = pts.length / 2;
+  const left: number[] = [];
+  const right: number[] = [];
+  for (let i = 0; i < n; i++) {
+    const a = Math.max(0, i - 1);
+    const b = Math.min(n - 1, i + 1);
+    const dx = pts[b * 2] - pts[a * 2];
+    const dy = pts[b * 2 + 1] - pts[a * 2 + 1];
+    const l = Math.hypot(dx, dy) || 1;
+    const w = halfWidth(i);
+    const nx = (-dy / l) * w;
+    const ny = (dx / l) * w;
+    left.push(pts[i * 2] + nx, pts[i * 2 + 1] + ny);
+    right.push(pts[i * 2] - nx, pts[i * 2 + 1] - ny);
+  }
+  const poly = [...left];
+  for (let i = n - 1; i >= 0; i--) poly.push(right[i * 2], right[i * 2 + 1]);
+  return g.poly(poly, true);
+}
+
 /** Smoothstep of t clamped to 0…1. */
 export function smooth(t: number): number {
   const k = Math.min(1, Math.max(0, t));
