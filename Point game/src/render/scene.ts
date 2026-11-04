@@ -68,6 +68,7 @@ export interface SceneConfig {
   octaves: number;
   renderScale: number;
   eyeMinOpen: number;
+  eyeGrow: number;
   clouds: CloudConfig;
 }
 
@@ -131,9 +132,11 @@ export class SceneRenderer {
   private masterAlpha = 0.08;
   private lastNow = 0;
   private renderScale: number;
+  private grow: number;
 
   constructor(pixi: Renderer, private readonly cfg: SceneConfig) {
     this.renderScale = cfg.renderScale;
+    this.grow = cfg.eyeGrow;
     this.dot = softDotTexture(64, 0.35);
     this.softDot = softDotTexture(128, 0);
     this.sky = new Sky(this.dot, cfg.stars);
@@ -177,6 +180,15 @@ export class SceneRenderer {
     return this.atmosphere.octaves;
   }
 
+  /** How much bigger the eyes look (0.3 = +30 %). */
+  get eyeGrow(): number {
+    return this.grow;
+  }
+  set eyeGrow(g: number) {
+    this.grow = g;
+    for (const eye of this.eyes.values()) eye.setSize(1 + g);
+  }
+
   /** `portraitPxWidth`: device pixels across the portrait layout. */
   resize(portraitPxWidth: number, renderScale = this.renderScale): void {
     this.renderScale = renderScale;
@@ -207,6 +219,7 @@ export class SceneRenderer {
       const eye = new Eye(p.id, p.pos, p.r, seeds.get(p.id) ?? p.id + 1, this.dot, this.cfg.eyeMinOpen);
       eye.lidLight = this.lidLight;
       eye.sparks = this.dust;
+      eye.setSize(1 + this.grow);
       this.eyes.set(p.id, eye);
       this.eyesLayer.addChild(eye.root);
     }
@@ -221,8 +234,9 @@ export class SceneRenderer {
     return this.ctx.points.find((p) => p.id === id)!.pos;
   }
 
+  /** The eye's visual radius, which the rings start from. The hit radii live in the reducer. */
   private radius(id: number): number {
-    return this.ctx.points.find((p) => p.id === id)!.r;
+    return this.ctx.points.find((p) => p.id === id)!.r * (1 + this.grow);
   }
 
   /** Gold rings (the eye rings) stay gold in the vfx look; the others turn lavender unless `vfxColor` says otherwise. */

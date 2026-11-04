@@ -54,6 +54,7 @@ export async function startApp(): Promise<void> {
     octaves: num('octaves', settings.display.noiseOctaves),
     renderScale,
     eyeMinOpen: settings.display.eyeMinOpen,
+    eyeGrow: settings.display.eyeGrow,
     clouds: settings.display.clouds,
   });
   scene.setLook(look);
@@ -142,6 +143,16 @@ export async function startApp(): Promise<void> {
             hint: 'Turns the picture and touch 90° clockwise. Back to the start after a reload.',
             text: () => `${rotateDeg}° ⟳`,
             press: rotate,
+          },
+          {
+            kind: 'range',
+            label: 'Eye size, + %',
+            min: 0,
+            max: 50,
+            step: 5,
+            hint: 'How much bigger the eyes look. Only the look changes: the touch areas stay the same.',
+            get: () => Math.round(scene.eyeGrow * 100),
+            set: (v) => (scene.eyeGrow = v / 100),
           },
           { kind: 'toggle', label: 'Debug overlay', key: 'D', get: () => debugOn, set: (v) => ((debugOn = v), applyView()) },
           { kind: 'toggle', label: 'Primitives only', key: 'P', get: () => primitivesOnly, set: (v) => ((primitivesOnly = v), applyView()) },

@@ -68,6 +68,8 @@ export const settings = {
     stars: 600,
     /** Eyes never close further than this (0 = closed lid line, 1 = wide open). */
     eyeMinOpen: 0.2,
+    /** Eyes look this much bigger (0.3 = +30 %), also in the M menu. Visual only: the hit radii stay as they are. */
+    eyeGrow: 0.3,
     /** Bottom layer image (portrait 9:16, in public/; 2160×3840 to stay sharp at 4K); '' = plain night gradient. */
     backdrop: 'assets/backdrop.png',
     /**

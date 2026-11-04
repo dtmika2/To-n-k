@@ -105,6 +105,7 @@ export class Eye {
   private readonly wobA: (x: number) => number;
   private readonly wobB: (x: number) => number;
   private readonly spin: number;
+  private sizeScale = 1;
   open = 0;
 
   constructor(
@@ -178,6 +179,12 @@ export class Eye {
 
   get position(): Vec {
     return this.home;
+  }
+
+  /** How big the eye looks, as a multiple of its built size. Visual only: hit radii don't use it. */
+  setSize(k: number): void {
+    this.sizeScale = k;
+    this.root.scale.set(k);
   }
 
   /** Snap the lids shut, as far as they go (flinch). */
@@ -387,8 +394,8 @@ export class Eye {
 
   /** Eye-local x,y pairs → world (the batch is drawn in the eyes' parent space). */
   private toWorld(pts: readonly number[]): number[] {
-    const c = Math.cos(this.root.rotation);
-    const s = Math.sin(this.root.rotation);
+    const c = Math.cos(this.root.rotation) * this.sizeScale;
+    const s = Math.sin(this.root.rotation) * this.sizeScale;
     const out: number[] = [];
     for (let i = 0; i < pts.length; i += 2) out.push(this.root.x + pts[i] * c - pts[i + 1] * s, this.root.y + pts[i] * s + pts[i + 1] * c);
     return out;
@@ -399,7 +406,7 @@ export class Eye {
    * the lashes towards their tips; the tips are kept (world) for the sparks.
    */
   private drawLight(light: LidLightBatch, time: number, upper: number[], lower: number[], visible: boolean, dirY: number, lowerK: number, color: number, alpha: number, glow: number): void {
-    const h = this.h;
+    const h = this.h * this.sizeScale; // the batch's line widths are in world units
     const lidT = (i: number) => -1 + (2 * i) / SAMPLES;
     const swell = (i: number) => Math.pow(Math.max(0, 1 - lidT(i) * lidT(i)), 0.7);
     const corners = (i: number) => 0.25 + 0.75 * Math.min(1, (1 - Math.abs(lidT(i))) * 4);
@@ -416,8 +423,9 @@ export class Eye {
       this.tips.push({ x: pts[last], y: pts[last + 1], dx: pts[last] - pts[last - 2], dy: pts[last + 1] - pts[last - 1] });
       light.add(pts, (k) => h * (0.008 + 0.04 * Math.pow(1 - k / LASH_SAMPLES, 1.3)), (k) => (1 - 0.7 * (k / LASH_SAMPLES)) * a, style);
     };
-    for (const l of this.upperLashes) lash(upper, l, dirY, h * 0.75, 0.55);
-    if (visible && lowerK > 0) for (const l of this.lowerLashes) lash(lower, l, 1, h * 0.5, 0.4 * lowerK);
+    // Lash lengths are eye-local, like the lid curves: toWorld scales them.
+    for (const l of this.upperLashes) lash(upper, l, dirY, this.h * 0.75, 0.55);
+    if (visible && lowerK > 0) for (const l of this.lowerLashes) lash(lower, l, 1, this.h * 0.5, 0.4 * lowerK);
   }
 
   /**
