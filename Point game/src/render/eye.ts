@@ -169,6 +169,11 @@ export class Eye {
     return this.home;
   }
 
+  /** Turn the eye from the angle its seed gave it (degrees, positive = clockwise). */
+  turn(degrees: number): void {
+    this.root.rotation += (degrees * Math.PI) / 180;
+  }
+
   /** How big the eye looks, as a multiple of its built size. Visual only: hit radii don't use it. */
   setSize(k: number): void {
     this.baseSize = k;

@@ -4,7 +4,7 @@ A memory game for a 75" portrait touch table: a PixiJS 8 + Web Audio PWA, run in
 
 ## Commands
 - `npm run dev` — Vite dev server on http://localhost:5173.
-  - URL flags: `?debug`, `?primitives`, `?unused` (marks decoy eyes), `?look=classic|vfx`, `?scale=`, `?rotate=`, `?octaves=`, `?depth`.
+  - URL flags: `?debug`, `?primitives`, `?unused` (marks decoy eyes), `?look=classic|vfx`, `?scale=`, `?rotate=`, `?octaves=`, `?depth=0` (depth off).
   - `M` opens the menu overlay (`src/debug/menu.ts`): the key legend plus live switches. New keys and safe live tunables belong there too.
   - `/vfx.html`: look-dev page, classic and vfx side by side with sliders.
 - `npm run verify` — typecheck, vitest, pattern validation and build. Run this before committing.
@@ -25,11 +25,12 @@ A memory game for a 75" portrait touch table: a PixiJS 8 + Web Audio PWA, run in
 - **Attract demo:** `game/attract.ts`, an INTRO-only presentation kept outside the reducer.
 - **Tunables:** `src/config/settings.ts`. The "get ready" notice timing is in `src/config/notice.ts`, shared by the scene and the audio.
 - **Pattern:** the Leo constellation, 18 eyes (ids 0–8 form Leo; 9–17 are decoys) and a 13-touch sequence.
+  - An eye's optional `turn` (degrees) adjusts the angle its seed gives it.
   - The start eye may repeat; the end may not.
   - Each eye has its own note from A minor pentatonic D3–G6.
   - The `E` key opens the layout editor.
 - **Scene layers, bottom to top:** sky/backdrop, clouds (puff sprites), mist shader, puffs, strands, beams, dust, eyes, lid light, master button, rings, orb, fx.
-- **Depth mode (experimental, off by default; `Z` key, M menu, `?depth`):** each eye gets a depth from its seed (`render/depth.ts`), which sets its size, haze and the width of its lines. `SceneRenderer.applyLayering()` gives each eye its own draw layer, furthest first (strands, beams, orbiters, eye, lid light), so a line passes over the eyes further than it and under the nearer ones while staying under its own two end eyes (`lineLayer`); clouds and a mist veil go in between the far, mid and near bands; off, everything uses the first layer in the order above. Visual only: hit radii ignore depth. Tunables: `settings.display.depth`.
+- **Depth mode (on by default; `Z` key, M menu, `?depth=0` for off):** each eye gets a depth from its seed (`render/depth.ts`), which sets its size, haze and the width of its lines. `SceneRenderer.applyLayering()` gives each eye its own draw layer, furthest first (strands, beams, orbiters, eye, lid light), so a line passes over the eyes further than it and under the nearer ones while staying under its own two end eyes (`lineLayer`); a dragged line's tip takes its depth from the regions around the eyes (`fingerDepth`); clouds and a mist veil go in between the far, mid and near bands; off, everything uses the first layer in the order above. Visual only: hit radii ignore depth. Tunables: `settings.display.depth`.
 - **Reveal:** no number image. After a solve the eyes in pattern.json `"figure"` are joined in order and draw the number; timing in `game/figure.ts` (`figureProgress`), shared by the scene, the debug drawing and the audio (each figure eye plays its note as the line reaches it).
 - **Two looks in one build** (`settings.display.look`, `?look=`, `L` key live): `classic` and `vfx`. The vfx look swaps three primitives for shaders in `render/vfx/`: the iris (`portal.ts`, inside the same lid mask), the strands (`beam.ts`, via `render/strand.ts`), the rings (`ring.ts`), the notice centre (`orb.ts` plus sparks) and the lids (`lidLight.ts`, lids and lashes of light; lash tips spark). Beams and rings are each one dynamic mesh per frame (`batch.ts`). Everything else is shared; new visuals should work in both looks.
 - **Shader time:** never pass raw time into noise (hash precision; the kiosk runs for days). Use `wrap()` from `render/vfx/shaders.ts` with the periodic `tnoise`/`tfbm`, or `shaderTime()` for sin-only use.

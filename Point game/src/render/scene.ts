@@ -8,7 +8,7 @@ import { noteToMidi } from '../pattern/notes.ts';
 import { ASPECT, type Pattern, type Vec } from '../pattern/types.ts';
 import { Atmosphere } from './atmosphere.ts';
 import { CloudCover, type CloudConfig } from './clouds.ts';
-import { assignDepths, atDepth, bandOf, eyesBelow, lineLayer, splitByLayer, type DepthConfig } from './depth.ts';
+import { assignDepths, atDepth, bandOf, eyesBelow, fingerDepth, lineLayer, splitByLayer, type DepthConfig, type DepthRegion } from './depth.ts';
 import { figureProgress, figureSurge } from '../game/figure.ts';
 import { almond, circle, easeOut, easeOutElastic, lerpColor, smooth, wobblyCircle } from './draw.ts';
 import { Eye, type EyeLook } from './eye.ts';
@@ -126,6 +126,8 @@ export class SceneRenderer {
   private eyeOrder: number[] = [];
   private eyeZs: number[] = [];
   private maxRadius = 0;
+  /** Around each eye, where a dragged line starts taking on that eye's depth. */
+  private regions: DepthRegion[] = [];
   private depthOn: boolean;
   private centre: Vec = { x: 0.5, y: ASPECT / 2 };
 
@@ -169,7 +171,7 @@ export class SceneRenderer {
     this.applyLayering();
   }
 
-  /** Experimental depth mode (Z key): eyes at different distances. Visual only. */
+  /** Depth mode (Z key): eyes at different distances. Visual only. */
   get depth(): boolean {
     return this.depthOn;
   }
@@ -224,6 +226,11 @@ export class SceneRenderer {
     return this.depths.get(id) ?? 1;
   }
 
+  /** The depth of a line's moving tip at `pos`, having left an eye at depth `from`. */
+  private tipDepth(pos: Vec, from: number): number {
+    return this.depthOn ? fingerDepth(pos.x, pos.y, from, this.regions) : from;
+  }
+
   setLook(look: Look): void {
     this.look = look;
   }
@@ -271,6 +278,7 @@ export class SceneRenderer {
     for (const e of this.eyes.values()) e.root.destroy({ children: true });
     this.eyes.clear();
     const seeds = new Map(pattern.points.map((p) => [p.id, p.seed]));
+    const turns = new Map(pattern.points.map((p) => [p.id, p.turn]));
     const midi = pattern.points.map((p) => [p.id, noteToMidi(p.note) ?? 60] as const);
     const lo = Math.min(...midi.map(([, m]) => m));
     const hi = Math.max(...midi.map(([, m]) => m));
@@ -281,12 +289,20 @@ export class SceneRenderer {
     this.eyeOrder = ctx.points.map((p) => p.id).sort((a, b) => this.z(a) - this.z(b) || a - b);
     this.eyeZs = this.eyeOrder.map((id) => this.z(id));
     this.maxRadius = Math.max(0, ...ctx.points.map((p) => p.r));
+    this.regions = ctx.points.map((p) => ({
+      x: p.pos.x,
+      y: p.pos.y,
+      z: this.z(p.id),
+      inner: p.r * ctx.hit.correctScale,
+      outer: p.r * this.cfg.depth.lineRegion,
+    }));
     while (this.layers.length <= ctx.points.length) this.layers.push(this.makeLayer());
     for (const l of this.layers) l.orbiters.clear();
     for (const p of ctx.points) {
       const eye = new Eye(p.id, p.pos, p.r, seedOf(p.id), this.dot, this.cfg.eyeMinOpen);
       eye.sparks = this.dust;
       eye.setSize(1 + this.grow);
+      eye.turn(turns.get(p.id) ?? 0);
       this.eyes.set(p.id, eye);
     }
     const depth = this.cfg.depth;
@@ -593,7 +609,8 @@ export class SceneRenderer {
       if (s.sub === 'TRACING') {
         this.liveTether(last, s.tether, now, dt, Z(seq[s.progress - 1]));
       } else {
-        this.strand(last, s.tether, now, 77, { color, alpha: alpha * 0.8, u, hot: 0, za: Z(seq[s.progress - 1]), zb: 1 });
+        const za = Z(seq[s.progress - 1]);
+        this.strand(last, s.tether, now, 77, { color, alpha: alpha * 0.8, u, hot: 0, za, zb: this.tipDepth(s.tether, za) });
       }
     }
 
@@ -602,8 +619,9 @@ export class SceneRenderer {
       const to = P(r.to);
       const pull = easeOutElastic(t);
       const tip = lerpVec(r.from, to, pull);
-      // the tip leaves the finger (nearest) and returns to the eye's depth
-      const zTip = 1 + (Z(r.to) - 1) * Math.min(1, pull);
+      // the tip leaves the finger's depth and returns to the eye's
+      const zFinger = this.tipDepth(r.from, Z(r.to));
+      const zTip = zFinger + (Z(r.to) - zFinger) * Math.min(1, pull);
       this.strand(to, tip, now, 88, { color: C.cold, alpha: 0.85 * (1 - t * 0.5), hot: 0, za: Z(r.to), zb: zTip });
       circle(this.tipLayer, tip.x, tip.y, 0.006 + 0.01 * (1 - t)).fill({ color: C.hot, alpha: 1 - t });
       if (Math.random() < dt * 60) this.dust.emit(now, { pos: tip, speed: 0.08, life: 0.5, size: 0.005, tint: C.hot });
@@ -661,7 +679,7 @@ export class SceneRenderer {
 
   /** The tether from the last point to the finger, shedding stardust. */
   private liveTether(from: Vec, finger: Vec, now: number, dt: number, zFrom: number): void {
-    this.strand(from, finger, now, 77, { color: C.hot, alpha: 0.85, hot: 1, za: zFrom, zb: 1 });
+    this.strand(from, finger, now, 77, { color: C.hot, alpha: 0.85, hot: 1, za: zFrom, zb: this.tipDepth(finger, zFrom) });
     const n = Math.random() < (dt * 70) % 1 ? Math.ceil(dt * 70) : Math.floor(dt * 70);
     for (let k = 0; k < n; k++) {
       const pos = lerpVec(from, finger, Math.random());

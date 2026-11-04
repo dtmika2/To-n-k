@@ -55,7 +55,7 @@ export async function startApp(): Promise<void> {
     renderScale,
     eyeMinOpen: settings.display.eyeMinOpen,
     eyeGrow: settings.display.eyeGrow,
-    depth: { ...settings.display.depth, enabled: settings.display.depth.enabled || params.has('depth') },
+    depth: { ...settings.display.depth, enabled: params.has('depth') ? params.get('depth') !== '0' : settings.display.depth.enabled },
     clouds: settings.display.clouds,
   });
   scene.setLook(look);
@@ -127,7 +127,7 @@ export async function startApp(): Promise<void> {
       { keys: 'P', what: 'primitives only (the Phase 1 debug drawing)' },
       { keys: 'L', what: 'switch the look: vfx ⇄ classic (also ?look=)' },
       { keys: 'T', what: 'turn the picture and touch 90° clockwise (also ?rotate=)' },
-      { keys: 'Z', what: 'depth (experimental): eyes at different distances, with clouds passing between them (also ?depth)' },
+      { keys: 'Z', what: 'depth: eyes at different distances, with clouds passing between them (also ?depth=0 for off)' },
       { keys: 'U', what: 'mark the decoy eyes, which are never in the sequence (also ?unused)' },
       { keys: 'E', what: 'layout editor: drag eyes, mouse wheel or [ ] for the radius, Backspace undoes while recording' },
       { keys: 'R', what: 'reset to the intro' },
@@ -160,7 +160,7 @@ export async function startApp(): Promise<void> {
             kind: 'toggle',
             label: 'Depth',
             key: 'Z',
-            hint: 'Experimental: eyes at different distances, with orbiting particles and clouds passing between them. Only the look changes.',
+            hint: 'Eyes at different distances, with orbiting particles and clouds passing between them. Only the look changes.',
             get: () => scene.depth,
             set: (v) => (scene.depth = v),
           },

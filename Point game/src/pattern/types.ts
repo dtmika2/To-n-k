@@ -8,6 +8,8 @@ export interface PatternPoint {
   r: number;
   seed: number;
   note: string;
+  /** Degrees added to the angle the seed gives the eye (positive = clockwise), to place it by hand. */
+  turn?: number;
 }
 
 export interface Pattern {

@@ -73,15 +73,16 @@ export const settings = {
     /** Bottom layer image (portrait 9:16, in public/; 2160×3840 to stay sharp at 4K); '' = plain night gradient. */
     backdrop: 'assets/backdrop.png',
     /**
-     * Experimental depth mode (Z key, M menu, `?depth`): eyes at different distances. Ranges are
+     * Depth mode (Z key, M menu, `?depth=0` for off): eyes at different distances. Ranges are
      * [far, near]. Visual only: the hit radii don't change. See render/depth.ts.
      */
     depth: {
-      enabled: false,
+      enabled: true,
       eyeScale: [0.72, 1.2] as [number, number],
       haze: [0.5, 0] as [number, number],
-      lineWidth: [0.6, 1.35] as [number, number],
+      lineWidth: [0.41, 1.54] as [number, number],
       lineAlpha: [0.75, 1] as [number, number],
+      lineRegion: 4.5,
       orbitersPerEye: 3,
       mistOver: 0.4,
       clouds: { mid: 0.25, front: 0.15, overCap: 0.35, veilAlpha: [0.1, 0.16] as [number, number] },

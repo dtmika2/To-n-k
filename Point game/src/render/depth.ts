@@ -2,7 +2,7 @@ import { hash, smooth } from './draw.ts';
 import type { CloudLayers } from './clouds.ts';
 
 /**
- * Experimental depth mode (Z key, `?depth`): the rules, kept free of rendering. Every eye gets a depth
+ * Depth mode (on by default; Z key, `?depth=0` for off): the rules, kept free of rendering. Every eye gets a depth
  * z, 0 (far) … 1 (near), which sets its place in the draw order, its band (the clouds pass between the
  * bands), its size, its haze and the width of the lines reaching it. Purely visual: the hit radii don't
  * use any of it.
@@ -19,6 +19,8 @@ export interface DepthConfig {
   haze: DepthRange;
   lineWidth: DepthRange;
   lineAlpha: DepthRange;
+  /** How far an eye's region reaches, as a multiple of its radius: a dragged line starts to change there. */
+  lineRegion: number;
   orbitersPerEye: number;
   /** Share of the mist drawn above the far band (the rest stays under it). */
   mistOver: number;
@@ -92,6 +94,42 @@ export function splitByLayer<T>(run: readonly T[], layerOf: (p: T) => number): {
   }
   if (current) pieces.push(current);
   return pieces.filter((piece) => piece.pts.length > 1);
+}
+
+/** An eye as `fingerDepth` sees it: where it is, how deep, and how far its region reaches. */
+export interface DepthRegion {
+  x: number;
+  y: number;
+  z: number;
+  /** Inside this distance the finger is at the eye's depth exactly. */
+  inner: number;
+  /** Beyond this distance the eye has no effect. */
+  outer: number;
+}
+
+/**
+ * The depth of a moving line tip. Away from every eye it stays at `from`, the depth of the eye it left, so
+ * the line keeps its width; entering an eye's region it eases towards that eye's depth, reaching it inside
+ * `inner`, where the finger reaches the eye. Where regions overlap, the closest eye counts the most. The
+ * line therefore arrives at the eye's depth already and doesn't change when it locks on.
+ */
+export function fingerDepth(x: number, y: number, from: number, regions: readonly DepthRegion[]): number {
+  let strongest = 0;
+  let weights = 0;
+  let sum = 0;
+  for (const r of regions) {
+    const d = Math.hypot(x - r.x, y - r.y);
+    if (d <= r.inner) return r.z;
+    if (d >= r.outer) continue;
+    const pull = smooth((r.outer - d) / (r.outer - r.inner));
+    const gap = d - r.inner;
+    const weight = pull / (gap * gap);
+    strongest = Math.max(strongest, pull);
+    weights += weight;
+    sum += weight * r.z;
+  }
+  if (weights === 0) return from;
+  return from + (sum / weights - from) * strongest;
 }
 
 /** A particle's circular path around an eye, on a plane tilted out of the screen. */

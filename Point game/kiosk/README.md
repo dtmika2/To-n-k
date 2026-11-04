@@ -40,13 +40,13 @@ To quit kiosk Chrome, press Alt+F4. Then close the "Dream Pattern server" window
 | `D` | debug overlay: state, strikes, timers, FPS, canvas and screen size in real pixels, render scale, and hit radii over the scene |
 | `P` | switch to the plain debug primitives (Phase 1 look) and back |
 | `T` | turn the picture and touch 90° clockwise, until the next reload; also a button in the `M` menu, and `?rotate=` in the URL |
-| `Z` | depth (experimental): eyes at different distances, with orbiting particles and clouds passing between them; also in the `M` menu, and `?depth` in the URL |
+| `Z` | depth (on by default): eyes at different distances, with orbiting particles and clouds passing between them; also in the `M` menu, and `?depth=0` in the URL turns it off |
 | `U` | mark the unused (decoy) eyes with a red ring and cross; also `?unused` in the URL |
 | `E` | layout editor (drag points, change radii, record the sequence, export `pattern.json`) |
 | `R` | back to the intro |
 | `1`–`5` | jump to INTRO / GAME / REVEAL / IDLE / CREATIVE |
 
-URL options: `?debug`, `?primitives`, `?rotate=90`, `?scale=0.4` (shader resolution, turns auto-scaling off), `?octaves=4`, `?depth`.
+URL options: `?debug`, `?primitives`, `?rotate=90`, `?scale=0.4` (shader resolution, turns auto-scaling off), `?octaves=4`, `?depth=0`.
 
 ## Performance
 

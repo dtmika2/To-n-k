@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { assignDepths, atDepth, BANDS, bandOf, eyesBelow, lineLayer, orbitAlpha, orbitPoint, splitByLayer, type Orbit } from '../../src/render/depth.ts';
+import { assignDepths, atDepth, BANDS, bandOf, eyesBelow, fingerDepth, lineLayer, orbitAlpha, orbitPoint, splitByLayer, type Orbit } from '../../src/render/depth.ts';
 import pattern from '../../src/config/pattern.json';
 
 const points = pattern.points.map((p) => ({ id: p.id, seed: p.seed }));
@@ -82,6 +82,47 @@ describe('splitByLayer', () => {
     for (let i = 1; i < pieces.length; i++) expect(pieces[i].pts[0]).toBe(pieces[i - 1].pts.at(-1));
     expect(pieces[0].pts[0]).toBe(run[0]);
     expect(pieces.at(-1)!.pts.at(-1)).toBe(run.at(-1));
+  });
+});
+
+describe('fingerDepth', () => {
+  const near = { x: 0, y: 0, z: 0.9, inner: 0.07, outer: 0.2 };
+  const far = { x: 1, y: 0, z: 0.1, inner: 0.07, outer: 0.2 };
+  const regions = [near, far];
+  const from = 0.5;
+
+  it('keeps the depth of the eye it left, away from every eye', () => {
+    expect(fingerDepth(0.5, 0, from, regions)).toBe(from);
+  });
+
+  it('reaches the eye\'s depth exactly where the finger reaches the eye', () => {
+    expect(fingerDepth(0.05, 0, from, regions)).toBe(near.z);
+    expect(fingerDepth(0.98, 0, from, regions)).toBe(far.z);
+  });
+
+  it('grows steadily on the way to a nearer eye, and shrinks towards a further one', () => {
+    const towards = (eye: typeof near, sign: number) => [0.19, 0.15, 0.11, 0.08].map((d) => fingerDepth(eye.x + sign * d, 0, from, regions));
+    const rising = towards(near, 1);
+    const falling = towards(far, -1);
+    for (let i = 1; i < rising.length; i++) {
+      expect(rising[i]).toBeGreaterThan(rising[i - 1]);
+      expect(falling[i]).toBeLessThan(falling[i - 1]);
+    }
+    expect(rising[0]).toBeGreaterThan(from);
+    expect(falling[0]).toBeLessThan(from);
+  });
+
+  it('has no jump at the edges of a region', () => {
+    expect(fingerDepth(near.outer - 1e-4, 0, from, regions)).toBeCloseTo(from, 3);
+    expect(fingerDepth(near.inner + 1e-4, 0, from, regions)).toBeCloseTo(near.z, 3);
+  });
+
+  it('where regions overlap, favours the closer eye without jumping', () => {
+    const close = [near, { ...far, x: 0.25 }];
+    const steps = Array.from({ length: 11 }, (_, i) => fingerDepth(0.075 + i * 0.01, 0, from, close));
+    expect(steps[0]).toBeCloseTo(near.z, 1);
+    expect(steps[10]).toBeCloseTo(far.z, 1);
+    for (let i = 1; i < steps.length; i++) expect(Math.abs(steps[i] - steps[i - 1])).toBeLessThan(0.25);
   });
 });
 
