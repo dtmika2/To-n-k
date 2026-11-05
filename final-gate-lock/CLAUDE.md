@@ -19,7 +19,7 @@ Setup and test steps are in `docs/SIGNAL-TEST.md`.
 - **Trigger:** `seq.after(S.coreLeftMs, …)` in `src/scene/SuccessSequence.ts` fires `game.onCoreLeft` as the core reaches the top edge (9.7 s), which also covers operator force-open. A reset before then sends nothing.
 - **Delivery:** `src/signal/passSignal.ts` saves each pass, retries until confirmed and drops it after 10 minutes. The server ignores repeated ids.
 - **PC side:** `scripts/signal-server.cjs` (server), `scripts/signal-tv.html` (TV page), `scripts/build-server-exe.mjs` (packs them with `dist/`, `PlaceholderVideo.mp4` and `PlaceholderStoneCover.png`).
-- **TV show:** stone cover over the video's frozen first frame → core rises in from the bottom (same `core.png`), erasing the stone around its path → collapses at the video's centre while the rest of the stone fades over the last second → flash + video starts with sound → stone back whole when it ends. Tunables: `FX` in `signal-tv.html`. Sound needs one click on the page; without it the video plays muted.
+- **TV show:** stone cover over a still of the video's first frame → core rises in from the bottom (same `core.png`), erasing the stone around its path → collapses at the video's centre while the rest of the stone fades over the last second → flash + video starts with sound → stone back whole when it ends. Tunables: `FX` in `signal-tv.html`. Sound needs one click on the page; without it the video plays muted.
 - **`?signal` / `?signal=URL`:** testing only. These also show the corner status label; players never see it in the installed app.
 
 ## Signal status (2026-11-05)
@@ -36,6 +36,7 @@ Setup and test steps are in `docs/SIGNAL-TEST.md`.
 - postject's "signature seems corrupted" warning is expected; the `.exe` is unsigned.
 - Plain-HTTP pages have no service worker, wake lock or `crypto.randomUUID`.
 - Checking the TV page with Playwright: its Chromium has no H.264, so use `channel: 'msedge'`. Its `evaluate` counts as a user gesture, and headless Edge doesn't enforce the sound rule, so neither can prove the no-click path.
+- The TV page reveals a canvas still, not the paused video: in Edge, a show started within about a second of pressing `F` found the paused video drawn as flat gray. Playwright can't reproduce this, because its fullscreen doesn't behave like a real key press. It needs real keys in an Edge with no automation.
 - Windows: stopping a backgrounded `npm run signal` can leave its Node process holding port 8787. Check with `Get-NetTCPConnection -LocalPort 8787`.
 - The user may have the `.exe` running for their own test, and rebuilding overwrites it. Check before rebuilding, and only ever stop your own test server by PID, never by name. Test on a spare port with `SIGNAL_PORT=18790 SIGNAL_NO_BROWSER=1`.
 - To run `src/signal/passSignal.ts` directly in Node, add `--experimental-transform-types`; it uses parameter properties.

@@ -11,9 +11,10 @@
   body.armed { cursor: none; }
   body.show-status { cursor: default; }
   #stage { position: fixed; left: 50%; top: 50%; overflow: hidden; background: var(--bg); }
-  #video, #stone, #fx { position: absolute; inset: 0; width: 100%; height: 100%; }
-  #video { object-fit: contain; }
-  #stone, #fx { pointer-events: none; }
+  #video, #still, #stone, #fx { position: absolute; inset: 0; width: 100%; height: 100%; }
+  #video, #still { object-fit: contain; }
+  #still, #stone, #fx { pointer-events: none; }
+  #still[hidden] { display: none; }
   #status {
     position: absolute; left: 50%; bottom: 4%; transform: translateX(-50%); width: min(92%, 900px);
     padding: 18px 24px; border-radius: 10px; background: var(--panel); text-align: center;
@@ -31,16 +32,18 @@
 <body>
   <div id="stage">
     <video id="video" playsinline preload="auto"></video>
+    <canvas id="still"></canvas>
     <canvas id="stone"></canvas>
     <canvas id="fx"></canvas>
     <div id="status" hidden></div>
   </div>
 <script>
   /**
-   * The TV screen, in layers: the video held on its first frame, the stone cover over it, the core
-   * and flash on top. The person is cursed into stone. When the lock is passed, the core that just
-   * left the top of the tablet rises in from the bottom edge and heals the stone along its way, the
-   * colour seeping through around it. It slows to the centre of the video, draws in and vanishes.
+   * The TV screen, in layers: the video, a still of its first frame over it, the stone cover over
+   * that, the core and flash on top. The person is cursed into stone. When the lock is passed, the
+   * core that just left the top of the tablet rises in from the bottom edge and heals the stone
+   * along its way, the colour seeping through around it. It slows to the centre of the video, draws
+   * in and vanishes.
    * The rest of the stone fades over the last second, so it's gone as the flash comes and the video
    * comes alive with its sound.
    *
@@ -77,6 +80,7 @@
   const $ = (id) => document.getElementById(id);
   const stage = $('stage');
   const video = $('video');
+  const still = $('still');
   const canvas = $('fx');
   const ctx = canvas.getContext('2d');
   const stone = $('stone');
@@ -216,6 +220,16 @@
   video.addEventListener('loadedmetadata', () => {
     if (phase === 'frozen') resetStone();
   });
+  /**
+   * What the core reveals is a still of the first frame, not the paused video. In Edge, a show
+   * started within about a second of going fullscreen found the paused video drawn wrongly (flat
+   * gray where the picture should be), though the frame itself was fine and playback wasn't affected.
+   */
+  video.addEventListener('loadeddata', () => {
+    still.width = video.videoWidth;
+    still.height = video.videoHeight;
+    still.getContext('2d').drawImage(video, 0, 0);
+  });
   video.addEventListener('canplaythrough', () => {
     if (videoReady) return;
     videoReady = true;
@@ -293,6 +307,7 @@
     if (frameHandle !== null) cancelAnimationFrame(frameHandle);
     frameHandle = null;
     playWhenReady = false;
+    still.hidden = false;
     ctx.clearRect(0, 0, W, H);
     video.pause();
     if (videoReady) video.currentTime = 0;
@@ -423,6 +438,10 @@
     phase = 'playing';
     // always gone by the first moving frame, even if a slow frame skipped the end of the fade
     stone.style.opacity = '0';
+    // the still stays until the video has a moving frame to show, all under the flash
+    video.requestVideoFrameCallback(() => {
+      if (phase === 'playing') still.hidden = true;
+    });
     playVideo();
     renderStatus();
     const speed = Math.hypot(W, H) * 0.0011;
