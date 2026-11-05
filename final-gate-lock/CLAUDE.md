@@ -25,7 +25,7 @@ Setup and test steps are in `docs/SIGNAL-TEST.md`.
 ## Signal status (2026-11-05)
 - **Proven on the real tablet:** the installed app reached the `.exe` over Wi-Fi and delivered one pass. The `.exe` ran on the development PC.
 - **Not tested:** a separate or inventory PC (firewall, admin rights, blocked unsigned programs, smooth playback), Wi-Fi dropout on the tablet, the Ethernet setup.
-- **TV show:** only checked with screenshots in headless Edge. Its feel, its sound and the tablet-to-TV handoff are not yet confirmed on the real tablet and TV.
+- **TV show:** the user has run it from the real tablet on the development PC's screen, and the sound start is confirmed with a short test clip. Its feel on the real TV is not yet confirmed.
 - **Assumed, awaiting the user's answer:** the TV is above or beyond the tablet (core enters from the bottom), the video cuts back to stone when it ends, the core lands at the exact centre, and the video isn't cropped to fill the screen (thin side bars on the placeholder).
 - **Next up:** feel-tuning on the real TV, then the real video and stone cover (the current ones are placeholders, and must share a shape and composition).
 
@@ -37,6 +37,7 @@ Setup and test steps are in `docs/SIGNAL-TEST.md`.
 - Plain-HTTP pages have no service worker, wake lock or `crypto.randomUUID`.
 - Checking the TV page with Playwright: its Chromium has no H.264, so use `channel: 'msedge'`. Its `evaluate` counts as a user gesture, and headless Edge doesn't enforce the sound rule, so neither can prove the no-click path.
 - The TV page reveals a canvas still, not the paused video: in Edge, a show started within about a second of pressing `F` found the paused video drawn as flat gray. Playwright can't reproduce this, because its fullscreen doesn't behave like a real key press. It needs real keys in an Edge with no automation.
+- After sitting paused for 40 s or more, the video froze for up to half a second just after starting with sound. Each pass therefore runs it for 1.5 s at an inaudible volume behind the still (`wakeVideo` in `signal-tv.html`). A seek or a muted play didn't help, which suggests the audio output goes idle, though that's unproven. Test this after a wait of a minute or more; a pass right after a reset never froze.
 - Windows: stopping a backgrounded `npm run signal` can leave its Node process holding port 8787. Check with `Get-NetTCPConnection -LocalPort 8787`.
 - The user may have the `.exe` running for their own test, and rebuilding overwrites it. Check before rebuilding, and only ever stop your own test server by PID, never by name. Test on a spare port with `SIGNAL_PORT=18790 SIGNAL_NO_BROWSER=1`.
 - To run `src/signal/passSignal.ts` directly in Node, add `--experimental-transform-types`; it uses parameter properties.

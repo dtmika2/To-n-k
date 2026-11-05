@@ -73,6 +73,10 @@
     ringMs: 1200,
     burstSparks: 140,
     trailSparksPerMs: 0.09,
+    /** How long the video runs, behind the still, when a pass arrives. Must end well before the flash. */
+    wakeMs: 1500,
+    /** Its volume meanwhile: too quiet to hear, but not silent, or the audio output stays asleep. */
+    wakeVolume: 0.0001,
   };
   const TABLET_LOST_MS = 10000;
   const ROTATE_KEY = 'final-gate-tv.rotate';
@@ -246,6 +250,27 @@
     post('/api/reset');
   });
 
+  /**
+   * A video left paused for a while freezes for up to half a second just after it starts with sound.
+   * A seek or a muted play doesn't prevent that, which points at the audio output having gone idle.
+   * So when a pass arrives, run it inaudibly quiet behind the still, then send it back to the start,
+   * ready for the flash.
+   */
+  let wakeTimer = null;
+
+  function wakeVideo() {
+    if (!videoReady) return;
+    video.muted = false;
+    video.volume = FX.wakeVolume;
+    // refused if nobody has clicked this page yet; then the show plays muted, which doesn't freeze
+    video.play().catch(() => {});
+    wakeTimer = setTimeout(() => {
+      if (phase !== 'arriving') return;
+      video.pause();
+      video.currentTime = 0;
+    }, FX.wakeMs);
+  }
+
   async function playVideo() {
     if (!videoReady) {
       playWhenReady = true;
@@ -253,6 +278,7 @@
     }
     playWhenReady = false;
     video.muted = false;
+    video.volume = 1;
     try {
       await video.play();
     } catch (e) {
@@ -298,6 +324,7 @@
     sparks = [];
     trailDue = 0;
     lastHeal = null;
+    wakeVideo();
     renderStatus();
     frameHandle = requestAnimationFrame(frame);
   }
@@ -307,6 +334,7 @@
     if (frameHandle !== null) cancelAnimationFrame(frameHandle);
     frameHandle = null;
     playWhenReady = false;
+    clearTimeout(wakeTimer);
     still.hidden = false;
     ctx.clearRect(0, 0, W, H);
     video.pause();
