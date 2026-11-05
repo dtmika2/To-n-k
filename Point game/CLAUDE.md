@@ -8,6 +8,7 @@ A memory game for a 75" portrait touch table: a PixiJS 8 + Web Audio PWA, run in
   - The picture is turned 270° by default (`display.rotateDeg`), for a landscape TV; use `?rotate=0` to work upright in a desktop browser.
   - `M` opens the menu overlay (`src/debug/menu.ts`): the key legend plus live switches. New keys and safe live tunables belong there too.
   - `/vfx.html`: look-dev page, classic and vfx side by side with sliders.
+  - `/install.html`: one-tap install page (`src/install/installPage.ts`); public at https://dtmika2.github.io/To-n-k/point-game/install.html.
 - `npm run verify` — typecheck, vitest, pattern validation and build. Run this before committing.
 - `npm run validate` / `npm run assign-pitches` — run these after changing `src/config/pattern.json`.
 - **Don't run the Playwright e2e/perf tests unless asked.**

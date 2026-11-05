@@ -48,8 +48,14 @@ export default defineConfig({
   build: {
     target: 'es2022',
     chunkSizeWarningLimit: 1500,
-    // vfx.html: look-dev page for the two visual looks (see src/dev/vfxLab.ts)
-    rollupOptions: { input: { main: resolve(import.meta.dirname, 'index.html'), vfx: resolve(import.meta.dirname, 'vfx.html') } },
+    // vfx.html: look-dev page for the two visual looks (see src/dev/vfxLab.ts); install.html: one-tap install page
+    rollupOptions: {
+      input: {
+        main: resolve(import.meta.dirname, 'index.html'),
+        vfx: resolve(import.meta.dirname, 'vfx.html'),
+        install: resolve(import.meta.dirname, 'install.html'),
+      },
+    },
   },
   plugins: [
     savePattern(),
@@ -64,11 +70,16 @@ export default defineConfig({
         orientation: 'any',
         background_color: '#07051a',
         theme_color: '#07051a',
-        icons: [{ src: 'icon.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any' }],
+        // The design stays inside the maskable safe zone, so one image serves both purposes.
+        icons: [
+          { src: 'icons/icon-192.png', sizes: '192x192', type: 'image/png' },
+          { src: 'icons/icon-512.png', sizes: '512x512', type: 'image/png' },
+          { src: 'icons/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+        ],
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,json,png,jpg,jpeg,webp,svg,ico,woff2,mp4}'],
-        maximumFileSizeToCacheInBytes: 20 * 1024 * 1024,
+        maximumFileSizeToCacheInBytes: 32 * 1024 * 1024,
         navigateFallback: 'index.html',
         navigateFallbackDenylist: [/\/vfx\.html/],
         cleanupOutdatedCaches: true,

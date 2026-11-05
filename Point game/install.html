@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#07051a" />
+    <link rel="icon" type="image/svg+xml" href="/icon.svg" />
+    <link rel="apple-touch-icon" href="/icons/icon-192.png" />
+    <title>Install Dream Pattern</title>
+    <style>
+      :root {
+        --bg: #07051a;
+        --ink: #efe9dc;
+        --muted: #a29fbb;
+        --gold: #f3d99a;
+        --gold-deep: #c9a75a;
+        --line: #2a2548;
+        --blue: #9fb7ff;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        margin: 0;
+        min-height: 100%;
+        background: var(--bg);
+        color: var(--ink);
+        font-family: system-ui, sans-serif;
+      }
+      body {
+        display: grid;
+        place-items: center;
+        min-height: 100vh;
+        padding: 24px 16px;
+        background: radial-gradient(ellipse at 50% 35%, #1b1640 0%, var(--bg) 65%);
+      }
+      main {
+        width: min(460px, 100%);
+        text-align: center;
+      }
+      img {
+        width: 112px;
+        height: 112px;
+        border-radius: 24px;
+        box-shadow: 0 6px 28px rgba(0, 0, 0, 0.7);
+      }
+      h1 {
+        font-family: Georgia, 'Times New Roman', serif;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        font-size: 30px;
+        margin: 20px 0 6px;
+        color: var(--gold);
+      }
+      .lead {
+        color: var(--muted);
+        margin: 0 0 28px;
+        line-height: 1.5;
+      }
+      button,
+      .open {
+        display: inline-block;
+        min-width: 240px;
+        padding: 16px 28px;
+        border-radius: 999px;
+        border: 2px solid var(--gold);
+        background: linear-gradient(180deg, #f3d99a 0%, #c9a75a 100%);
+        color: #15102e;
+        font: 700 18px Georgia, 'Times New Roman', serif;
+        letter-spacing: 0.04em;
+        text-decoration: none;
+        cursor: pointer;
+        box-shadow: 0 4px 18px rgba(0, 0, 0, 0.6);
+      }
+      button:disabled {
+        opacity: 0.35;
+        cursor: default;
+      }
+      .open {
+        background: transparent;
+        color: var(--gold);
+        margin-top: 14px;
+      }
+      [hidden] {
+        display: none !important;
+      }
+      #status {
+        margin: 22px 0 0;
+        min-height: 1.5em;
+        line-height: 1.5;
+      }
+      #status.ok {
+        color: var(--blue);
+      }
+      #offline {
+        margin: 6px 0 0;
+        font-size: 14px;
+        color: var(--muted);
+      }
+      #offline.ok {
+        color: var(--blue);
+      }
+      details {
+        margin-top: 30px;
+        text-align: left;
+        color: var(--muted);
+        border-top: 1px solid var(--line);
+        padding-top: 14px;
+      }
+      summary {
+        cursor: pointer;
+        color: var(--ink);
+      }
+      ol {
+        padding-left: 20px;
+        line-height: 1.6;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <img src="/icons/icon-192.png" alt="" />
+      <h1>Dream Pattern</h1>
+      <p class="lead">Install the game on this device. Once installed it runs fullscreen and works without internet.</p>
+
+      <button id="install" type="button" disabled>Install</button>
+      <div><a class="open" id="open" href="./" hidden>Open the game</a></div>
+
+      <p id="status" role="status">Getting ready…</p>
+      <p id="offline">Saving files for offline use…</p>
+
+      <details id="help">
+        <summary>The button doesn't work?</summary>
+        <ol>
+          <li><strong>Android or computer:</strong> use Chrome or Edge, not an in-app browser. Open the browser menu and choose <strong>Install app</strong> or <strong>Add to Home screen</strong>.</li>
+          <li><strong>iPhone or iPad:</strong> tap <strong>Open the game</strong> in Safari, then <strong>Share</strong> → <strong>Add to Home Screen</strong>.</li>
+          <li>If it is already installed, open it from its icon (a gold eye).</li>
+        </ol>
+      </details>
+    </main>
+    <script type="module" src="/src/install/installPage.ts"></script>
+  </body>
+</html>

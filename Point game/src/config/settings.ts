@@ -77,7 +77,7 @@ export const settings = {
      * Experimental backdrops (B key, M menu, `?backdrop=`): looping silent videos, portrait 9:16, H.264 MP4.
      * A name here becomes a choice; the image above stays the default and the fallback.
      */
-    backdropVideos: { loop: 'assets/BackdropLoop.mp4', swirl: 'assets/BackdropSwirl.mp4' } as Record<string, string>,
+    backdropVideos: { loop: 'assets/BackdropLoop.mp4', swirl: 'assets/BackdropSwirlHighRes.mp4' } as Record<string, string>,
     /**
      * Depth mode (Z key, M menu, `?depth=0` for off): eyes at different distances. Ranges are
      * [far, near]. Visual only: the hit radii don't change. See render/depth.ts.

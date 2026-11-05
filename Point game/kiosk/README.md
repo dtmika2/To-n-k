@@ -2,7 +2,7 @@
 
 The app runs from the built `dist/` folder through a tiny local server and a full-screen Chrome window. It works fully offline: the service worker caches everything after the first start.
 
-To try it on another PC without this setup, open the public build instead: **https://dtmika2.github.io/To-n-k/point-game/** (published from `main`; also offline after the first visit).
+To try it on another PC without this setup, open the public build instead: **https://dtmika2.github.io/To-n-k/point-game/** (published from `main`; also offline after the first visit). To install it as an app, open **https://dtmika2.github.io/To-n-k/point-game/install.html**.
 
 ## Build and test once
 

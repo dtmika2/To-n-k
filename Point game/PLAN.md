@@ -427,4 +427,4 @@ Goal: the owner can play the full rules on the real TV, hear the real sound, and
 ## Amendment (2026-11-05): new backdrop, and videos to try
 
 - **Image.** The default backdrop is now `BackdropHighRes.jpeg` (3072×5472), sharp at 4K.
-- **Videos (experimental).** `BackdropLoop.mp4` (2160×3840) and `BackdropSwirl.mp4` (480×848) can replace the image, by `B`, the M menu or `?backdrop=loop|swirl`. They are looping silent H.264, cached for offline use, and a video that cannot play falls back to the image.
+- **Videos (experimental).** `BackdropLoop.mp4` (2160×3840) and `BackdropSwirlHighRes.mp4` (2160×3840) can replace the image, by `B`, the M menu or `?backdrop=loop|swirl`. They are looping silent H.264, cached for offline use, and a video that cannot play falls back to the image.
