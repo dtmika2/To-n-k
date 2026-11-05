@@ -72,7 +72,8 @@ ring fills as you hold. Enter the PIN (`operator.pin` in config.json; default `0
 - **PC address**: where to tell the TV that the lock was passed. Enter the address shown by
   `Final-Gate-Lock-Server.exe` on the PC (see `docs/SIGNAL-TEST.md`), then tap **Save**. The line below
   shows the live link. Chrome may ask to allow access to the local network: allow it, or the link stays
-  DOWN. Leave the field empty to send no signal. **Force open** sends the signal too.
+  DOWN. Leave the field empty to send no signal. The signal goes as the core leaves the top of the
+  screen, for **Force open** too.
 
 Menu settings are saved on the tablet (localStorage) and survive restarts; `config.json` stays the
 default. The menu closes itself after 60 s without input.

@@ -52,6 +52,7 @@ const MIME = {
   '.ogg': 'audio/ogg',
   '.mp3': 'audio/mpeg',
   '.wav': 'audio/wav',
+  '.mp4': 'video/mp4',
 };
 
 const CORS = {
@@ -269,6 +270,13 @@ function readTvPage() {
   return PACKED ? Buffer.from(sea.getRawAsset('tv.html')) : readFileSync(join(__dirname, 'signal-tv.html'));
 }
 
+/** The TV's video, or null if it's missing. Replace the file to change the content. */
+function readTvVideo() {
+  if (PACKED) return Buffer.from(sea.getRawAsset('tv-video.mp4'));
+  const file = resolve(__dirname, '../PlaceholderVideo.mp4');
+  return existsSync(file) ? readFileSync(file) : null;
+}
+
 /** A file of the built lock, or null. `path` starts with a slash. */
 function readDistFile(path) {
   if (PACKED) {
@@ -292,6 +300,15 @@ function sendBytes(res, name, bytes) {
 function handleStatic(res, path) {
   if (path === '/tv' || path === '/tv/') {
     sendBytes(res, 'tv.html', readTvPage());
+    return;
+  }
+  if (path === '/tv/video') {
+    const video = readTvVideo();
+    if (video) sendBytes(res, 'tv-video.mp4', video);
+    else {
+      res.writeHead(404, { 'Content-Type': 'text/plain' });
+      res.end('No video file');
+    }
     return;
   }
   // No service worker from this server: on localhost it would take over and answer /tv with the lock.

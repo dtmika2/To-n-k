@@ -73,6 +73,8 @@ export class Game {
   readonly gesture: OperatorGesture;
   /** Called when the operator hold completes (App opens the PIN pad). */
   onOperator: (() => void) | null = null;
+  /** The core has flown off the top of the screen (solved or forced open). */
+  onCoreLeft: (() => void) | null = null;
   private staticRevision: number;
   /** Current touch position per touched wheel (logical), for Curious neighbours. */
   private touches = new Map<Wheel, { x: number; y: number }>();

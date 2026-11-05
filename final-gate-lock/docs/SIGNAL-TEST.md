@@ -16,11 +16,33 @@ installed.
    an unknown publisher, choose **More info → Run anyway**. If Windows Firewall asks, choose **Allow**,
    which may need an administrator on a managed PC.
 3. The window shows the **PC address**, such as `192.168.2.51:8787`, and the TV page opens by itself.
-   Move it to the TV and press **F** for fullscreen. The TV page also shows the address until the tablet
-   connects. Keep the window open: closing it stops the server.
+   Move it to the TV and **click it once**. That goes fullscreen and turns on sound: browsers refuse to
+   play sound on a page nobody has touched, so without the click the video plays muted. The TV page also
+   shows the address until the tablet connects. Keep the window open: closing it stops the server.
+4. If the picture is sideways, press **O** to rotate it. This is for a TV that's physically turned while
+   Windows still sends a landscape picture, and it's remembered on that PC. Turning the display to
+   portrait in Windows settings works too.
+5. Make sure Windows sends sound to the TV: over HDMI it can stay on the PC's own speakers.
 
 Turn off sleep on the PC, because a sleeping PC stops the server. If port 8787 is busy, the program
 uses the next free port, so always read the address rather than assuming it.
+
+## What the TV does
+
+The video waits on its first frame. When the core reaches the top edge of the tablet (9.7 s into the
+opening), the tablet signals the PC. The core rises in from the bottom of the TV, slows to the centre of
+the video, swells slightly and collapses to nothing. In that instant comes the flash, and the video
+starts with its sound. When it ends, the TV returns to the frozen first frame for the next group.
+
+Passes that arrive while the video is playing are ignored by the TV. If staff reset the lock before the
+core has left, nothing is sent.
+
+Timings, size and the target point are in `FX` at the top of the script in `scripts/signal-tv.html`.
+Tablet timing is `coreLeftMs` in `src/feel.ts`.
+
+**The video** is `PlaceholderVideo.mp4` in this folder, packed into the program by `npm run signal:exe`.
+Use H.264 with AAC, in the TV's own resolution. A larger file can stutter on an older PC, which may not
+have hardware decoding for it.
 
 ## Set up the tablet
 
@@ -30,7 +52,8 @@ uses the next free port, so always read the address rather than assuming it.
 4. The line below the field should change to `TV link OK · N ms`.
 
 Players never see any of this: the status only appears in the operator menu. **Force open** in the menu
-is a quick end-to-end test, and it sends the signal just as solving the lock does.
+is a quick end-to-end test: it runs the whole opening and sends the signal about 10 s later, just as
+solving the lock does.
 
 **The PC address can change** when a PC reconnects to a network. The TV page then shows the new address
 until the tablet connects, so enter that in the menu. To avoid this, reserve a fixed address for the PC
@@ -38,8 +61,12 @@ in the router.
 
 ## TV page keys
 
-**P** passes by hand, which is the backup if the tablet can't connect. **R** clears the screen for the
-next group. **F** toggles fullscreen.
+**P** passes by hand, which is the backup if the tablet can't connect. **R** returns to the frozen first
+frame. **F** toggles fullscreen. **O** rotates 90°. **H** shows or hides the status panel.
+
+The panel appears by itself only on the frozen frame, and only when something needs doing: no click yet,
+no tablet connected, or a problem with the server or the video. It hides as soon as the core arrives, but
+it can show over the frozen frame if the tablet drops out, so check it before players come in.
 
 ## Testing from the repo
 

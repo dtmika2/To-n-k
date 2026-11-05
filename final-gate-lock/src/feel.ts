@@ -101,5 +101,10 @@ export const FEEL = {
      */
     coreFlyAt: 8000,
     coreFlyMs: 1800,
+    /**
+     * How far into the flight the core reaches the top edge: the moment the TV is told, so the core
+     * leaves here and arrives there. Tied to the rise in Core.ts (FLY).
+     */
+    coreLeftMs: 1700,
   },
 } as const;

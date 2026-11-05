@@ -8,6 +8,7 @@
  *   4.0 s      the plate breaks free (a short shove apart, a burst of dust), a breath, then the
  *              halves grind slowly apart over the gold core (core hum rises) while dust keeps falling
  *   8.0 s      the core swells a little and flies up off the top of the screen (whoosh, hum fades)
+ *   9.7 s      it reaches the top edge: the TV is told, and the core arrives there
  *  10.0 s      → Open (halves apart, the light and dust lingering in the doorway, eyes closed)
  */
 import type { Game } from '../app/Game';
@@ -110,5 +111,7 @@ export async function runSuccess(game: Game, seq: Seq): Promise<void> {
   game.sfx.play('reveal_whoosh', { rate: 0.8 });
   game.sfx.loop('core_hum', false, S.coreFlyMs);
   seq.fire({ duration: S.coreFlyMs, ease: ease.linear, onUpdate: (k) => (game.unlock.fly = k) });
+  // it's off the top edge: from here it's the TV's to show (not sent if staff reset the lock first)
+  seq.after(S.coreLeftMs, () => game.onCoreLeft?.());
   await at(SUCCESS_MS);
 }

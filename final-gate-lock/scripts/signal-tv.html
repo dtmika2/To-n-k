@@ -3,102 +3,493 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>TV Signal Test</title>
+<title>Final Gate TV</title>
 <style>
-  :root { --bg: #050405; --fg: #e8e2d4; --dim: #8d877b; --ok: #46c47e; --bad: #e0574f; --pass: #0f7a42; }
+  :root { --bg: #000; --fg: #f3ecdc; --panel: rgba(12, 10, 8, .86); --bad: #ff8a80; --ok: #7ee2a8; }
   * { box-sizing: border-box; }
-  html, body { height: 100%; margin: 0; }
-  body {
-    display: flex; flex-direction: column; background: var(--bg); color: var(--fg);
-    font-family: system-ui, sans-serif; transition: background-color .25s;
+  html, body { height: 100%; margin: 0; overflow: hidden; background: var(--bg); color: var(--fg); font-family: system-ui, sans-serif; }
+  body.armed { cursor: none; }
+  body.show-status { cursor: default; }
+  #stage { position: fixed; left: 50%; top: 50%; overflow: hidden; background: var(--bg); }
+  #video, #fx { position: absolute; inset: 0; width: 100%; height: 100%; }
+  #video { object-fit: contain; }
+  #fx { pointer-events: none; }
+  #status {
+    position: absolute; left: 50%; bottom: 4%; transform: translateX(-50%); width: min(92%, 900px);
+    padding: 18px 24px; border-radius: 10px; background: var(--panel); text-align: center;
+    font-size: clamp(16px, 2.2vmin, 28px); line-height: 1.4;
   }
-  body.passed { background: var(--pass); }
-  body.flash { animation: flash .9s ease-out; }
-  @keyframes flash { 0%, 40% { background: #fff; } 100% { background: var(--pass); } }
-  main { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 16px; }
-  h1 { margin: 0; font-size: clamp(48px, 12vw, 180px); letter-spacing: .02em; }
-  #detail { margin-top: 16px; font-size: clamp(16px, 2.4vw, 32px); color: var(--dim); }
-  body.passed #detail { color: var(--fg); }
-  footer { display: flex; flex-wrap: wrap; gap: 8px 32px; justify-content: space-between; padding: 16px 24px; font-size: 18px; }
-  .ok { color: var(--ok); }
-  .bad { color: var(--bad); }
-  body.passed .ok, body.passed .bad { color: var(--fg); }
-  kbd { padding: 1px 7px; border: 1px solid currentColor; border-radius: 4px; font: inherit; }
-  #setup { margin-top: 40px; font-size: clamp(16px, 2.4vw, 32px); overflow-wrap: anywhere; }
-  #setup[hidden] { display: none; }
-  #link { margin-top: 8px; font-family: monospace; font-size: 1.5em; font-weight: 700; }
+  #status[hidden] { display: none; }
+  #status div + div { margin-top: 8px; }
+  #status .big { font: 700 1.6em monospace; overflow-wrap: anywhere; }
+  #status .bad { color: var(--bad); }
+  #status .ok { color: var(--ok); }
+  #status .keys { font-size: .75em; opacity: .75; }
+  kbd { padding: 0 6px; border: 1px solid currentColor; border-radius: 4px; font: inherit; }
 </style>
 </head>
 <body>
-  <main>
-    <h1 id="title">WAITING</h1>
-    <div id="detail">No pass yet</div>
-    <div id="setup" hidden>
-      <div>On the tablet: operator menu &gt; PC address, enter:</div>
-      <div id="link"></div>
-    </div>
-  </main>
-  <footer>
-    <div><span id="server" class="bad">Server: connecting…</span> &nbsp; <span id="tablet" class="bad">Tablet: not seen</span></div>
-    <div><kbd>P</kbd> pass by hand &nbsp; <kbd>R</kbd> reset &nbsp; <kbd>F</kbd> fullscreen</div>
-  </footer>
+  <div id="stage">
+    <video id="video" playsinline preload="auto"></video>
+    <canvas id="fx"></canvas>
+    <div id="status" hidden></div>
+  </div>
 <script>
+  /**
+   * The TV screen. The video waits on its first frame. When the lock is passed, the core that just
+   * left the top of the tablet rises in from the bottom edge, slows to the centre of the video,
+   * draws in and vanishes. In that instant comes the flash, and the video comes alive with its sound.
+   *
+   * Keys: P pass by hand · R back to the frozen frame · F fullscreen · O rotate 90° · H status
+   */
+  const FX = {
+    /** Where the core ends up, as a share of the video's width and height. */
+    target: { x: 0.5, y: 0.5 },
+    /** Core image width as a share of the screen width. */
+    coreShare: 0.72,
+    /** Rising in from the bottom edge to the target. */
+    travelMs: 2400,
+    /** Sideways drift on the way in, as a share of the screen width. */
+    driftShare: 0.035,
+    /** Swelling as it draws in, then collapsing to nothing. */
+    shrinkMs: 950,
+    swellBy: 0.12,
+    swellShare: 0.28,
+    /** The flash: fast up, slow down. The video starts as it rises. */
+    flashRiseMs: 100,
+    flashFallMs: 1800,
+    ringMs: 1200,
+    burstSparks: 140,
+    trailSparksPerMs: 0.09,
+  };
   const TABLET_LOST_MS = 10000;
-  const $ = (id) => document.getElementById(id);
-  let lastPasses = null;
+  const ROTATE_KEY = 'final-gate-tv.rotate';
 
-  function setLink(el, text, ok) {
-    el.textContent = text;
-    el.className = ok ? 'ok' : 'bad';
+  const $ = (id) => document.getElementById(id);
+  const stage = $('stage');
+  const video = $('video');
+  const canvas = $('fx');
+  const ctx = canvas.getContext('2d');
+  const statusBox = $('status');
+
+  const coreImage = new Image();
+  coreImage.src = '/assets/sprites/core.png';
+
+  const clamp01 = (v) => Math.min(1, Math.max(0, v));
+  const lerp = (a, b, k) => a + (b - a) * k;
+  const outCubic = (k) => 1 - Math.pow(1 - k, 3);
+  const inCubic = (k) => k * k * k;
+  const outQuad = (k) => 1 - (1 - k) * (1 - k);
+
+  // ---- layout: the stage is what's upright on the TV, whatever Windows thinks the screen is
+
+  let rotation = 0;
+  try {
+    const saved = Number(localStorage.getItem(ROTATE_KEY));
+    if ([90, 180, 270].includes(saved)) rotation = saved;
+  } catch { /* blocked storage: start upright */ }
+
+  let W = 0;
+  let H = 0;
+
+  function layout() {
+    const sideways = rotation === 90 || rotation === 270;
+    W = sideways ? window.innerHeight : window.innerWidth;
+    H = sideways ? window.innerWidth : window.innerHeight;
+    stage.style.width = `${W}px`;
+    stage.style.height = `${H}px`;
+    stage.style.transform = `translate(-50%, -50%) rotate(${rotation}deg)`;
+    canvas.width = W;
+    canvas.height = H;
+  }
+  window.addEventListener('resize', layout);
+  layout();
+
+  /** The target point in stage pixels, allowing for the bars around a video that doesn't fill it. */
+  function targetPoint() {
+    const vw = video.videoWidth || W;
+    const vh = video.videoHeight || H;
+    const scale = Math.min(W / vw, H / vh);
+    const shownW = vw * scale;
+    const shownH = vh * scale;
+    return { x: (W - shownW) / 2 + shownW * FX.target.x, y: (H - shownH) / 2 + shownH * FX.target.y };
   }
 
-  function render(s) {
-    document.body.classList.toggle('passed', s.passed);
-    $('title').textContent = s.passed ? 'LOCK PASSED' : 'WAITING';
-    if (s.passes > 0 && s.lastPassAt) {
-      const how = s.lastSource === 'manual' ? 'by hand' : 'from the tablet';
-      const when = new Date(s.lastPassAt).toLocaleTimeString();
-      $('detail').textContent = `Pass #${s.passes} ${how} at ${when}`;
-    } else {
-      $('detail').textContent = 'No pass yet';
+  // ---- the video
+
+  let videoReady = false;
+  let videoError = null;
+  let playWhenReady = false;
+  let soundBlocked = false;
+
+  async function loadVideo() {
+    // Whole file into memory: it can't stall mid-show, and going back to the first frame is instant.
+    try {
+      const res = await fetch('/tv/video');
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const blob = await res.blob();
+      video.src = URL.createObjectURL(blob);
+    } catch (e) {
+      videoError = `Video didn't load (${e.message}). Retrying…`;
+      renderStatus();
+      setTimeout(loadVideo, 3000);
     }
+  }
 
-    if (s.tabletAgeMs === null) setLink($('tablet'), 'Tablet: not seen', false);
-    else if (s.tabletAgeMs > TABLET_LOST_MS) setLink($('tablet'), `Tablet: LOST (${Math.round(s.tabletAgeMs / 1000)} s ago)`, false);
-    else setLink($('tablet'), `Tablet: connected${s.rttMs === null ? '' : ` · ${s.rttMs} ms round trip`}`, true);
+  video.addEventListener('canplaythrough', () => {
+    if (videoReady) return;
+    videoReady = true;
+    videoError = null;
+    renderStatus();
+    if (playWhenReady) playVideo();
+  });
+  video.addEventListener('error', () => {
+    videoError = "This browser can't play the video file.";
+    renderStatus();
+  });
+  video.addEventListener('ended', () => {
+    backToFrozen();
+    post('/api/reset');
+  });
 
-    // only while the tablet is missing, so it's gone by the time players can see the screen
-    $('setup').hidden = s.tabletAgeMs !== null && s.tabletAgeMs <= TABLET_LOST_MS;
-    $('link').textContent = s.pcAddress ?? 'No network yet. Connect this PC to the same network as the tablet.';
-
-    // A pass that arrives while this page is open (or reconnecting) flashes; loading the page doesn't.
-    if (lastPasses !== null && s.passes > lastPasses) {
-      document.body.classList.remove('flash');
-      void document.body.offsetWidth;
-      document.body.classList.add('flash');
+  async function playVideo() {
+    if (!videoReady) {
+      playWhenReady = true;
+      return;
     }
-    lastPasses = s.passes;
+    playWhenReady = false;
+    video.muted = false;
+    try {
+      await video.play();
+    } catch (e) {
+      if (e.name !== 'NotAllowedError') {
+        console.error(e);
+        return;
+      }
+      // nobody has clicked this page yet, so the browser refuses sound: better silent than frozen
+      soundBlocked = true;
+      video.muted = true;
+      video.play().catch((err) => console.error(err));
+    }
+  }
+
+  // ---- the sequence
+
+  /** 'frozen' → 'arriving' (core on its way in) → 'playing' → back to 'frozen'. */
+  let phase = 'frozen';
+  let startedAt = 0;
+  let lastFrameAt = 0;
+  let frameHandle = null;
+  let flashStarted = false;
+  let sparks = [];
+  let trailDue = 0;
+
+  const FLASH_AT = FX.travelMs + FX.shrinkMs;
+  const FLASH_MS = Math.max(FX.flashRiseMs + FX.flashFallMs, FX.ringMs, 1600);
+
+  function startSequence() {
+    if (phase !== 'frozen') return;
+    phase = 'arriving';
+    startedAt = performance.now();
+    lastFrameAt = startedAt;
+    flashStarted = false;
+    sparks = [];
+    trailDue = 0;
+    renderStatus();
+    frameHandle = requestAnimationFrame(frame);
+  }
+
+  function backToFrozen() {
+    phase = 'frozen';
+    if (frameHandle !== null) cancelAnimationFrame(frameHandle);
+    frameHandle = null;
+    playWhenReady = false;
+    ctx.clearRect(0, 0, W, H);
+    video.pause();
+    if (videoReady) video.currentTime = 0;
+    renderStatus();
+  }
+
+  function addSpark(x, y, vx, vy, life, size) {
+    sparks.push({ x, y, vx, vy, age: 0, life, size });
+  }
+
+  /** A soft ember, drawn once and reused: a gradient per spark per frame would be wasteful. */
+  const ember = document.createElement('canvas');
+  ember.width = ember.height = 64;
+  {
+    const c = ember.getContext('2d');
+    const g = c.createRadialGradient(32, 32, 0, 32, 32, 32);
+    g.addColorStop(0, 'rgba(255, 250, 230, 1)');
+    g.addColorStop(0.18, 'rgba(255, 226, 160, .9)');
+    g.addColorStop(0.45, 'rgba(255, 180, 80, .28)');
+    g.addColorStop(1, 'rgba(255, 160, 60, 0)');
+    c.fillStyle = g;
+    c.fillRect(0, 0, 64, 64);
+  }
+
+  function drawSparks(dt) {
+    ctx.globalCompositeOperation = 'lighter';
+    for (let i = sparks.length - 1; i >= 0; i--) {
+      const s = sparks[i];
+      s.age += dt;
+      if (s.age >= s.life) {
+        sparks.splice(i, 1);
+        continue;
+      }
+      const damp = Math.exp(-dt * 0.0016);
+      s.vx *= damp;
+      s.vy *= damp;
+      s.x += s.vx * dt;
+      s.y += s.vy * dt;
+      const k = 1 - s.age / s.life;
+      const d = s.size * (0.5 + 0.5 * k) * 5; // the ember image is mostly soft edge
+      ctx.globalAlpha = k * 0.9;
+      ctx.drawImage(ember, s.x - d / 2, s.y - d / 2, d, d);
+    }
+    ctx.globalAlpha = 1;
+    ctx.globalCompositeOperation = 'source-over';
+  }
+
+  function drawGlow(x, y, radius, alpha, inner = '255, 244, 214', outer = '255, 190, 90') {
+    if (radius <= 0 || alpha <= 0) return;
+    const g = ctx.createRadialGradient(x, y, 0, x, y, radius);
+    g.addColorStop(0, `rgba(${inner}, ${alpha})`);
+    g.addColorStop(0.35, `rgba(${outer}, ${alpha * 0.55})`);
+    g.addColorStop(1, `rgba(${outer}, 0)`);
+    ctx.fillStyle = g;
+    ctx.fillRect(x - radius, y - radius, radius * 2, radius * 2);
+  }
+
+  /** The core at `t` ms into the sequence: position and scale, on its way in and drawing in. */
+  function corePose(t, target, size) {
+    const travel = clamp01(t / FX.travelMs);
+    const eased = outCubic(travel);
+    const x = target.x + Math.sin(travel * Math.PI * 2.2) * W * FX.driftShare * (1 - eased);
+    const y = lerp(H + size * 0.5, target.y, eased);
+    const shrink = clamp01((t - FX.travelMs) / FX.shrinkMs);
+    const scale = shrink < FX.swellShare
+      ? 1 + FX.swellBy * outQuad(shrink / FX.swellShare)
+      : (1 + FX.swellBy) * (1 - inCubic((shrink - FX.swellShare) / (1 - FX.swellShare)));
+    return { x, y, scale, shrink };
+  }
+
+  function drawCore(t, target, size, dt) {
+    const pose = corePose(t, target, size);
+    const s = size * pose.scale;
+    if (s <= 0.5) return;
+
+    const breathe = 0.92 + 0.08 * Math.sin(t * 0.0034);
+    ctx.globalCompositeOperation = 'lighter';
+    // the glow tightens and burns brighter as it draws in
+    drawGlow(pose.x, pose.y, s * 1.05, lerp(0.55, 1, pose.shrink) * breathe);
+    if (coreImage.complete && coreImage.naturalWidth > 0) {
+      ctx.save();
+      ctx.translate(pose.x, pose.y);
+      ctx.rotate(t * 0.00005);
+      ctx.drawImage(coreImage, -s / 2, -s / 2, s, s);
+      ctx.restore();
+    }
+    ctx.globalCompositeOperation = 'source-over';
+
+    // a trail of embers falling behind it
+    if (t < FLASH_AT) {
+      trailDue += dt * FX.trailSparksPerMs;
+      while (trailDue >= 1) {
+        trailDue -= 1;
+        const angle = Math.random() * Math.PI * 2;
+        const r = Math.random() * s * 0.16;
+        addSpark(
+          pose.x + Math.cos(angle) * r,
+          pose.y + Math.sin(angle) * r,
+          (Math.random() - 0.5) * 0.09,
+          0.03 + Math.random() * 0.13,
+          600 + Math.random() * 800,
+          1.5 + Math.random() * 3,
+        );
+      }
+    }
+  }
+
+  function startFlash(target) {
+    flashStarted = true;
+    phase = 'playing';
+    playVideo();
+    renderStatus();
+    const speed = Math.hypot(W, H) * 0.0011;
+    for (let i = 0; i < FX.burstSparks; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const v = speed * (0.25 + Math.random() * Math.random() * 1.5);
+      addSpark(target.x, target.y, Math.cos(angle) * v, Math.sin(angle) * v, 700 + Math.random() * 1300, 1.5 + Math.random() * 4);
+    }
+  }
+
+  function drawFlash(t, target) {
+    const reach = Math.hypot(W, H);
+    const up = clamp01(t / FX.flashRiseMs);
+    const down = clamp01((t - FX.flashRiseMs) / FX.flashFallMs);
+    const strength = up < 1 ? up : Math.pow(1 - down, 2.4);
+
+    ctx.globalCompositeOperation = 'lighter';
+    if (strength > 0) {
+      const g = ctx.createRadialGradient(target.x, target.y, 0, target.x, target.y, reach * 0.75);
+      g.addColorStop(0, `rgba(255, 255, 255, ${strength})`);
+      g.addColorStop(0.3, `rgba(255, 232, 170, ${strength * 0.85})`);
+      g.addColorStop(1, `rgba(255, 180, 80, ${strength * 0.5})`);
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, W, H);
+    }
+    const ring = clamp01(t / FX.ringMs);
+    if (ring < 1) {
+      // a soft pressure wave rather than a drawn line: no hard edge on either side
+      const r = outCubic(ring) * reach * 0.7;
+      const band = W * (0.08 + 0.16 * ring);
+      const g = ctx.createRadialGradient(target.x, target.y, Math.max(0, r - band), target.x, target.y, r + band);
+      const a = Math.pow(1 - ring, 1.5) * 0.45;
+      g.addColorStop(0, 'rgba(255, 226, 160, 0)');
+      g.addColorStop(0.5, `rgba(255, 226, 160, ${a})`);
+      g.addColorStop(1, 'rgba(255, 226, 160, 0)');
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, W, H);
+    }
+    ctx.globalCompositeOperation = 'source-over';
+  }
+
+  function frame(now) {
+    const dt = Math.min(now - lastFrameAt, 100);
+    lastFrameAt = now;
+    const t = now - startedAt;
+    const target = targetPoint();
+    const size = W * FX.coreShare;
+
+    ctx.clearRect(0, 0, W, H);
+    if (t < FLASH_AT) drawCore(t, target, size, dt);
+    else if (!flashStarted) startFlash(target);
+    if (flashStarted) drawFlash(t - FLASH_AT, target);
+    drawSparks(dt);
+
+    if (t >= FLASH_AT + FLASH_MS && sparks.length === 0) {
+      ctx.clearRect(0, 0, W, H);
+      frameHandle = null;
+      return;
+    }
+    frameHandle = requestAnimationFrame(frame);
+  }
+
+  // ---- signal from the server
+
+  let last = null;
+  let serverUp = false;
+
+  function onState(s) {
+    const isNewPass = last !== null && s.passes > last.passes;
+    const wasCleared = last !== null && last.passed && !s.passed;
+    last = s;
+    if (isNewPass) startSequence();
+    else if (wasCleared && phase !== 'frozen') backToFrozen();
+    renderStatus();
   }
 
   const events = new EventSource('/api/events');
-  events.onopen = () => setLink($('server'), 'Server: connected', true);
-  events.onerror = () => setLink($('server'), 'Server: DISCONNECTED', false);
+  events.onopen = () => {
+    serverUp = true;
+    renderStatus();
+  };
+  events.onerror = () => {
+    serverUp = false;
+    renderStatus();
+  };
   events.onmessage = (e) => {
-    setLink($('server'), 'Server: connected', true);
-    render(JSON.parse(e.data));
+    serverUp = true;
+    onState(JSON.parse(e.data));
   };
 
   const post = (path) => fetch(path, { method: 'POST', body: '{}' }).catch((e) => console.error(e));
+
+  // ---- operator status: only ever shown on the frozen frame, and only when something needs doing
+
+  let forceStatus = false;
+
+  const hasClicked = () => navigator.userActivation?.hasBeenActive ?? armed;
+  let armed = false;
+
+  function line(text, cls) {
+    const d = document.createElement('div');
+    d.textContent = text;
+    if (cls) d.className = cls;
+    return d;
+  }
+
+  function renderStatus() {
+    const rows = [];
+    const age = last?.tabletAgeMs ?? null;
+    const tabletHere = age !== null && age <= TABLET_LOST_MS;
+
+    if (!serverUp) rows.push(line('Server not reachable. Is the server window still open?', 'bad'));
+    if (videoError) rows.push(line(videoError, 'bad'));
+    else if (!videoReady) rows.push(line('Loading the video…'));
+    if (!hasClicked()) rows.push(line('Click here once to turn on sound and go fullscreen', 'big'));
+    if (serverUp && !tabletHere) {
+      rows.push(line('On the tablet: operator menu > PC address, enter:'));
+      rows.push(line(last?.pcAddress ?? 'No network yet. Connect this PC to the same network as the tablet.', 'big'));
+    }
+    if (forceStatus) {
+      rows.push(line(tabletHere ? `Tablet connected${last.rttMs === null ? '' : ` · ${last.rttMs} ms round trip`}` : 'Tablet not connected', tabletHere ? 'ok' : 'bad'));
+      rows.push(line(`Passes: ${last?.passes ?? 0}${soundBlocked ? ' · last video played MUTED: click this page first' : ''}`));
+    }
+    if (rows.length > 0 || forceStatus) {
+      const keys = document.createElement('div');
+      keys.className = 'keys';
+      keys.innerHTML = '<kbd>P</kbd> pass by hand &nbsp; <kbd>R</kbd> reset &nbsp; <kbd>F</kbd> fullscreen &nbsp; <kbd>O</kbd> rotate &nbsp; <kbd>H</kbd> status';
+      rows.push(keys);
+    }
+
+    // Players must never see this over the show. H still works, because staff asked for it.
+    const visible = rows.length > 0 && (phase === 'frozen' || forceStatus);
+    statusBox.replaceChildren(...rows);
+    statusBox.hidden = !visible;
+    document.body.classList.toggle('armed', hasClicked());
+    document.body.classList.toggle('show-status', visible);
+  }
+  // keeps "tablet missing" honest even if events stop arriving
+  setInterval(renderStatus, 1000);
+
+  // ---- operator input
+
+  function toggleFullscreen() {
+    if (document.fullscreenElement) document.exitFullscreen();
+    else document.documentElement.requestFullscreen().catch((err) => console.error(err));
+  }
+
+  window.addEventListener('pointerdown', () => {
+    const first = !armed;
+    armed = true;
+    soundBlocked = false;
+    if (first && !document.fullscreenElement) toggleFullscreen();
+    renderStatus();
+  });
+
   window.addEventListener('keydown', (e) => {
+    armed = true;
     if (e.repeat) return;
     const key = e.key.toLowerCase();
     if (key === 'p') post('/api/manual');
-    else if (key === 'r') post('/api/reset');
-    else if (key === 'f') {
-      if (document.fullscreenElement) document.exitFullscreen();
-      else document.documentElement.requestFullscreen().catch((err) => console.error(err));
-    }
+    else if (key === 'r') {
+      backToFrozen();
+      post('/api/reset');
+    } else if (key === 'f') toggleFullscreen();
+    else if (key === 'o') {
+      rotation = (rotation + 90) % 360;
+      try {
+        localStorage.setItem(ROTATE_KEY, String(rotation));
+      } catch { /* not remembered, still rotated */ }
+      layout();
+    } else if (key === 'h') forceStatus = !forceStatus;
+    renderStatus();
   });
+
+  renderStatus();
+  loadVideo();
 </script>
 </body>
 </html>

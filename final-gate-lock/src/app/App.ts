@@ -55,10 +55,7 @@ export async function startApp(baseConfig: AppConfig, flags: Flags): Promise<Gam
     });
     signal.start();
   };
-  // entering Success covers both a real solve and the operator's force-open
-  game.machine.on((e) => {
-    if (e.to === 'Success') signal?.passed();
-  });
+  game.onCoreLeft = () => signal?.passed();
   connectSignal(flags.signalUrl ?? settings.pcAddress ?? null);
 
   const menu = new OperatorMenu(config.operator.pin, {
