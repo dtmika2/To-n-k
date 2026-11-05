@@ -20,6 +20,12 @@ export interface OperatorActions {
   setFps(on: boolean): void;
   getTimings(): Timings;
   setTimings(t: Partial<Timings>): void;
+  /** The saved address of the PC behind the TV, as shown to the operator ('' when none). */
+  getPcAddress(): string;
+  /** Save and connect; '' turns the signal off. False if it isn't a valid address. */
+  setPcAddress(input: string): boolean;
+  /** One line about the link to that PC. */
+  linkStatus(): string;
   /** Game-clock timers (so `?speed` also shortens the auto-close in tests). */
   setTimeout(fn: () => void, ms: number): number;
   clearTimeout(h: number): void;
@@ -27,6 +33,7 @@ export interface OperatorActions {
 }
 
 export const AUTO_CLOSE_MS = 60_000;
+const LINK_REFRESH_MS = 1000;
 
 /** "Version 0.1.0 · build 57 · 610732d · 2026-10-13" (filled in by vite.config.ts at build time). */
 export function versionLabel(): string {
@@ -56,6 +63,7 @@ function el<K extends keyof HTMLElementTagNameMap>(tag: K, attrs: Record<string,
 export class OperatorMenu {
   private overlay: HTMLDivElement | null = null;
   private idleTimer: number | null = null;
+  private linkTimer: number | null = null;
   /** 'pin' | 'menu' | null */
   view: 'pin' | 'menu' | null = null;
 
@@ -202,6 +210,44 @@ export class OperatorMenu {
       timings.appendChild(row);
     }
 
+    // link to the PC behind the TV
+    const address = el('input', {
+      type: 'text',
+      inputmode: 'url',
+      autocapitalize: 'off',
+      autocomplete: 'off',
+      spellcheck: 'false',
+      placeholder: '192.168.1.50:8787',
+      'data-testid': 'op-pc-address',
+    }) as HTMLInputElement;
+    address.value = this.a.getPcAddress();
+    const linkLine = el('div', { class: 'op-status', 'data-testid': 'op-link-status' }, this.a.linkStatus());
+    let invalid = false;
+    const savePcAddress = () => {
+      this.touch();
+      invalid = !this.a.setPcAddress(address.value);
+      if (invalid) {
+        linkLine.textContent = 'Not a valid address. It should look like 192.168.1.50:8787';
+        return;
+      }
+      this.a.beep();
+      address.value = this.a.getPcAddress();
+      linkLine.textContent = this.a.linkStatus();
+    };
+    const saveAddress = el('button', { class: 'op-btn', 'data-testid': 'op-pc-save', type: 'button' }, 'Save');
+    saveAddress.addEventListener('click', savePcAddress);
+    address.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') savePcAddress();
+    });
+    address.addEventListener('input', () => (invalid = false));
+    const refreshLink = () => {
+      if (!invalid) linkLine.textContent = this.a.linkStatus();
+      this.linkTimer = this.a.setTimeout(refreshLink, LINK_REFRESH_MS);
+    };
+    this.linkTimer = this.a.setTimeout(refreshLink, LINK_REFRESH_MS);
+    const addressRow = el('label', { class: 'op-row' });
+    addressRow.append(el('span', {}, 'PC address'), address, saveAddress);
+
     const close = el('button', { class: 'op-btn op-close', 'data-testid': 'op-close', type: 'button' }, 'Close');
     close.addEventListener('click', () => {
       this.a.beep();
@@ -213,7 +259,7 @@ export class OperatorMenu {
     const modeRow = el('div', { class: 'op-row' });
     modeRow.append(el('span', {}, 'Visual mode'), mode);
 
-    box.append(el('h2', {}, 'Final Gate Lock — operator'), el('div', { class: 'op-version', 'data-testid': 'op-version' }, versionLabel()), status, actions, volRow, modeRow, fps, el('h3', {}, 'Timings'), timings, close);
+    box.append(el('h2', {}, 'Final Gate Lock — operator'), el('div', { class: 'op-version', 'data-testid': 'op-version' }, versionLabel()), status, actions, volRow, modeRow, fps, el('h3', {}, 'TV link'), addressRow, linkLine, el('h3', {}, 'Timings'), timings, close);
     ov.appendChild(box);
   }
 
@@ -240,6 +286,8 @@ export class OperatorMenu {
   close(): void {
     if (this.idleTimer !== null) this.a.clearTimeout(this.idleTimer);
     this.idleTimer = null;
+    if (this.linkTimer !== null) this.a.clearTimeout(this.linkTimer);
+    this.linkTimer = null;
     this.overlay?.remove();
     this.overlay = null;
     this.view = null;

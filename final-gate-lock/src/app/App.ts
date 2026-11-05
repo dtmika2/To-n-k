@@ -10,6 +10,8 @@ import { applySettings, loadSettings, saveSettings, type OperatorSettings } from
 import { Stage } from './Stage';
 import { textureMemoryMB } from '../util/gpuMemory';
 import { PlateSplit } from '../scene/PlateSplit';
+import { httpSignalPost, linkLabel, localSignalStore, parsePcAddress, PassSignal, type SignalStatus } from '../signal/passSignal';
+import { createSignalBadge } from '../signal/statusBadge';
 import type { Container } from 'pixi.js';
 
 function countObjects(c: Container): number {
@@ -37,6 +39,27 @@ export async function startApp(baseConfig: AppConfig, flags: Flags): Promise<Gam
   void audio.load();
   const game = new Game(stage, config, flags, factory, audio);
   if (settings.fps) game.stats.setVisible(true);
+
+  // ---- signal to the PC behind the TV: the address saved in the menu, or `?signal` when testing
+  let signal: PassSignal | null = null;
+  let link: SignalStatus | null = null;
+  const badge = flags.signalUrl !== null ? createSignalBadge() : null;
+  const connectSignal = (url: string | null) => {
+    signal?.stop();
+    signal = null;
+    link = null;
+    if (url === null) return;
+    signal = new PassSignal(httpSignalPost(url), localSignalStore, (s) => {
+      link = s;
+      badge?.(s);
+    });
+    signal.start();
+  };
+  // entering Success covers both a real solve and the operator's force-open
+  game.machine.on((e) => {
+    if (e.to === 'Success') signal?.passed();
+  });
+  connectSignal(flags.signalUrl ?? settings.pcAddress ?? null);
 
   const menu = new OperatorMenu(config.operator.pin, {
     resetToShrouded: () => game.operatorReset(),
@@ -76,6 +99,18 @@ export async function startApp(baseConfig: AppConfig, flags: Flags): Promise<Gam
       settings.timings = { ...(settings.timings ?? {}), ...t };
       persist();
     },
+    getPcAddress: () => settings.pcAddress?.replace(/^http:\/\//, '') ?? '',
+    setPcAddress: (input) => {
+      const cleared = input.trim() === '';
+      const address = cleared ? null : parsePcAddress(input);
+      if (!cleared && address === null) return false;
+      if (address === null) delete settings.pcAddress;
+      else settings.pcAddress = address;
+      persist();
+      connectSignal(address ?? flags.signalUrl);
+      return true;
+    },
+    linkStatus: () => (link ? linkLabel(link) : 'No PC address set, so the TV gets no signal'),
     setTimeout: (fn, ms) => game.clock.setTimeout(fn, ms),
     clearTimeout: (h) => game.clock.clearTimeout(h),
     status: () => {

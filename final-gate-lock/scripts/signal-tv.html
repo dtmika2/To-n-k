@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TV Signal Test</title>
+<style>
+  :root { --bg: #050405; --fg: #e8e2d4; --dim: #8d877b; --ok: #46c47e; --bad: #e0574f; --pass: #0f7a42; }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    display: flex; flex-direction: column; background: var(--bg); color: var(--fg);
+    font-family: system-ui, sans-serif; transition: background-color .25s;
+  }
+  body.passed { background: var(--pass); }
+  body.flash { animation: flash .9s ease-out; }
+  @keyframes flash { 0%, 40% { background: #fff; } 100% { background: var(--pass); } }
+  main { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 16px; }
+  h1 { margin: 0; font-size: clamp(48px, 12vw, 180px); letter-spacing: .02em; }
+  #detail { margin-top: 16px; font-size: clamp(16px, 2.4vw, 32px); color: var(--dim); }
+  body.passed #detail { color: var(--fg); }
+  footer { display: flex; flex-wrap: wrap; gap: 8px 32px; justify-content: space-between; padding: 16px 24px; font-size: 18px; }
+  .ok { color: var(--ok); }
+  .bad { color: var(--bad); }
+  body.passed .ok, body.passed .bad { color: var(--fg); }
+  kbd { padding: 1px 7px; border: 1px solid currentColor; border-radius: 4px; font: inherit; }
+  #setup { margin-top: 40px; font-size: clamp(16px, 2.4vw, 32px); overflow-wrap: anywhere; }
+  #setup[hidden] { display: none; }
+  #link { margin-top: 8px; font-family: monospace; font-size: 1.5em; font-weight: 700; }
+</style>
+</head>
+<body>
+  <main>
+    <h1 id="title">WAITING</h1>
+    <div id="detail">No pass yet</div>
+    <div id="setup" hidden>
+      <div>On the tablet: operator menu &gt; PC address, enter:</div>
+      <div id="link"></div>
+    </div>
+  </main>
+  <footer>
+    <div><span id="server" class="bad">Server: connecting…</span> &nbsp; <span id="tablet" class="bad">Tablet: not seen</span></div>
+    <div><kbd>P</kbd> pass by hand &nbsp; <kbd>R</kbd> reset &nbsp; <kbd>F</kbd> fullscreen</div>
+  </footer>
+<script>
+  const TABLET_LOST_MS = 10000;
+  const $ = (id) => document.getElementById(id);
+  let lastPasses = null;
+
+  function setLink(el, text, ok) {
+    el.textContent = text;
+    el.className = ok ? 'ok' : 'bad';
+  }
+
+  function render(s) {
+    document.body.classList.toggle('passed', s.passed);
+    $('title').textContent = s.passed ? 'LOCK PASSED' : 'WAITING';
+    if (s.passes > 0 && s.lastPassAt) {
+      const how = s.lastSource === 'manual' ? 'by hand' : 'from the tablet';
+      const when = new Date(s.lastPassAt).toLocaleTimeString();
+      $('detail').textContent = `Pass #${s.passes} ${how} at ${when}`;
+    } else {
+      $('detail').textContent = 'No pass yet';
+    }
+
+    if (s.tabletAgeMs === null) setLink($('tablet'), 'Tablet: not seen', false);
+    else if (s.tabletAgeMs > TABLET_LOST_MS) setLink($('tablet'), `Tablet: LOST (${Math.round(s.tabletAgeMs / 1000)} s ago)`, false);
+    else setLink($('tablet'), `Tablet: connected${s.rttMs === null ? '' : ` · ${s.rttMs} ms round trip`}`, true);
+
+    // only while the tablet is missing, so it's gone by the time players can see the screen
+    $('setup').hidden = s.tabletAgeMs !== null && s.tabletAgeMs <= TABLET_LOST_MS;
+    $('link').textContent = s.pcAddress ?? 'No network yet. Connect this PC to the same network as the tablet.';
+
+    // A pass that arrives while this page is open (or reconnecting) flashes; loading the page doesn't.
+    if (lastPasses !== null && s.passes > lastPasses) {
+      document.body.classList.remove('flash');
+      void document.body.offsetWidth;
+      document.body.classList.add('flash');
+    }
+    lastPasses = s.passes;
+  }
+
+  const events = new EventSource('/api/events');
+  events.onopen = () => setLink($('server'), 'Server: connected', true);
+  events.onerror = () => setLink($('server'), 'Server: DISCONNECTED', false);
+  events.onmessage = (e) => {
+    setLink($('server'), 'Server: connected', true);
+    render(JSON.parse(e.data));
+  };
+
+  const post = (path) => fetch(path, { method: 'POST', body: '{}' }).catch((e) => console.error(e));
+  window.addEventListener('keydown', (e) => {
+    if (e.repeat) return;
+    const key = e.key.toLowerCase();
+    if (key === 'p') post('/api/manual');
+    else if (key === 'r') post('/api/reset');
+    else if (key === 'f') {
+      if (document.fullscreenElement) document.exitFullscreen();
+      else document.documentElement.requestFullscreen().catch((err) => console.error(err));
+    }
+  });
+</script>
+</body>
+</html>

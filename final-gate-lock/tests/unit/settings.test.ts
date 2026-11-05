@@ -60,6 +60,14 @@ describe('operator settings', () => {
     ).toEqual({ timings: { glanceIntervalMs: [1000, 2000] } });
   });
 
+  it('keeps a valid PC address and drops a bad one', () => {
+    const st = new MemStorage() as unknown as Storage;
+    saveSettings({ pcAddress: 'http://192.168.2.51:8787' }, st);
+    expect(loadSettings(st)).toEqual({ pcAddress: 'http://192.168.2.51:8787' });
+    expect(sanitize({ pcAddress: 'not an address' })).toEqual({});
+    expect(sanitize({ pcAddress: 7 as never })).toEqual({});
+  });
+
   it('applies only timings, volume and mode over config.json', () => {
     const c = applySettings(cfg, { masterVolume: 0.2, visualMode: 'procedural', timings: { resetAfterIdleMs: 5000 } });
     expect(c.audio.masterVolume).toBe(0.2);

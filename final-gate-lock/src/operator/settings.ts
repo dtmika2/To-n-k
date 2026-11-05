@@ -3,12 +3,15 @@
  * Every access is wrapped in try/catch: private mode or blocked storage must never break the lock.
  */
 import type { AppConfig, Timings, VisualMode } from '../config';
+import { parsePcAddress } from '../signal/passSignal';
 
 export interface OperatorSettings {
   masterVolume?: number;
   visualMode?: VisualMode;
   fps?: boolean;
   timings?: Partial<Timings>;
+  /** Base URL of the PC behind the TV, e.g. http://192.168.2.51:8787. Unset: no signal is sent. */
+  pcAddress?: string;
 }
 
 const KEY = 'final-gate-lock.settings.v1';
@@ -59,6 +62,10 @@ export function sanitize(s: OperatorSettings): OperatorSettings {
   if (typeof s.masterVolume === 'number' && s.masterVolume >= 0 && s.masterVolume <= 1) out.masterVolume = s.masterVolume;
   if (s.visualMode === 'procedural' || s.visualMode === 'sprites') out.visualMode = s.visualMode;
   if (typeof s.fps === 'boolean') out.fps = s.fps;
+  if (typeof s.pcAddress === 'string') {
+    const address = parsePcAddress(s.pcAddress);
+    if (address) out.pcAddress = address;
+  }
   if (s.timings && typeof s.timings === 'object') {
     const t: Partial<Timings> = {};
     for (const k of ['resetAfterSuccessMs', 'resetAfterIdleMs', 'settledToDrowsyMs', 'operatorHoldMs'] as const) {

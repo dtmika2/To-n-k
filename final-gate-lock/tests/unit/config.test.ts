@@ -86,4 +86,11 @@ describe('parseFlags', () => {
     expect(parseFlags('?config=tests/x.json').configUrl).toBe('tests/x.json');
     expect(parseFlags('?procedural').visualMode).toBe('procedural');
   });
+  it('parses the signal server address', () => {
+    expect(parseFlags('').signalUrl).toBeNull();
+    expect(parseFlags('?signal').signalUrl).toBe('');
+    expect(parseFlags('?signal=http://192.168.1.50:8787/').signalUrl).toBe('http://192.168.1.50:8787');
+    expect(parseFlags('?signal=javascript:alert(1)').signalUrl).toBeNull();
+    expect(parseFlags('?signal=not-a-url').signalUrl).toBeNull();
+  });
 });

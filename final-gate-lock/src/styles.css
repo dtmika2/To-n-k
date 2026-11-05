@@ -166,6 +166,19 @@ body {
   border-radius: 6px;
   border: 0;
 }
+.op-row input[type='text'] {
+  flex: 1;
+  min-width: 0;
+  font: inherit;
+  font-size: 20px;
+  padding: 8px;
+  border-radius: 6px;
+  border: 0;
+  user-select: text;
+}
+.op-row .op-btn {
+  padding: 0 24px;
+}
 .op-value {
   min-width: 52px;
   text-align: right;

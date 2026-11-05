@@ -69,6 +69,10 @@ ring fills as you hold. Enter the PIN (`operator.pin` in config.json; default `0
 - **Master volume**, **Visual mode** (sprites by default / procedural), **FPS meter**, and timings in
   seconds: reset after success (default 20), reset after idle (default 30), settled → drowsy,
   operator hold (default 1).
+- **PC address**: where to tell the TV that the lock was passed. Enter the address shown by
+  `Final-Gate-Lock-Server.exe` on the PC (see `docs/SIGNAL-TEST.md`), then tap **Save**. The line below
+  shows the live link. Chrome may ask to allow access to the local network: allow it, or the link stays
+  DOWN. Leave the field empty to send no signal. **Force open** sends the signal too.
 
 Menu settings are saved on the tablet (localStorage) and survive restarts; `config.json` stays the
 default. The menu closes itself after 60 s without input.

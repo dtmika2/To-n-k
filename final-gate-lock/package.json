@@ -13,7 +13,9 @@
     "icons": "node scripts/make-icons.mjs",
     "verify": "npm run typecheck && npm test && npm run build",
     "test-sprites": "node scripts/make-test-sprites.mjs",
-    "soak": "playwright test --config playwright.soak.config.ts"
+    "soak": "playwright test --config playwright.soak.config.ts",
+    "signal": "vite build && node scripts/signal-server.cjs",
+    "signal:exe": "vite build && node scripts/build-server-exe.mjs"
   },
   "type": "module",
   "dependencies": {
@@ -24,6 +26,7 @@
     "@playwright/test": "^1.63.0",
     "@types/node": "^26.6.4",
     "@vitest/coverage-v8": "^5.0.3",
+    "postject": "1.0.0-alpha.6",
     "typescript": "^7.0.2",
     "vite": "^8.3.3",
     "vite-plugin-pwa": "^2.0.0",
