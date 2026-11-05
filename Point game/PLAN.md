@@ -423,3 +423,8 @@ Goal: the owner can play the full rules on the real TV, hear the real sound, and
 - **Clouds and mist between the eyes.** Some puffs drift above the far eyes and some above the mid eyes, capped so the INTRO shroud cannot bury them, and with a minimum alpha so veils still cross them during play. Part of the mist is drawn again above the far eyes from the same texture, so the finger still parts it.
 - **Lines.** Width and brightness follow the depth along the line. Every eye has a region around it (`lineRegion` × its radius, on decoys too, so it gives nothing away): a dragged line keeps the depth of the eye it left until the finger enters a region, then eases to that eye's depth, arriving there as the finger reaches the eye, so it grows or shrinks on the way and doesn't change when it locks on. A line passes over the eyes further than it (or about level with it) and under the nearer ones, always staying under its own two end eyes, and it passes through the clouds between the bands. The eyes are sorted individually for this, not by band.
 - Tunables: `display.depth` in `settings.ts`.
+
+## Amendment (2026-11-05): new backdrop, and videos to try
+
+- **Image.** The default backdrop is now `BackdropHighRes.jpeg` (3072×5472), sharp at 4K.
+- **Videos (experimental).** `BackdropLoop.mp4` (2160×3840) and `BackdropSwirl.mp4` (480×848) can replace the image, by `B`, the M menu or `?backdrop=loop|swirl`. They are looping silent H.264, cached for offline use, and a video that cannot play falls back to the image.

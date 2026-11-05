@@ -21,6 +21,7 @@ const types = {
   '.svg': 'image/svg+xml',
   '.ico': 'image/x-icon',
   '.woff2': 'font/woff2',
+  '.mp4': 'video/mp4',
 };
 // Files that must never be cached by the browser, so updates to dist/ are picked up.
 const noCache = new Set(['/index.html', '/sw.js', '/registerSW.js', '/manifest.webmanifest']);

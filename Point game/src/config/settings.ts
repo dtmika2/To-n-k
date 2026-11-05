@@ -57,7 +57,8 @@ export const settings = {
      * light). Both ship in the same build; `?look=` overrides this and the L key switches it live.
      */
     look: 'vfx' as Look,
-    rotateDeg: 0,
+    /** Turns the whole picture and touch together (0/90/180/270); 270 fills a TV Windows drives in landscape. `?rotate=` overrides it. */
+    rotateDeg: 270,
     /** Resolution of the cloud/mist shader layer relative to the screen. */
     renderScale: 0.5,
     /** fBm octaves in the cloud/mist shader (performance vs. detail). */
@@ -70,8 +71,13 @@ export const settings = {
     eyeMinOpen: 0.2,
     /** Eyes look this much bigger (0.4 = +40 %), also in the M menu. Visual only: the hit radii stay as they are. */
     eyeGrow: 0.4,
-    /** Bottom layer image (portrait 9:16, in public/; 2160×3840 to stay sharp at 4K); '' = plain night gradient. */
-    backdrop: 'assets/backdrop.png',
+    /** Bottom layer image (portrait 9:16, in public/; at least 2160×3840 to stay sharp at 4K); '' = plain night gradient. */
+    backdrop: 'assets/BackdropHighRes.jpeg',
+    /**
+     * Experimental backdrops (B key, M menu, `?backdrop=`): looping silent videos, portrait 9:16, H.264 MP4.
+     * A name here becomes a choice; the image above stays the default and the fallback.
+     */
+    backdropVideos: { loop: 'assets/BackdropLoop.mp4', swirl: 'assets/BackdropSwirl.mp4' } as Record<string, string>,
     /**
      * Depth mode (Z key, M menu, `?depth=0` for off): eyes at different distances. Ranges are
      * [far, near]. Visual only: the hit radii don't change. See render/depth.ts.

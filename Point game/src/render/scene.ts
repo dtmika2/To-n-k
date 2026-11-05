@@ -17,6 +17,7 @@ import { Particles } from './particles.ts';
 import { Sky } from './sky.ts';
 import { softDotTexture } from './textures.ts';
 import { beamStrand, strandRuns, strokeStrand, type StrandStyle } from './strand.ts';
+import { loadVideoBackdrop, type VideoBackdrop } from './videoBackdrop.ts';
 import { BeamBatch, type BeamPoint } from './vfx/beam.ts';
 import { LidLightBatch } from './vfx/lidLight.ts';
 import { EnergyOrb } from './vfx/orb.ts';
@@ -154,6 +155,10 @@ export class SceneRenderer {
   private lastNow = 0;
   private renderScale: number;
   private grow: number;
+  private backdropImage: Texture | null = null;
+  private backdropVideo: VideoBackdrop | null = null;
+  /** Counts video requests, so a slow load that was switched away from is dropped when it arrives. */
+  private backdropRequest = 0;
 
   constructor(pixi: Renderer, private readonly cfg: SceneConfig) {
     this.renderScale = cfg.renderScale;
@@ -267,10 +272,42 @@ export class SceneRenderer {
   async loadBackdrop(url: string): Promise<void> {
     if (!url) return;
     try {
-      this.sky.setBackdrop(await Assets.load<Texture>(url));
+      this.backdropImage = await Assets.load<Texture>(url);
+      this.sky.setBackdrop(this.backdropImage);
     } catch {
       console.warn(`[dream-pattern] backdrop "${url}" did not load; using the gradient`);
     }
+  }
+
+  /**
+   * Experimental: a looping video as the backdrop, or `null` for the image again. Resolves to false if the
+   * video couldn't be played, in which case the image is showing.
+   */
+  async showVideoBackdrop(url: string | null): Promise<boolean> {
+    const request = ++this.backdropRequest;
+    if (!url) {
+      this.useBackdrop(null);
+      return true;
+    }
+    try {
+      const video = await loadVideoBackdrop(url);
+      if (request === this.backdropRequest) this.useBackdrop(video);
+      else video.dispose();
+      return true;
+    } catch (error) {
+      console.warn(`[dream-pattern] backdrop video "${url}" did not play`, error);
+      if (request === this.backdropRequest) this.useBackdrop(null);
+      return false;
+    }
+  }
+
+  private useBackdrop(video: VideoBackdrop | null): void {
+    const old = this.backdropVideo;
+    this.backdropVideo = video;
+    const texture = video?.texture ?? this.backdropImage;
+    if (texture) this.sky.setBackdrop(texture);
+    else this.sky.clearBackdrop();
+    old?.dispose();
   }
 
   setPattern(ctx: GameContext, pattern: Pattern): void {

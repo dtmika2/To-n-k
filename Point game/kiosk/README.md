@@ -23,7 +23,7 @@ To quit kiosk Chrome, press Alt+F4. Then close the "Dream Pattern server" window
 
 ## PC checklist (Windows)
 
-- [ ] **Portrait:** Settings → System → Display → Display orientation → *Portrait* (or *Portrait, flipped*) for the TV. If OS rotation is impractical, set `display.rotateDeg` in `src/config/settings.ts` instead (0/90/180/270) and rebuild. Rendering and touch then rotate together.
+- [ ] **Orientation:** leave the TV in *Landscape* in Settings → System → Display → Display orientation. The app turns the picture and touch itself (`display.rotateDeg` = 270 in `src/config/settings.ts`). If Windows drives the TV in portrait instead, set it to 0 and rebuild; the kiosk takes no URL options unless you add them to `start-kiosk.bat`.
 - [ ] **Map touch input to the TV:** Control Panel → *Tablet PC Settings* → *Setup…* → touch the TV when asked. Re-do this after changing the rotation.
 - [ ] **Edge swipes off:** Settings → Bluetooth & devices → Touch → turn off *Three- and four-finger touch gestures*. Disable *edge swipes* via Group Policy (Computer Configuration → Administrative Templates → Windows Components → Edge UI → *Allow edge swipe* = Disabled) or the registry (`HKLM\SOFTWARE\Policies\Microsoft\Windows\EdgeUI`, DWORD `AllowEdgeSwipe` = 0).
 - [ ] **Press-and-hold right-click off:** Control Panel → Pen and Touch → Touch → *Press and hold* → Settings → untick *Enable press and hold for right-clicking*. The app also blocks the context menu.
@@ -41,12 +41,13 @@ To quit kiosk Chrome, press Alt+F4. Then close the "Dream Pattern server" window
 | `P` | switch to the plain debug primitives (Phase 1 look) and back |
 | `T` | turn the picture and touch 90° clockwise, until the next reload; also a button in the `M` menu, and `?rotate=` in the URL |
 | `Z` | depth (on by default): eyes at different distances, with orbiting particles and clouds passing between them; also in the `M` menu, and `?depth=0` in the URL turns it off |
+| `B` | backdrop (experimental): the image or a looping video; also in the `M` menu, and `?backdrop=loop` or `?backdrop=swirl` in the URL |
 | `U` | mark the unused (decoy) eyes with a red ring and cross; also `?unused` in the URL |
 | `E` | layout editor (drag points, change radii, record the sequence, export `pattern.json`) |
 | `R` | back to the intro |
 | `1`–`5` | jump to INTRO / GAME / REVEAL / IDLE / CREATIVE |
 
-URL options: `?debug`, `?primitives`, `?rotate=90`, `?scale=0.4` (shader resolution, turns auto-scaling off), `?octaves=4`, `?depth=0`.
+URL options: `?debug`, `?primitives`, `?rotate=90`, `?scale=0.4` (shader resolution, turns auto-scaling off), `?octaves=4`, `?depth=0`, `?backdrop=loop|swirl`.
 
 ## Performance
 

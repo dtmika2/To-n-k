@@ -67,7 +67,7 @@ export default defineConfig({
         icons: [{ src: 'icon.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any' }],
       },
       workbox: {
-        globPatterns: ['**/*.{js,css,html,json,png,jpg,jpeg,webp,svg,ico,woff2}'],
+        globPatterns: ['**/*.{js,css,html,json,png,jpg,jpeg,webp,svg,ico,woff2,mp4}'],
         maximumFileSizeToCacheInBytes: 20 * 1024 * 1024,
         navigateFallback: 'index.html',
         navigateFallbackDenylist: [/\/vfx\.html/],

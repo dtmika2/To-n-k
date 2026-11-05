@@ -118,6 +118,19 @@ export async function startApp(): Promise<void> {
     rotateDeg = (rotateDeg + 90) % 360;
     layout();
   };
+  // Experimental: the backdrop can be one of the videos instead of the image.
+  const backdropVideos = settings.display.backdropVideos;
+  const backdropChoices = ['image', ...Object.keys(backdropVideos)];
+  let backdropChoice = 'image';
+  const setBackdrop = (name: string) => {
+    backdropChoice = name;
+    const video = backdropVideos[name];
+    void scene.showVideoBackdrop(video ? import.meta.env.BASE_URL + video : null).then((played) => {
+      if (played || backdropChoice !== name) return;
+      backdropChoice = 'image';
+      menu.sync();
+    });
+  };
 
   // M: menu overlay, with the key legend and live switches (all of them also work by key, or are tunables)
   const menu = new Menu(
@@ -128,6 +141,7 @@ export async function startApp(): Promise<void> {
       { keys: 'L', what: 'switch the look: vfx ⇄ classic (also ?look=)' },
       { keys: 'T', what: 'turn the picture and touch 90° clockwise (also ?rotate=)' },
       { keys: 'Z', what: 'depth: eyes at different distances, with clouds passing between them (also ?depth=0 for off)' },
+      { keys: 'B', what: 'backdrop (experimental): the image or a looping video (also ?backdrop=)' },
       { keys: 'U', what: 'mark the decoy eyes, which are never in the sequence (also ?unused)' },
       { keys: 'E', what: 'layout editor: drag eyes, mouse wheel or [ ] for the radius, Backspace undoes while recording' },
       { keys: 'R', what: 'reset to the intro' },
@@ -156,6 +170,7 @@ export async function startApp(): Promise<void> {
             get: () => Math.round(scene.eyeGrow * 100),
             set: (v) => (scene.eyeGrow = v / 100),
           },
+          { kind: 'choice', label: 'Backdrop', key: 'B', options: backdropChoices, get: () => backdropChoice, set: setBackdrop },
           {
             kind: 'toggle',
             label: 'Depth',
@@ -250,6 +265,8 @@ export async function startApp(): Promise<void> {
     document.body.classList.toggle('show-cursor', debugOn || editor.isOpen || menu.isOpen);
   };
   applyView();
+  const backdropParam = params.get('backdrop');
+  if (backdropParam && backdropVideos[backdropParam]) setBackdrop(backdropParam);
 
   // Finger speed (world units / s), smoothed, for the theremin swell.
   let speed = 0;
@@ -298,6 +315,7 @@ export async function startApp(): Promise<void> {
     else if (k === 'l') setLook(look === 'vfx' ? 'classic' : 'vfx');
     else if (k === 't') rotate();
     else if (k === 'z') scene.depth = !scene.depth;
+    else if (k === 'b') setBackdrop(backdropChoices[(backdropChoices.indexOf(backdropChoice) + 1) % backdropChoices.length]);
     else if (k === 'e') {
       editor.toggle(pattern);
       if (!editor.isOpen) primitives.refreshLabels();

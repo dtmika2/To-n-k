@@ -26,6 +26,7 @@ export class Sky {
   private readonly stars: Star[] = [];
 
   private readonly gradient: Sprite;
+  private backdrop: Sprite | null = null;
 
   constructor(dot: Texture, count: number) {
     const bg = new Sprite(skyTexture());
@@ -57,19 +58,30 @@ export class Sky {
   }
 
   /**
-   * The backdrop image becomes the bottom layer (cover-fitted to the portrait world, centred) and
-   * replaces the gradient, which stays only as the fallback when no image loads.
+   * The backdrop (an image or a video's texture) becomes the bottom layer, cover-fitted to the portrait
+   * world and centred. It replaces the gradient, which stays only as the fallback when nothing loads.
    */
   setBackdrop(tex: Texture): void {
-    const bd = new Sprite(tex);
-    bd.anchor.set(0.5);
-    bd.scale.set(Math.max(1 / tex.width, ASPECT / tex.height));
-    bd.position.set(0.5, ASPECT / 2);
-    const clip = new Graphics().rect(0, 0, 1, ASPECT).fill({ color: 0xffffff });
-    bd.mask = clip;
-    this.root.addChildAt(clip, 0);
-    this.root.addChildAt(bd, 0);
+    if (!this.backdrop) {
+      const bd = new Sprite(tex);
+      bd.anchor.set(0.5);
+      bd.position.set(0.5, ASPECT / 2);
+      const clip = new Graphics().rect(0, 0, 1, ASPECT).fill({ color: 0xffffff });
+      bd.mask = clip;
+      this.root.addChildAt(clip, 0);
+      this.root.addChildAt(bd, 0);
+      this.backdrop = bd;
+    }
+    this.backdrop.texture = tex;
+    this.backdrop.scale.set(Math.max(1 / tex.width, ASPECT / tex.height));
+    this.backdrop.visible = true;
     this.gradient.visible = false;
+  }
+
+  /** Back to the gradient. */
+  clearBackdrop(): void {
+    if (this.backdrop) this.backdrop.visible = false;
+    this.gradient.visible = true;
   }
 
   update(now: number, dt: number): void {
