@@ -24,8 +24,10 @@ Setup and test steps are in `docs/SIGNAL-TEST.md`.
 
 ## Signal status (2026-11-05)
 - **Proven on the real tablet:** the installed app reached the `.exe` over Wi-Fi and delivered one pass. The `.exe` ran on the development PC.
-- **Not tested:** a separate or inventory PC (firewall, admin rights, blocked unsigned programs), Wi-Fi dropout on the tablet, the Ethernet setup.
-- **Next up:** the real video and stone cover (the current ones are placeholders, and must share a shape and composition), and feel-tuning the TV show on the real TV.
+- **Not tested:** a separate or inventory PC (firewall, admin rights, blocked unsigned programs, smooth playback), Wi-Fi dropout on the tablet, the Ethernet setup.
+- **TV show:** only checked with screenshots in headless Edge. Its feel, its sound and the tablet-to-TV handoff are not yet confirmed on the real tablet and TV.
+- **Assumed, awaiting the user's answer:** the TV is above or beyond the tablet (core enters from the bottom), the video cuts back to stone when it ends, the core lands at the exact centre, and the video isn't cropped to fill the screen (thin side bars on the placeholder).
+- **Next up:** feel-tuning on the real TV, then the real video and stone cover (the current ones are placeholders, and must share a shape and composition).
 
 ## Gotchas
 - The commit code in the operator menu is the last commit, and ignores uncommitted changes. It doesn't prove a local build contains your work.
@@ -35,4 +37,5 @@ Setup and test steps are in `docs/SIGNAL-TEST.md`.
 - Plain-HTTP pages have no service worker, wake lock or `crypto.randomUUID`.
 - Checking the TV page with Playwright: its Chromium has no H.264, so use `channel: 'msedge'`. Its `evaluate` counts as a user gesture, and headless Edge doesn't enforce the sound rule, so neither can prove the no-click path.
 - Windows: stopping a backgrounded `npm run signal` can leave its Node process holding port 8787. Check with `Get-NetTCPConnection -LocalPort 8787`.
+- The user may have the `.exe` running for their own test, and rebuilding overwrites it. Check before rebuilding, and only ever stop your own test server by PID, never by name. Test on a spare port with `SIGNAL_PORT=18790 SIGNAL_NO_BROWSER=1`.
 - To run `src/signal/passSignal.ts` directly in Node, add `--experimental-transform-types`; it uses parameter properties.
