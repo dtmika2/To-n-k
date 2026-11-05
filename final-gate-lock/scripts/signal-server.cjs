@@ -270,11 +270,16 @@ function readTvPage() {
   return PACKED ? Buffer.from(sea.getRawAsset('tv.html')) : readFileSync(join(__dirname, 'signal-tv.html'));
 }
 
-/** The TV's video, or null if it's missing. Replace the file to change the content. */
-function readTvVideo() {
-  if (PACKED) return Buffer.from(sea.getRawAsset('tv-video.mp4'));
-  const file = resolve(__dirname, '../PlaceholderVideo.mp4');
-  return existsSync(file) ? readFileSync(file) : null;
+/** The TV's content by URL: packed name, and the file it comes from. Replace the files to change it. */
+const TV_CONTENT = {
+  '/tv/video': { packed: 'tv-video.mp4', file: 'PlaceholderVideo.mp4' },
+  '/tv/cover': { packed: 'tv-cover.png', file: 'PlaceholderStoneCover.png' },
+};
+
+function readTvContent({ packed, file }) {
+  if (PACKED) return Buffer.from(sea.getRawAsset(packed));
+  const path = resolve(__dirname, '..', file);
+  return existsSync(path) ? readFileSync(path) : null;
 }
 
 /** A file of the built lock, or null. `path` starts with a slash. */
@@ -302,12 +307,13 @@ function handleStatic(res, path) {
     sendBytes(res, 'tv.html', readTvPage());
     return;
   }
-  if (path === '/tv/video') {
-    const video = readTvVideo();
-    if (video) sendBytes(res, 'tv-video.mp4', video);
+  const content = Object.hasOwn(TV_CONTENT, path) ? TV_CONTENT[path] : null;
+  if (content) {
+    const bytes = readTvContent(content);
+    if (bytes) sendBytes(res, content.packed, bytes);
     else {
       res.writeHead(404, { 'Content-Type': 'text/plain' });
-      res.end('No video file');
+      res.end(`Missing file: ${content.file}`);
     }
     return;
   }

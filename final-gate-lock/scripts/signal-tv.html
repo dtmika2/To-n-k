@@ -11,9 +11,9 @@
   body.armed { cursor: none; }
   body.show-status { cursor: default; }
   #stage { position: fixed; left: 50%; top: 50%; overflow: hidden; background: var(--bg); }
-  #video, #fx { position: absolute; inset: 0; width: 100%; height: 100%; }
+  #video, #stone, #fx { position: absolute; inset: 0; width: 100%; height: 100%; }
   #video { object-fit: contain; }
-  #fx { pointer-events: none; }
+  #stone, #fx { pointer-events: none; }
   #status {
     position: absolute; left: 50%; bottom: 4%; transform: translateX(-50%); width: min(92%, 900px);
     padding: 18px 24px; border-radius: 10px; background: var(--panel); text-align: center;
@@ -31,14 +31,18 @@
 <body>
   <div id="stage">
     <video id="video" playsinline preload="auto"></video>
+    <canvas id="stone"></canvas>
     <canvas id="fx"></canvas>
     <div id="status" hidden></div>
   </div>
 <script>
   /**
-   * The TV screen. The video waits on its first frame. When the lock is passed, the core that just
-   * left the top of the tablet rises in from the bottom edge, slows to the centre of the video,
-   * draws in and vanishes. In that instant comes the flash, and the video comes alive with its sound.
+   * The TV screen, in layers: the video held on its first frame, the stone cover over it, the core
+   * and flash on top. The person is cursed into stone. When the lock is passed, the core that just
+   * left the top of the tablet rises in from the bottom edge and heals the stone along its way, the
+   * colour seeping through around it. It slows to the centre of the video, draws in and vanishes.
+   * The rest of the stone fades over the last second, so it's gone as the flash comes and the video
+   * comes alive with its sound.
    *
    * Keys: P pass by hand · R back to the frozen frame · F fullscreen · O rotate 90° · H status
    */
@@ -48,7 +52,12 @@
     /** Core image width as a share of the screen width. */
     coreShare: 0.72,
     /** Rising in from the bottom edge to the target. */
-    travelMs: 2400,
+    travelMs: 3400,
+    /** Radius of the healed area around the core, as a share of the screen width: it spreads as it goes. */
+    healFromShare: 0.2,
+    healToShare: 0.46,
+    /** The rest of the stone fades over this long, ending exactly as the flash starts. */
+    stoneFadeMs: 1000,
     /** Sideways drift on the way in, as a share of the screen width. */
     driftShare: 0.035,
     /** Swelling as it draws in, then collapsing to nothing. */
@@ -70,10 +79,24 @@
   const video = $('video');
   const canvas = $('fx');
   const ctx = canvas.getContext('2d');
+  const stone = $('stone');
+  const stoneCtx = stone.getContext('2d');
   const statusBox = $('status');
 
   const coreImage = new Image();
   coreImage.src = '/assets/sprites/core.png';
+
+  const coverImage = new Image();
+  let coverError = false;
+  coverImage.addEventListener('load', () => {
+    coverError = false;
+    if (phase === 'frozen') resetStone();
+    renderStatus();
+  });
+  coverImage.addEventListener('error', () => {
+    coverError = true;
+    renderStatus();
+  });
 
   const clamp01 = (v) => Math.min(1, Math.max(0, v));
   const lerp = (a, b, k) => a + (b - a) * k;
@@ -99,20 +122,73 @@
     stage.style.width = `${W}px`;
     stage.style.height = `${H}px`;
     stage.style.transform = `translate(-50%, -50%) rotate(${rotation}deg)`;
-    canvas.width = W;
-    canvas.height = H;
+    canvas.width = stone.width = W;
+    canvas.height = stone.height = H;
   }
-  window.addEventListener('resize', layout);
   layout();
 
-  /** The target point in stage pixels, allowing for the bars around a video that doesn't fill it. */
-  function targetPoint() {
-    const vw = video.videoWidth || W;
-    const vh = video.videoHeight || H;
+  /** Where the video shows on the stage, allowing for bars when its shape doesn't match the screen. */
+  function shownRect() {
+    const vw = video.videoWidth || coverImage.naturalWidth || W;
+    const vh = video.videoHeight || coverImage.naturalHeight || H;
     const scale = Math.min(W / vw, H / vh);
-    const shownW = vw * scale;
-    const shownH = vh * scale;
-    return { x: (W - shownW) / 2 + shownW * FX.target.x, y: (H - shownH) / 2 + shownH * FX.target.y };
+    const width = vw * scale;
+    const height = vh * scale;
+    return { x: (W - width) / 2, y: (H - height) / 2, width, height };
+  }
+
+  function targetPoint() {
+    const r = shownRect();
+    return { x: r.x + r.width * FX.target.x, y: r.y + r.height * FX.target.y };
+  }
+
+  // ---- the stone cover
+
+  /** The whole cover again, exactly over the video. */
+  function resetStone() {
+    const r = shownRect();
+    stoneCtx.globalCompositeOperation = 'source-over';
+    stoneCtx.globalAlpha = 1;
+    stoneCtx.clearRect(0, 0, W, H);
+    if (coverImage.complete && coverImage.naturalWidth > 0) stoneCtx.drawImage(coverImage, r.x, r.y, r.width, r.height);
+    stone.style.opacity = '1';
+  }
+
+  /** What the core erases with: soft, with a broken edge, so the stone gives way unevenly. */
+  const healBrush = document.createElement('canvas');
+  healBrush.width = healBrush.height = 256;
+  {
+    const c = healBrush.getContext('2d');
+    const g = c.createRadialGradient(128, 128, 0, 128, 128, 128);
+    g.addColorStop(0, 'rgba(0, 0, 0, 1)');
+    g.addColorStop(0.55, 'rgba(0, 0, 0, .95)');
+    g.addColorStop(0.8, 'rgba(0, 0, 0, .4)');
+    g.addColorStop(1, 'rgba(0, 0, 0, 0)');
+    c.fillStyle = g;
+    c.fillRect(0, 0, 256, 256);
+    c.globalCompositeOperation = 'destination-out';
+    for (let i = 0; i < 90; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const dist = 62 + Math.random() * 66;
+      const x = 128 + Math.cos(angle) * dist;
+      const y = 128 + Math.sin(angle) * dist;
+      const r = 5 + Math.random() * 20;
+      const b = c.createRadialGradient(x, y, 0, x, y, r);
+      b.addColorStop(0, 'rgba(0, 0, 0, .75)');
+      b.addColorStop(1, 'rgba(0, 0, 0, 0)');
+      c.fillStyle = b;
+      c.fillRect(x - r, y - r, r * 2, r * 2);
+    }
+  }
+
+  function stampHeal(x, y, radius, alpha) {
+    stoneCtx.save();
+    stoneCtx.globalCompositeOperation = 'destination-out';
+    stoneCtx.globalAlpha = alpha;
+    stoneCtx.translate(x, y);
+    stoneCtx.rotate(Math.random() * Math.PI * 2);
+    stoneCtx.drawImage(healBrush, -radius, -radius, radius * 2, radius * 2);
+    stoneCtx.restore();
   }
 
   // ---- the video
@@ -136,6 +212,10 @@
     }
   }
 
+  // now its real shape is known: line the cover up with it
+  video.addEventListener('loadedmetadata', () => {
+    if (phase === 'frozen') resetStone();
+  });
   video.addEventListener('canplaythrough', () => {
     if (videoReady) return;
     videoReady = true;
@@ -183,9 +263,17 @@
   let flashStarted = false;
   let sparks = [];
   let trailDue = 0;
+  let lastHeal = null;
 
   const FLASH_AT = FX.travelMs + FX.shrinkMs;
   const FLASH_MS = Math.max(FX.flashRiseMs + FX.flashFallMs, FX.ringMs, 1600);
+
+  /** Resizing clears a canvas. During the show the stone stays as it is, so only redraw it when frozen. */
+  function relayout() {
+    layout();
+    if (phase === 'frozen') resetStone();
+  }
+  window.addEventListener('resize', relayout);
 
   function startSequence() {
     if (phase !== 'frozen') return;
@@ -195,6 +283,7 @@
     flashStarted = false;
     sparks = [];
     trailDue = 0;
+    lastHeal = null;
     renderStatus();
     frameHandle = requestAnimationFrame(frame);
   }
@@ -207,6 +296,7 @@
     ctx.clearRect(0, 0, W, H);
     video.pause();
     if (videoReady) video.currentTime = 0;
+    resetStone();
     renderStatus();
   }
 
@@ -264,7 +354,7 @@
   /** The core at `t` ms into the sequence: position and scale, on its way in and drawing in. */
   function corePose(t, target, size) {
     const travel = clamp01(t / FX.travelMs);
-    const eased = outCubic(travel);
+    const eased = outQuad(travel);
     const x = target.x + Math.sin(travel * Math.PI * 2.2) * W * FX.driftShare * (1 - eased);
     const y = lerp(H + size * 0.5, target.y, eased);
     const shrink = clamp01((t - FX.travelMs) / FX.shrinkMs);
@@ -272,6 +362,23 @@
       ? 1 + FX.swellBy * outQuad(shrink / FX.swellShare)
       : (1 + FX.swellBy) * (1 - inCubic((shrink - FX.swellShare) / (1 - FX.swellShare)));
     return { x, y, scale, shrink };
+  }
+
+  /** The core eats the stone along its path and around it, and the healed area spreads as it slows. */
+  function healStone(t, target, size, dt) {
+    const pose = corePose(t, target, size);
+    const radius = W * lerp(FX.healFromShare, FX.healToShare, clamp01(t / FX.travelMs));
+    const from = lastHeal ?? pose;
+    const distance = Math.hypot(pose.x - from.x, pose.y - from.y);
+    // close enough together that a fast core still leaves an unbroken path, on any frame rate
+    const steps = Math.max(1, Math.ceil(distance / (radius * 0.2)));
+    for (let i = 1; i <= steps; i++) {
+      const k = i / steps;
+      stampHeal(lerp(from.x, pose.x, k), lerp(from.y, pose.y, k), radius, Math.min(1, dt / 90));
+    }
+    lastHeal = pose;
+    const fade = clamp01((t - (FLASH_AT - FX.stoneFadeMs)) / FX.stoneFadeMs);
+    stone.style.opacity = String(1 - fade);
   }
 
   function drawCore(t, target, size, dt) {
@@ -314,6 +421,8 @@
   function startFlash(target) {
     flashStarted = true;
     phase = 'playing';
+    // always gone by the first moving frame, even if a slow frame skipped the end of the fade
+    stone.style.opacity = '0';
     playVideo();
     renderStatus();
     const speed = Math.hypot(W, H) * 0.0011;
@@ -363,8 +472,10 @@
     const size = W * FX.coreShare;
 
     ctx.clearRect(0, 0, W, H);
-    if (t < FLASH_AT) drawCore(t, target, size, dt);
-    else if (!flashStarted) startFlash(target);
+    if (t < FLASH_AT) {
+      healStone(t, target, size, dt);
+      drawCore(t, target, size, dt);
+    } else if (!flashStarted) startFlash(target);
     if (flashStarted) drawFlash(t - FLASH_AT, target);
     drawSparks(dt);
 
@@ -426,6 +537,7 @@
     const tabletHere = age !== null && age <= TABLET_LOST_MS;
 
     if (!serverUp) rows.push(line('Server not reachable. Is the server window still open?', 'bad'));
+    if (coverError) rows.push(line("The stone cover didn't load, so the video shows without it.", 'bad'));
     if (videoError) rows.push(line(videoError, 'bad'));
     else if (!videoReady) rows.push(line('Loading the video…'));
     if (!hasClicked()) rows.push(line('Click here once to turn on sound and go fullscreen', 'big'));
@@ -483,11 +595,12 @@
       try {
         localStorage.setItem(ROTATE_KEY, String(rotation));
       } catch { /* not remembered, still rotated */ }
-      layout();
+      relayout();
     } else if (key === 'h') forceStatus = !forceStatus;
     renderStatus();
   });
 
+  coverImage.src = '/tv/cover';
   renderStatus();
   loadVideo();
 </script>

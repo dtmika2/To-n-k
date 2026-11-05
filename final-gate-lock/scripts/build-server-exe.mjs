@@ -39,12 +39,19 @@ rmSync(WORK, { recursive: true, force: true });
 mkdirSync(WORK, { recursive: true });
 
 const TV_VIDEO = join(ROOT, 'PlaceholderVideo.mp4');
-if (!existsSync(TV_VIDEO)) {
-  console.error(`The TV video is missing: ${TV_VIDEO}`);
-  process.exit(1);
+const TV_COVER = join(ROOT, 'PlaceholderStoneCover.png');
+for (const file of [TV_VIDEO, TV_COVER]) {
+  if (!existsSync(file)) {
+    console.error(`TV content is missing: ${file}`);
+    process.exit(1);
+  }
 }
 
-const assets = { 'tv.html': join(ROOT, 'scripts', 'signal-tv.html'), 'tv-video.mp4': TV_VIDEO };
+const assets = {
+  'tv.html': join(ROOT, 'scripts', 'signal-tv.html'),
+  'tv-video.mp4': TV_VIDEO,
+  'tv-cover.png': TV_COVER,
+};
 for (const entry of readdirSync(DIST, { recursive: true, withFileTypes: true })) {
   if (!entry.isFile()) continue;
   const file = join(entry.parentPath, entry.name);

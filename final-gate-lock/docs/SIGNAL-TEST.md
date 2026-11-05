@@ -29,10 +29,13 @@ uses the next free port, so always read the address rather than assuming it.
 
 ## What the TV does
 
-The video waits on its first frame. When the core reaches the top edge of the tablet (9.7 s into the
-opening), the tablet signals the PC. The core rises in from the bottom of the TV, slows to the centre of
-the video, swells slightly and collapses to nothing. In that instant comes the flash, and the video
-starts with its sound. When it ends, the TV returns to the frozen first frame for the next group.
+The screen shows the stone cover, with the video held on its first frame underneath. When the core
+reaches the top edge of the tablet (9.7 s into the opening), the tablet signals the PC. The core rises in
+from the bottom of the TV, healing the stone along its path and around it, so the colour of the frame
+underneath seeps through. It slows to the centre of the video, swells slightly and collapses to nothing.
+The rest of the stone fades over the last second, so it's gone as the flash comes and the video starts
+with its sound, about 14 s after the solve. When the video ends, the stone comes back whole for the next
+group.
 
 Passes that arrive while the video is playing are ignored by the TV. If staff reset the lock before the
 core has left, nothing is sent.
@@ -40,9 +43,10 @@ core has left, nothing is sent.
 Timings, size and the target point are in `FX` at the top of the script in `scripts/signal-tv.html`.
 Tablet timing is `coreLeftMs` in `src/feel.ts`.
 
-**The video** is `PlaceholderVideo.mp4` in this folder, packed into the program by `npm run signal:exe`.
-Use H.264 with AAC, in the TV's own resolution. A larger file can stutter on an older PC, which may not
-have hardware decoding for it.
+**The content** is `PlaceholderVideo.mp4` and `PlaceholderStoneCover.png` in this folder, packed into the
+program by `npm run signal:exe`. Use H.264 with AAC for the video, in the TV's own resolution. A larger
+file can stutter on an older PC, which may not have hardware decoding for it. The cover must have the
+same shape and composition as the video's first frame, or the two won't line up as it heals.
 
 ## Set up the tablet
 
@@ -61,12 +65,12 @@ in the router.
 
 ## TV page keys
 
-**P** passes by hand, which is the backup if the tablet can't connect. **R** returns to the frozen first
-frame. **F** toggles fullscreen. **O** rotates 90°. **H** shows or hides the status panel.
+**P** passes by hand, which is the backup if the tablet can't connect. **R** returns to the stone cover.
+**F** toggles fullscreen. **O** rotates 90°. **H** shows or hides the status panel.
 
-The panel appears by itself only on the frozen frame, and only when something needs doing: no click yet,
-no tablet connected, or a problem with the server or the video. It hides as soon as the core arrives, but
-it can show over the frozen frame if the tablet drops out, so check it before players come in.
+The panel appears by itself only on the stone cover, and only when something needs doing: no click yet,
+no tablet connected, or a problem with the server, the video or the cover. It hides as soon as the core
+arrives, but it can show over the cover if the tablet drops out, so check it before players come in.
 
 ## Testing from the repo
 

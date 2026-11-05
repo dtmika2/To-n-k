@@ -18,14 +18,14 @@ Setup and test steps are in `docs/SIGNAL-TEST.md`.
 - **Design:** the tablet runs the installed HTTPS app and POSTs to a plain-HTTP server on the PC, at the address saved in the operator menu. The lock never depends on the PC to run. Don't serve the live lock from the PC: no offline copy, no fullscreen install, and a watchdog reload would fail if the PC is down.
 - **Trigger:** `seq.after(S.coreLeftMs, …)` in `src/scene/SuccessSequence.ts` fires `game.onCoreLeft` as the core reaches the top edge (9.7 s), which also covers operator force-open. A reset before then sends nothing.
 - **Delivery:** `src/signal/passSignal.ts` saves each pass, retries until confirmed and drops it after 10 minutes. The server ignores repeated ids.
-- **PC side:** `scripts/signal-server.cjs` (server), `scripts/signal-tv.html` (TV page), `scripts/build-server-exe.mjs` (packs them with `dist/` and `PlaceholderVideo.mp4`).
-- **TV show:** frozen first frame → core rises in from the bottom (same `core.png`) → collapses at the video's centre → flash + video starts with sound → back to frozen when it ends. Tunables: `FX` in `signal-tv.html`. Sound needs one click on the page; without it the video plays muted.
+- **PC side:** `scripts/signal-server.cjs` (server), `scripts/signal-tv.html` (TV page), `scripts/build-server-exe.mjs` (packs them with `dist/`, `PlaceholderVideo.mp4` and `PlaceholderStoneCover.png`).
+- **TV show:** stone cover over the video's frozen first frame → core rises in from the bottom (same `core.png`), erasing the stone around its path → collapses at the video's centre while the rest of the stone fades over the last second → flash + video starts with sound → stone back whole when it ends. Tunables: `FX` in `signal-tv.html`. Sound needs one click on the page; without it the video plays muted.
 - **`?signal` / `?signal=URL`:** testing only. These also show the corner status label; players never see it in the installed app.
 
 ## Signal status (2026-11-05)
 - **Proven on the real tablet:** the installed app reached the `.exe` over Wi-Fi and delivered one pass. The `.exe` ran on the development PC.
 - **Not tested:** a separate or inventory PC (firewall, admin rights, blocked unsigned programs), Wi-Fi dropout on the tablet, the Ethernet setup.
-- **Next up:** the real video (the current one is a placeholder), and feel-tuning the TV show on the real TV.
+- **Next up:** the real video and stone cover (the current ones are placeholders, and must share a shape and composition), and feel-tuning the TV show on the real TV.
 
 ## Gotchas
 - The commit code in the operator menu is the last commit, and ignores uncommitted changes. It doesn't prove a local build contains your work.
