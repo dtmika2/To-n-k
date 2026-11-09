@@ -38,13 +38,20 @@ if (!existsSync(join(DIST, 'index.html'))) {
 rmSync(WORK, { recursive: true, force: true });
 mkdirSync(WORK, { recursive: true });
 
-const TV_VIDEO = join(ROOT, 'PlaceholderVideo.mp4');
-const TV_COVER = join(ROOT, 'PlaceholderStoneCover.png');
-for (const file of [TV_VIDEO, TV_COVER]) {
-  if (!existsSync(file)) {
-    console.error(`TV content is missing: ${file}`);
-    process.exit(1);
-  }
+// The full-quality video isn't in git (over GitHub's 100 MB limit); the optimized copy is the fallback.
+const TV_VIDEOS = [join(ROOT, 'TrueVideo.mp4'), join(ROOT, 'TrueVideoOptimized.mp4')];
+const TV_VIDEO = TV_VIDEOS.find((file) => existsSync(file));
+const TV_COVER = join(ROOT, 'TrueStoneCoverBetterLineup.png');
+if (!TV_VIDEO) {
+  console.error(`TV video is missing: ${TV_VIDEOS.join(' or ')}`);
+  process.exit(1);
+}
+if (TV_VIDEO !== TV_VIDEOS[0]) {
+  console.warn(`\n  NOTE: TrueVideo.mp4 not found, packing the smaller TrueVideoOptimized.mp4 instead.\n`);
+}
+if (!existsSync(TV_COVER)) {
+  console.error(`TV content is missing: ${TV_COVER}`);
+  process.exit(1);
 }
 
 const assets = {

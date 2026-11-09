@@ -6,7 +6,7 @@ An escape-room lock for a Samsung tablet: a PixiJS 8 PWA, installed once and the
 - `npm run dev` — Vite dev server on http://localhost:5173. URL flags are in `src/flags.ts`, example links in `docs/DEV-URLS.md`.
 - `npm run verify` — typecheck, vitest and build. Run this before committing.
 - `npm run signal` — build, then run the signal server from source.
-- `npm run signal:exe` — build `release/Final-Gate-Lock-Server.exe` (about 115 MB, not in git).
+- `npm run signal:exe` — build `release/Final-Gate-Lock-Server.exe` (about 260 MB, not in git).
 - **Don't run the Playwright e2e tests unless asked.**
 - **Public build:** every push to `main` publishes https://dtmika2.github.io/To-n-k/ (repo-root `.github/workflows/pages.yml`).
 
@@ -18,7 +18,7 @@ Setup and test steps are in `docs/SIGNAL-TEST.md`.
 - **Design:** the tablet runs the installed HTTPS app and POSTs to a plain-HTTP server on the PC, at the address saved in the operator menu. The lock never depends on the PC to run. Don't serve the live lock from the PC: no offline copy, no fullscreen install, and a watchdog reload would fail if the PC is down.
 - **Trigger:** `seq.after(S.coreLeftMs, …)` in `src/scene/SuccessSequence.ts` fires `game.onCoreLeft` as the core reaches the top edge (9.7 s), which also covers operator force-open. A reset before then sends nothing.
 - **Delivery:** `src/signal/passSignal.ts` saves each pass, retries until confirmed and drops it after 10 minutes. The server ignores repeated ids.
-- **PC side:** `scripts/signal-server.cjs` (server), `scripts/signal-tv.html` (TV page), `scripts/build-server-exe.mjs` (packs them with `dist/`, `PlaceholderVideo.mp4` and `PlaceholderStoneCover.png`).
+- **PC side:** `scripts/signal-server.cjs` (server), `scripts/signal-tv.html` (TV page), `scripts/build-server-exe.mjs` (packs them with `dist/`, `TrueVideo.mp4` and `TrueStoneCoverBetterLineup.png`). Without `TrueVideo.mp4` (gitignored), the build and the server fall back to `TrueVideoOptimized.mp4`, and the build prints a note. `TrueStoneCoverBetterLineup.png` is 1080×1920, the video's own size.
 - **TV show:** stone cover over a still of the video's first frame → core rises in from the bottom (same `core.png`), erasing the stone around its path → collapses at the video's centre while the rest of the stone fades over the last second → flash + video starts with sound → stone back whole when it ends. Tunables: `FX` in `signal-tv.html`. Sound needs one click on the page; without it the video plays muted.
 - **`?signal` / `?signal=URL`:** testing only. These also show the corner status label; players never see it in the installed app.
 
@@ -26,8 +26,9 @@ Setup and test steps are in `docs/SIGNAL-TEST.md`.
 - **Proven on the real tablet:** the installed app reached the `.exe` over Wi-Fi and delivered one pass. The `.exe` ran on the development PC.
 - **Not tested:** a separate or inventory PC (firewall, admin rights, blocked unsigned programs, smooth playback), Wi-Fi dropout on the tablet, the Ethernet setup.
 - **TV show:** the user has run it from the real tablet on the development PC's screen, and the sound start is confirmed with a short test clip. Its feel on the real TV is not yet confirmed.
-- **Assumed, awaiting the user's answer:** the TV is above or beyond the tablet (core enters from the bottom), the video cuts back to stone when it ends, the core lands at the exact centre, and the video isn't cropped to fill the screen (thin side bars on the placeholder).
-- **Next up:** feel-tuning on the real TV, then the real video and stone cover (the current ones are placeholders, and must share a shape and composition).
+- **Assumed, awaiting the user's answer:** the TV is above or beyond the tablet (core enters from the bottom), the video cuts back to stone when it ends, the core lands at the exact centre, and the video isn't cropped to fill the screen (the real video is exactly 9:16).
+- **Content (2026-11-09):** the real video (`TrueVideo.mp4`, 1080×1920 H.264 + AAC, 87 s, 13 Mbps, 142 MB) and stone cover are in place, and the cover lines up with the first frame. `TrueVideo.mp4` is the main one but is over GitHub's 100 MB limit, so it's gitignored and needs a backup outside git; `TrueVideoOptimized.mp4` (same frames, 5 Mbps, 55 MB) is the copy in git.
+- **Next up:** feel-tuning on the real TV with the real content.
 
 ## Gotchas
 - The commit code in the operator menu is the last commit, and ignores uncommitted changes. It doesn't prove a local build contains your work.

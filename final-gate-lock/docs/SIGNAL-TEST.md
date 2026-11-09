@@ -10,7 +10,7 @@ lock still plays normally and the pass is sent when the link returns (within 10 
 installed.
 
 1. In the repo, run `npm run signal:exe`. This creates `release/Final-Gate-Lock-Server.exe` (about
-   115 MB). It isn't in git, so copy it across by USB stick or similar. It only needs rebuilding when
+   260 MB). It isn't in git, so copy it across by USB stick or similar. It only needs rebuilding when
    the server or the TV page changes, or for the Chrome test below when the lock changes.
 2. Connect the PC to the same network as the tablet and double-click the program. If Windows warns about
    an unknown publisher, choose **More info → Run anyway**. If Windows Firewall asks, choose **Allow**,
@@ -43,7 +43,7 @@ core has left, nothing is sent.
 Timings, size and the target point are in `FX` at the top of the script in `scripts/signal-tv.html`.
 Tablet timing is `coreLeftMs` in `src/feel.ts`.
 
-**The content** is `PlaceholderVideo.mp4` and `PlaceholderStoneCover.png` in this folder, packed into the
+**The content** is `TrueVideo.mp4` (not in git; `TrueVideoOptimized.mp4` is used if it's missing) and `TrueStoneCoverBetterLineup.png` in this folder, packed into the
 program by `npm run signal:exe`. Use H.264 with AAC for the video, in the TV's own resolution. A larger
 file can stutter on an older PC, which may not have hardware decoding for it. The cover must have the
 same shape and composition as the video's first frame, or the two won't line up as it heals.

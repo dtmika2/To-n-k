@@ -270,16 +270,19 @@ function readTvPage() {
   return PACKED ? Buffer.from(sea.getRawAsset('tv.html')) : readFileSync(join(__dirname, 'signal-tv.html'));
 }
 
-/** The TV's content by URL: packed name, and the file it comes from. Replace the files to change it. */
+/**
+ * The TV's content by URL: packed name, and the files it comes from, first found wins. Replace the
+ * files to change it. The full-quality video isn't in git; the optimized copy is the fallback.
+ */
 const TV_CONTENT = {
-  '/tv/video': { packed: 'tv-video.mp4', file: 'PlaceholderVideo.mp4' },
-  '/tv/cover': { packed: 'tv-cover.png', file: 'PlaceholderStoneCover.png' },
+  '/tv/video': { packed: 'tv-video.mp4', files: ['TrueVideo.mp4', 'TrueVideoOptimized.mp4'] },
+  '/tv/cover': { packed: 'tv-cover.png', files: ['TrueStoneCoverBetterLineup.png'] },
 };
 
-function readTvContent({ packed, file }) {
+function readTvContent({ packed, files }) {
   if (PACKED) return Buffer.from(sea.getRawAsset(packed));
-  const path = resolve(__dirname, '..', file);
-  return existsSync(path) ? readFileSync(path) : null;
+  const path = files.map((file) => resolve(__dirname, '..', file)).find((p) => existsSync(p));
+  return path ? readFileSync(path) : null;
 }
 
 /** A file of the built lock, or null. `path` starts with a slash. */
@@ -313,7 +316,7 @@ function handleStatic(res, path) {
     if (bytes) sendBytes(res, content.packed, bytes);
     else {
       res.writeHead(404, { 'Content-Type': 'text/plain' });
-      res.end(`Missing file: ${content.file}`);
+      res.end(`Missing file: ${content.files.join(' or ')}`);
     }
     return;
   }
