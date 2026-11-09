@@ -118,7 +118,7 @@ export async function startApp(): Promise<void> {
     rotateDeg = (rotateDeg + 90) % 360;
     layout();
   };
-  // Experimental: the backdrop can be one of the videos instead of the image.
+  // The backdrop: the image or one of the looping videos (the default is `display.backdropDefault`).
   const backdropVideos = settings.display.backdropVideos;
   const backdropChoices = ['image', ...Object.keys(backdropVideos)];
   let backdropChoice = 'image';
@@ -141,7 +141,7 @@ export async function startApp(): Promise<void> {
       { keys: 'L', what: 'switch the look: vfx ⇄ classic (also ?look=)' },
       { keys: 'T', what: 'turn the picture and touch 90° clockwise (also ?rotate=)' },
       { keys: 'Z', what: 'depth: eyes at different distances, with clouds passing between them (also ?depth=0 for off)' },
-      { keys: 'B', what: 'backdrop (experimental): the image or a looping video (also ?backdrop=)' },
+      { keys: 'B', what: 'backdrop: the image or a looping video (also ?backdrop=)' },
       { keys: 'U', what: 'mark the decoy eyes, which are never in the sequence (also ?unused)' },
       { keys: 'E', what: 'layout editor: drag eyes, mouse wheel or [ ] for the radius, Backspace undoes while recording' },
       { keys: 'R', what: 'reset to the intro' },
@@ -265,8 +265,11 @@ export async function startApp(): Promise<void> {
     document.body.classList.toggle('show-cursor', debugOn || editor.isOpen || menu.isOpen);
   };
   applyView();
+  // `?backdrop=image|loop|swirl` overrides the default; an unknown name is ignored.
   const backdropParam = params.get('backdrop');
-  if (backdropParam && backdropVideos[backdropParam]) setBackdrop(backdropParam);
+  const startBackdrop =
+    backdropParam && backdropChoices.includes(backdropParam) ? backdropParam : settings.display.backdropDefault;
+  if (startBackdrop !== 'image' && backdropVideos[startBackdrop]) setBackdrop(startBackdrop);
 
   // Finger speed (world units / s), smoothed, for the theremin swell.
   let speed = 0;

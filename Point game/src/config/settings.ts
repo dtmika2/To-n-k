@@ -74,10 +74,12 @@ export const settings = {
     /** Bottom layer image (portrait 9:16, in public/; at least 2160×3840 to stay sharp at 4K); '' = plain night gradient. */
     backdrop: 'assets/BackdropHighRes.jpeg',
     /**
-     * Experimental backdrops (B key, M menu, `?backdrop=`): looping silent videos, portrait 9:16, H.264 MP4.
-     * A name here becomes a choice; the image above stays the default and the fallback.
+     * Video backdrops (B key, M menu, `?backdrop=`): looping silent videos, portrait 9:16, H.264 MP4.
+     * A name here becomes a choice; the image above is the fallback if a video can't play.
      */
     backdropVideos: { loop: 'assets/BackdropLoop.mp4', swirl: 'assets/BackdropSwirlHighRes.mp4' } as Record<string, string>,
+    /** The backdrop at startup: 'image' or a name from `backdropVideos`. `?backdrop=` overrides it. */
+    backdropDefault: 'swirl',
     /**
      * Depth mode (Z key, M menu, `?depth=0` for off): eyes at different distances. Ranges are
      * [far, near]. Visual only: the hit radii don't change. See render/depth.ts.
