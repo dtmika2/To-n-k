@@ -77,7 +77,7 @@ export const settings = {
      * Video backdrops (B key, M menu, `?backdrop=`): looping silent videos, portrait 9:16, H.264 MP4.
      * A name here becomes a choice; the image above is the fallback if a video can't play.
      */
-    backdropVideos: { loop: 'assets/BackdropLoop.mp4', swirl: 'assets/BackdropSwirlHighRes.mp4' } as Record<string, string>,
+    backdropVideos: { loop: 'assets/BackdropLoop.mp4', swirl: 'assets/BackdropSwirl1080.mp4' } as Record<string, string>,
     /** The backdrop at startup: 'image' or a name from `backdropVideos`. `?backdrop=` overrides it. */
     backdropDefault: 'swirl',
     /**

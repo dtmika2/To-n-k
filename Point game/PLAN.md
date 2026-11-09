@@ -432,3 +432,9 @@ Goal: the owner can play the full rules on the real TV, hear the real sound, and
 ## Amendment (2026-11-09): the swirl video is the default backdrop
 
 - `BackdropSwirlHighRes.mp4` now shows at startup (`display.backdropDefault: 'swirl'`). The image is still the fallback if the video can't play, and `?backdrop=image` (or `B`) brings it back.
+
+## Amendment (2026-11-09): the swirl backdrop at 1080×1920
+
+- The 4K swirl made the game lag on test PCs, and with the image instead it ran smoothly: each 2160×3840 frame is about 33 MB to copy to the graphics card, up to 30 times a second. The swirl is now `BackdropSwirl1080.mp4` (1080×1920, 30 fps, 5 MB, same 449 frames, so it loops the same), which is a quarter of that work. At full size it looks practically the same behind the mist.
+- The 4K original moved to `media/BackdropSwirlHighRes.mp4`, out of `public/`, so it's no longer downloaded and cached by every install.
+- Encoded with: `ffmpeg -i BackdropSwirlHighRes.mp4 -an -vf scale=1080:1920:flags=lanczos -c:v libx264 -preset slow -crf 20 -profile:v high -level 4.1 -pix_fmt yuv420p -r 30 -movflags +faststart BackdropSwirl1080.mp4`
