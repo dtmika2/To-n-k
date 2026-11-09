@@ -66,7 +66,7 @@ test('Playwright drives the arrows to solve the lock; state becomes Success', as
     .toContain('Success');
   s = await snap(page);
   expect(s.solved).toBe(true);
-  expect(s.slots.map((slot, i) => cfg.wheels[i].slots[slot])).toEqual([9, 12, 88, 14, 5, 3, 79, 0, 6, 31]);
+  expect(s.slots.map((slot, i) => cfg.wheels[i].slots[slot])).toEqual([8, 7, 3, 1, 2, 4, 5, 5, 9, 8]);
 });
 
 test('five parallel synthetic pointers turn five different wheels at once', async ({ page }) => {

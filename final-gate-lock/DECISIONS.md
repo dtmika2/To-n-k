@@ -125,3 +125,9 @@ Format: date — question → choice (reason).
     Open is quiet. The "held breath" duck is released at the split. It was never released before
     Open, so the hum was ducked to silence. The flight reuses `reveal_whoosh` at 0.8× rate. A
     dedicated `core_fly` sound can replace it if the client supplies one.
+- 2026-11-09 — **The real code: single digits.** Correct numbers, first wheel to last:
+  8 7 3 1 2 4 5 5 9 8; decoys 1 6 0 9 8 2 1 3 7 0. Wheel 6's decoy was given as 4, the same as
+  its correct number, so the user chose 2 instead. Each wheel keeps its old `correct` and `start`
+  slots. Numbers now repeat across wheels, so the config check only requires the three numbers on
+  one wheel to differ. The start slot's number is never shown (it's the star), and is set to the
+  lowest digit not used on that wheel.

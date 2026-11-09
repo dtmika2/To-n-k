@@ -14,7 +14,7 @@ test('invalid config shows the red error screen with reasons', async ({ page }) 
     const res = await route.fetch();
     const cfg = await res.json();
     cfg.wheels[0].start = cfg.wheels[0].correct; // start === correct
-    cfg.wheels[1].slots[0] = cfg.wheels[2].slots[0]; // duplicate number
+    cfg.wheels[1].slots[0] = cfg.wheels[1].slots[1]; // same number twice on one wheel
     cfg.wheels.pop(); // only 9 wheels
     await route.fulfill({ response: res, json: cfg });
   });
@@ -24,7 +24,7 @@ test('invalid config shows the red error screen with reasons', async ({ page }) 
   await expect(err).toBeVisible();
   await expect(err).toContainText('expected 10 wheels');
   await expect(err).toContainText('"start" must differ from "correct"');
-  await expect(err).toContainText('already used');
+  await expect(err).toContainText('appears twice on this wheel');
   const bg = await err.evaluate((el) => getComputedStyle(el).backgroundColor);
   expect(bg).toBe('rgb(122, 0, 0)');
   await shot(page, 'M0-config-error');

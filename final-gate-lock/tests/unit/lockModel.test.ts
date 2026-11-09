@@ -45,8 +45,8 @@ describe('LockModel', () => {
   it('value() reports the number in the window', () => {
     const m = model();
     m.setSlot(1, 2);
-    expect(m.value(1)).toBe(9);
-    expect(m.spec(1).slots).toEqual([57, 23, 9]);
+    expect(m.value(1)).toBe(8);
+    expect(m.spec(1).slots).toEqual([0, 1, 8]);
   });
 
   it('solved only when all 10 are correct', () => {
@@ -71,7 +71,7 @@ describe('LockModel', () => {
       while (!m.isCorrect(w.id) && guard++ < 3) m.rotate(w.id, 'cw');
     }
     expect(m.isSolved()).toBe(true);
-    expect(m.snapshot().map((s, i) => cfg.wheels[i].slots[s])).toEqual([9, 12, 88, 14, 5, 3, 79, 0, 6, 31]);
+    expect(m.snapshot().map((s, i) => cfg.wheels[i].slots[s])).toEqual([8, 7, 3, 1, 2, 4, 5, 5, 9, 8]);
   });
 
   it('reset returns to start', () => {

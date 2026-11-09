@@ -59,7 +59,6 @@ export function validateConfig(raw: unknown): ValidationResult {
   } else {
     if (wheels.length !== 10) errors.push(`expected 10 wheels, found ${wheels.length}`);
     const seenIds = new Set<number>();
-    const seenValues = new Map<number, number>();
     let lastRowIdx = 0;
     const rowCounts: Record<Row, number> = { top: 0, middle: 0, bottom: 0 };
     wheels.forEach((w, i) => {
@@ -86,13 +85,16 @@ export function validateConfig(raw: unknown): ValidationResult {
       if (!Array.isArray(slots) || slots.length !== 3) {
         errors.push(`${label}: "slots" must have exactly 3 numbers`);
       } else {
+        // Numbers may repeat across wheels (the code is single digits), but not on one wheel:
+        // two equal numbers there would make the decoy look exactly like the solution.
+        const seenOnWheel = new Set<number>();
         slots.forEach((s, k) => {
           if (!isInt(s) || s < 0 || s > 99) {
             errors.push(`${label}: slot ${k} must be an integer 0–99`);
-          } else if (seenValues.has(s)) {
-            errors.push(`${label}: number ${s} is already used by wheel #${seenValues.get(s)}`);
+          } else if (seenOnWheel.has(s)) {
+            errors.push(`${label}: number ${s} appears twice on this wheel`);
           } else {
-            seenValues.set(s, i + 1);
+            seenOnWheel.add(s);
           }
         });
       }

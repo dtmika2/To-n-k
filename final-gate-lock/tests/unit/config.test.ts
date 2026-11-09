@@ -14,7 +14,14 @@ describe('validateConfig', () => {
   it('shipped correct numbers match the plan', () => {
     const r = validateConfig(base());
     if (!r.ok) throw new Error('invalid');
-    expect(r.config.wheels.map((w) => w.slots[w.correct])).toEqual([9, 12, 88, 14, 5, 3, 79, 0, 6, 31]);
+    expect(r.config.wheels.map((w) => w.slots[w.correct])).toEqual([8, 7, 3, 1, 2, 4, 5, 5, 9, 8]);
+  });
+
+  it('allows the same number on different wheels', () => {
+    const c = base();
+    c.wheels[1].slots = [11, 12, 13];
+    c.wheels[2].slots = [11, 12, 13];
+    expect(validateConfig(c).ok).toBe(true);
   });
 
   it('rejects non-objects', () => {
@@ -26,7 +33,7 @@ describe('validateConfig', () => {
     ['wheels not array', (c) => (c.wheels = 3), '"wheels" must be an array'],
     ['9 wheels', (c) => c.wheels.pop(), 'expected 10 wheels'],
     ['start equals correct', (c) => (c.wheels[3].start = c.wheels[3].correct), 'must differ'],
-    ['duplicate number', (c) => (c.wheels[1].slots[2] = c.wheels[0].slots[0]), 'already used'],
+    ['same number twice on a wheel', (c) => (c.wheels[1].slots[2] = c.wheels[1].slots[0]), 'appears twice on this wheel'],
     ['2 slots', (c) => (c.wheels[2].slots = [1, 2]), 'exactly 3'],
     ['slot out of range', (c) => (c.wheels[2].slots[1] = 140), 'integer 0–99'],
     ['bad row', (c) => (c.wheels[0].row = 'side'), '"row" must be'],
