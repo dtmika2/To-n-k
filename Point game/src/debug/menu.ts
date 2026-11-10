@@ -11,7 +11,7 @@ export interface KeyHelp {
 
 export type MenuControl =
   | { kind: 'toggle'; label: string; key?: string; hint?: string; get(): boolean; set(v: boolean): void }
-  | { kind: 'choice'; label: string; key?: string; options: readonly string[]; get(): string; set(v: string): void }
+  | { kind: 'choice'; label: string; key?: string; hint?: string; options: readonly string[]; get(): string; set(v: string): void }
   | { kind: 'button'; label: string; key?: string; hint?: string; text(): string; press(): void }
   | { kind: 'range'; label: string; min: number; max: number; step: number; hint?: string; get(): number; set(v: number): void };
 

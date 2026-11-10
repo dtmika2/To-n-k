@@ -96,6 +96,47 @@ export function splitByLayer<T>(run: readonly T[], layerOf: (p: T) => number): {
   return pieces.filter((piece) => piece.pts.length > 1);
 }
 
+/**
+ * Like `splitByLayer`, but each cut is a soft hand-over instead of a hard one. Around a cut the two pieces
+ * overlap, and across the overlap one fades out while the next fades in: a point's weight in a piece is the
+ * share of the window `fade` points either side of it that lies in that piece's own stretch, so at every
+ * point the weights add up to 1. For additive beams the line keeps its brightness, and a cloud or mist veil
+ * between the two layers turns into a gradual change rather than a visible seam across the line.
+ * `weigh(p, w)` returns a copy of `p` carrying the weight (a point may be in two pieces at once).
+ */
+export function crossfadeByLayer<T>(
+  run: readonly T[],
+  layerOf: (p: T) => number,
+  fade: number,
+  weigh: (p: T, w: number) => T,
+): { layer: number; pts: T[] }[] {
+  const n = run.length;
+  if (n === 0) return [];
+  const layers = run.map(layerOf);
+  // each piece's own stretch, in point coordinates; the first and last reach out past the line's ends
+  const spans: { layer: number; from: number; to: number }[] = [];
+  for (let i = 0; i < n; i++) {
+    if (i > 0 && layers[i] === layers[i - 1]) spans[spans.length - 1].to = i + 0.5;
+    else spans.push({ layer: layers[i], from: i - 0.5, to: i + 0.5 });
+  }
+  if (spans.length === 1) return n > 1 ? [{ layer: layers[0], pts: [...run] }] : [];
+  spans[0].from = -Infinity;
+  spans[spans.length - 1].to = Infinity;
+
+  const h = Math.max(0.5, fade);
+  const pieces: { layer: number; pts: T[] }[] = [];
+  for (const span of spans) {
+    const weight = (i: number) => (Math.min(span.to, i + h) - Math.max(span.from, i - h)) / (2 * h);
+    // the points this piece touches, plus one at zero weight at each end, so it fades out completely
+    const first = Math.max(0, Math.floor(span.from - h));
+    const last = Math.min(n - 1, Math.ceil(span.to + h));
+    const pts: T[] = [];
+    for (let i = first; i <= last; i++) pts.push(weigh(run[i], Math.max(0, Math.min(1, weight(i)))));
+    if (pts.length > 1) pieces.push({ layer: span.layer, pts });
+  }
+  return pieces;
+}
+
 /** An eye as `fingerDepth` sees it: where it is, how deep, and how far its region reaches. */
 export interface DepthRegion {
   x: number;

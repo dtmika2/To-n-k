@@ -438,3 +438,9 @@ Goal: the owner can play the full rules on the real TV, hear the real sound, and
 - The 4K swirl made the game lag on test PCs, and with the image instead it ran smoothly: each 2160×3840 frame is about 33 MB to copy to the graphics card, up to 30 times a second. The swirl is now `BackdropSwirl1080.mp4` (1080×1920, 30 fps, 5 MB, same 449 frames, so it loops the same), which is a quarter of that work. At full size it looks practically the same behind the mist.
 - The 4K original moved to `media/BackdropSwirlHighRes.mp4`, out of `public/`, so it's no longer downloaded and cached by every install.
 - Encoded with: `ffmpeg -i BackdropSwirlHighRes.mp4 -an -vf scale=1080:1920:flags=lanczos -c:v libx264 -preset slow -crf 20 -profile:v high -level 4.1 -pix_fmt yuv420p -r 30 -movflags +faststart BackdropSwirl1080.mp4`
+
+## Amendment (2026-11-10): swirl quality in the menu
+
+- The M menu has *Swirl quality*: 1080p (default, `BackdropSwirl1080.mp4`), 2K (`BackdropSwirl1440.mp4`, 1440×2560, 7.8 MB) and 4K (`BackdropSwirl2160.mp4`, the 2160×3840 original, back from `media/`). Also `?swirl=1080p|2K|4K`; the startup size is `display.swirlQualityDefault`.
+- 2K and 4K stay out of the precache (`globIgnores`) so installs don't download ~35 MB more; a CacheFirst runtime route caches each the first time it plays, so it works offline after that. If a bigger size can't load (offline, never cached), the swirl falls back to 1080p.
+- 2K encoded like the 1080 one: `ffmpeg -i BackdropSwirl2160.mp4 -an -vf scale=1440:2560:flags=lanczos -c:v libx264 -preset slow -crf 20 -profile:v high -level 5.0 -pix_fmt yuv420p -r 30 -movflags +faststart BackdropSwirl1440.mp4`

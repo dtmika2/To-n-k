@@ -78,6 +78,18 @@ export const settings = {
      * A name here becomes a choice; the image above is the fallback if a video can't play.
      */
     backdropVideos: { loop: 'assets/BackdropLoop.mp4', swirl: 'assets/BackdropSwirl1080.mp4' } as Record<string, string>,
+    /**
+     * The swirl at three sizes (M menu "Swirl quality", `?swirl=1080p|2K|4K`); the same 449 frames, so each loops the same.
+     * Bigger is sharper but heavier: every frame is copied to the graphics card, and 4K made test PCs lag.
+     * Only 1080p is in the offline install; 2K and 4K are cached the first time they play (online).
+     */
+    swirlQualities: {
+      '1080p': 'assets/BackdropSwirl1080.mp4',
+      '2K': 'assets/BackdropSwirl1440.mp4',
+      '4K': 'assets/BackdropSwirl2160.mp4',
+    } as Record<string, string>,
+    /** The swirl size at startup: a name from `swirlQualities`. */
+    swirlQualityDefault: '1080p',
     /** The backdrop at startup: 'image' or a name from `backdropVideos`. `?backdrop=` overrides it. */
     backdropDefault: 'swirl',
     /**

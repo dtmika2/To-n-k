@@ -80,6 +80,16 @@ export default defineConfig({
       workbox: {
         globPatterns: ['**/*.{js,css,html,json,png,jpg,jpeg,webp,svg,ico,woff2,mp4}'],
         maximumFileSizeToCacheInBytes: 32 * 1024 * 1024,
+        // The 2K and 4K swirls (settings `swirlQualities`) stay out of the install, which would otherwise download
+        // ~35 MB more; each is cached the first time it plays, so it works offline after that.
+        globIgnores: ['**/node_modules/**/*', 'sw.js', 'workbox-*.js', '**/BackdropSwirl1440.mp4', '**/BackdropSwirl2160.mp4'],
+        runtimeCaching: [
+          {
+            urlPattern: /\/assets\/BackdropSwirl(1440|2160)\.mp4$/,
+            handler: 'CacheFirst',
+            options: { cacheName: 'swirl-hq', cacheableResponse: { statuses: [200] } },
+          },
+        ],
         navigateFallback: 'index.html',
         navigateFallbackDenylist: [/\/vfx\.html/],
         cleanupOutdatedCaches: true,

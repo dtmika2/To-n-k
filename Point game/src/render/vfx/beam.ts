@@ -10,6 +10,23 @@ export interface BeamPoint {
   w?: number;
   /** Alpha multiplier at this point (depth mode). */
   a?: number;
+  /** Unit normal, if worked out over the whole strand (depth mode cuts it into pieces that must meet exactly). */
+  nx?: number;
+  ny?: number;
+}
+
+/** Gives each point of a strand its unit normal from its neighbours, so pieces cut from it share the normals. */
+export function setNormals(pts: BeamPoint[]): void {
+  const n = pts.length;
+  for (let i = 0; i < n; i++) {
+    const a = pts[Math.max(0, i - 1)];
+    const c = pts[Math.min(n - 1, i + 1)];
+    const dx = c.x - a.x;
+    const dy = c.y - a.y;
+    const l = Math.hypot(dx, dy) || 1;
+    pts[i].nx = -dy / l;
+    pts[i].ny = dx / l;
+  }
 }
 
 export interface BeamStyle {
@@ -103,14 +120,20 @@ export class BeamBatch {
     const first = this.batch.reserve(n * 2, (n - 1) * 6);
     for (let i = 0; i < n; i++) {
       const p = pts[i];
-      const a = pts[Math.max(0, i - 1)];
-      const c = pts[Math.min(n - 1, i + 1)];
-      const dx = c.x - a.x;
-      const dy = c.y - a.y;
-      const l = Math.hypot(dx, dy) || 1;
+      let ux = p.nx;
+      let uy = p.ny;
+      if (ux === undefined || uy === undefined) {
+        const a = pts[Math.max(0, i - 1)];
+        const c = pts[Math.min(n - 1, i + 1)];
+        const dx = c.x - a.x;
+        const dy = c.y - a.y;
+        const l = Math.hypot(dx, dy) || 1;
+        ux = -dy / l;
+        uy = dx / l;
+      }
       const w = hw * (p.w ?? 1);
-      const nx = (-dy / l) * w;
-      const ny = (dx / l) * w;
+      const nx = ux * w;
+      const ny = uy * w;
       const along = p.s * len;
       const alpha = o.alpha * (p.a ?? 1);
       this.batch.vertex(p.x + nx, p.y + ny, along, 1, r, g, b, alpha, o.u, o.hot, o.seed, len);

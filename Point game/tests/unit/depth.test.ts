@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { assignDepths, atDepth, BANDS, bandOf, eyesBelow, fingerDepth, lineLayer, orbitAlpha, orbitPoint, splitByLayer, type Orbit } from '../../src/render/depth.ts';
+import { assignDepths, atDepth, BANDS, bandOf, crossfadeByLayer, eyesBelow, fingerDepth, lineLayer, orbitAlpha, orbitPoint, splitByLayer, type Orbit } from '../../src/render/depth.ts';
 import pattern from '../../src/config/pattern.json';
 
 const points = pattern.points.map((p) => ({ id: p.id, seed: p.seed }));
@@ -82,6 +82,43 @@ describe('splitByLayer', () => {
     for (let i = 1; i < pieces.length; i++) expect(pieces[i].pts[0]).toBe(pieces[i - 1].pts.at(-1));
     expect(pieces[0].pts[0]).toBe(run[0]);
     expect(pieces.at(-1)!.pts.at(-1)).toBe(run.at(-1));
+  });
+});
+
+describe('crossfadeByLayer', () => {
+  const run = Array.from({ length: 31 }, (_, i) => ({ i, s: i / 30, a: 1 }));
+  const byThirds = (p: { s: number }) => bandOf(p.s);
+  const weigh = (p: { i: number; s: number; a: number }, w: number) => ({ ...p, a: p.a * w });
+
+  it('keeps a line inside one layer whole, at full strength', () => {
+    expect(crossfadeByLayer(run, () => 4, 3, weigh)).toEqual([{ layer: 4, pts: run }]);
+  });
+
+  it('cuts a line wherever its layer changes, in order', () => {
+    expect(crossfadeByLayer(run, byThirds, 3, weigh).map((p) => p.layer)).toEqual([0, 1, 2]);
+  });
+
+  it('keeps the line at full strength at every point: the pieces\' weights add up to 1', () => {
+    const total = new Map<number, number>();
+    for (const piece of crossfadeByLayer(run, byThirds, 3, weigh))
+      for (const p of piece.pts) total.set(p.i, (total.get(p.i) ?? 0) + p.a);
+    expect(total.size).toBe(run.length);
+    for (const sum of total.values()) expect(sum).toBeCloseTo(1, 10);
+  });
+
+  it('fades each piece out to nothing at a cut, rather than stopping at full strength', () => {
+    const [first, second] = crossfadeByLayer(run, byThirds, 3, weigh);
+    expect(first.pts.at(-1)!.a).toBe(0);
+    expect(second.pts[0].a).toBe(0);
+    expect(first.pts[0].a).toBe(1); // the line's own ends stay whole
+  });
+
+  it('works for cuts closer together than the fade', () => {
+    const zigzag = (p: { i: number }) => (p.i >= 10 && p.i < 12 ? 1 : 0);
+    const total = new Map<number, number>();
+    for (const piece of crossfadeByLayer(run, zigzag, 3, weigh))
+      for (const p of piece.pts) total.set(p.i, (total.get(p.i) ?? 0) + p.a);
+    for (const sum of total.values()) expect(sum).toBeCloseTo(1, 10);
   });
 });
 

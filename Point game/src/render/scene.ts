@@ -8,7 +8,7 @@ import { noteToMidi } from '../pattern/notes.ts';
 import { ASPECT, type Pattern, type Vec } from '../pattern/types.ts';
 import { Atmosphere } from './atmosphere.ts';
 import { CloudCover, type CloudConfig } from './clouds.ts';
-import { assignDepths, atDepth, bandOf, eyesBelow, fingerDepth, lineLayer, splitByLayer, type DepthConfig, type DepthRegion } from './depth.ts';
+import { assignDepths, atDepth, bandOf, crossfadeByLayer, eyesBelow, fingerDepth, lineLayer, splitByLayer, type DepthConfig, type DepthRegion } from './depth.ts';
 import { figureProgress, figureSurge } from '../game/figure.ts';
 import { almond, circle, easeOut, easeOutElastic, lerpColor, smooth, wobblyCircle } from './draw.ts';
 import { Eye, type EyeLook } from './eye.ts';
@@ -18,7 +18,7 @@ import { Sky } from './sky.ts';
 import { softDotTexture } from './textures.ts';
 import { beamStrand, strandRuns, strokeStrand, type StrandStyle } from './strand.ts';
 import { loadVideoBackdrop, type VideoBackdrop } from './videoBackdrop.ts';
-import { BeamBatch, type BeamPoint } from './vfx/beam.ts';
+import { BeamBatch, setNormals, type BeamPoint } from './vfx/beam.ts';
 import { LidLightBatch } from './vfx/lidLight.ts';
 import { EnergyOrb } from './vfx/orb.ts';
 import { RingBatch } from './vfx/ring.ts';
@@ -37,6 +37,8 @@ const C = {
  * looks) and the touch ripple (gold here). Beams and the rest keep their colours.
  */
 const VFX_RING = { color: C.lavender, fill: 1 };
+/** Depth mode, vfx look: where a line changes layer, the two pieces cross-fade over this many points either side (~0.01 world units apart). */
+const LAYER_FADE_POINTS = 3;
 
 interface Anim {
   start: number;
@@ -557,7 +559,13 @@ export class SceneRenderer {
         p.w = atDepth(cfg.lineWidth, zAt(p.s));
         p.a = atDepth(cfg.lineAlpha, zAt(p.s));
       }
-      for (const piece of splitByLayer(run, layerOf)) this.drawRuns(this.layers[piece.layer], a, b, [piece.pts], seed, o);
+      // vfx: the beams add up, so the pieces cross-fade over a few points and meet with the same normals,
+      // leaving no seam where the line changes layer; classic strokes blend normally, so they meet edge to edge
+      if (this.vfx) setNormals(run);
+      const pieces = this.vfx
+        ? crossfadeByLayer(run, layerOf, LAYER_FADE_POINTS, (p, k) => ({ ...p, a: (p.a ?? 1) * k }))
+        : splitByLayer(run, layerOf);
+      for (const piece of pieces) this.drawRuns(this.layers[piece.layer], a, b, [piece.pts], seed, o);
     }
   }
 

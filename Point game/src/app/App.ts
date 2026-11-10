@@ -122,14 +122,30 @@ export async function startApp(): Promise<void> {
   const backdropVideos = settings.display.backdropVideos;
   const backdropChoices = ['image', ...Object.keys(backdropVideos)];
   let backdropChoice = 'image';
+  // The swirl's size (`display.swirlQualities`): `?swirl=` or the menu; the default is `display.swirlQualityDefault`.
+  const swirlQualities = settings.display.swirlQualities;
+  const swirlQualityChoices = Object.keys(swirlQualities);
+  const swirlParam = params.get('swirl')?.toLowerCase();
+  let swirlQuality =
+    swirlQualityChoices.find((q) => q.toLowerCase() === swirlParam) ?? settings.display.swirlQualityDefault;
+  const videoFor = (name: string) => (name === 'swirl' && swirlQualities[swirlQuality]) || backdropVideos[name];
   const setBackdrop = (name: string) => {
     backdropChoice = name;
-    const video = backdropVideos[name];
+    const quality = swirlQuality;
+    const video = videoFor(name);
     void scene.showVideoBackdrop(video ? import.meta.env.BASE_URL + video : null).then((played) => {
-      if (played || backdropChoice !== name) return;
-      backdropChoice = 'image';
+      if (played || backdropChoice !== name || swirlQuality !== quality) return;
+      // A bigger swirl that can't load (offline before it was ever cached) falls back to the smallest one.
+      if (name === 'swirl' && quality !== swirlQualityChoices[0]) {
+        swirlQuality = swirlQualityChoices[0];
+        setBackdrop(name);
+      } else backdropChoice = 'image';
       menu.sync();
     });
+  };
+  const setSwirlQuality = (quality: string) => {
+    swirlQuality = quality;
+    if (backdropChoice === 'swirl') setBackdrop('swirl');
   };
 
   // M: menu overlay, with the key legend and live switches (all of them also work by key, or are tunables)
@@ -171,6 +187,14 @@ export async function startApp(): Promise<void> {
             set: (v) => (scene.eyeGrow = v / 100),
           },
           { kind: 'choice', label: 'Backdrop', key: 'B', options: backdropChoices, get: () => backdropChoice, set: setBackdrop },
+          {
+            kind: 'choice',
+            label: 'Swirl quality',
+            hint: 'The swirl video size (also ?swirl=). Bigger is sharper but heavier; if the game stutters, go back to 1080p. Back to the default after a reload.',
+            options: swirlQualityChoices,
+            get: () => swirlQuality,
+            set: setSwirlQuality,
+          },
           {
             kind: 'toggle',
             label: 'Depth',
