@@ -17,7 +17,7 @@ export class DebugOverlay {
     this.el.style.display = v ? 'block' : 'none';
   }
 
-  update(s: GameState, ctx: GameContext, now: number, fps: number, extra: string): void {
+  update(s: GameState, ctx: GameContext, now: number, fps: number, extra: string, offline: string): void {
     if (!this.visible) return;
     const t = ctx.timing;
     const secs = (ms: number) => `${(Math.max(0, ms) / 1000).toFixed(1)} s`;
@@ -32,6 +32,7 @@ export class DebugOverlay {
       `pointer ${s.pointer ? `${s.pointer.id}${s.pointer.ignored ? ' (ignored)' : ''}` : '—'}  hysteresis [${s.inside.join(',')}]`,
       ...(s.mode === 'CREATIVE' ? [`chain ${s.chain.join(' → ') || '—'}`] : []),
       `${fps.toFixed(0)} fps  ${extra}`,
+      offline,
       `M menu · D overlay · P primitives · L look · E editor · R reset · 1–5 INTRO/GAME/REVEAL/IDLE/CREATIVE`,
     ].join('\n');
   }

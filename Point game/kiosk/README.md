@@ -16,7 +16,7 @@ The hidden number needs no image: after a solve, the eyes listed in `src/config/
 
 ## Start it
 
-- **Windows, no install (easiest):** copy `kiosk\start-kiosk-online.bat` to the PC and double-click it. It opens the public build (https://dtmika2.github.io/To-n-k/point-game/) in kiosk Chrome with the same flags as below (Edge if Chrome is missing), in its own profile. It needs internet on the first start only; after that the service worker runs the game offline. No Node, no build, no server window. It's better than the installed app: kiosk mode has no title bar or close button, no exit-full-screen X on a long touch at the top, and it allows sound before the first touch.
+- **Windows, no install (easiest):** copy `kiosk\start-kiosk-online.bat` to the PC and double-click it. It opens the public build (https://dtmika2.github.io/To-n-k/point-game/) in kiosk Chrome with the same flags as below (Edge if Chrome is missing), in its own profile. It needs internet on the first start only, until the whole offline copy (about 21 MB) is saved: on a slow line that takes 10 minutes or more, and the game shows long before it's done. Press `D` and wait for **offline copy: ready ✓** before closing it; until then a start without internet shows the browser's "no internet" page. After that the service worker runs the game offline, and updates download in the background without breaking it. No Node, no build, no server window. It's better than the installed app: kiosk mode has no title bar or close button, no exit-full-screen X on a long touch at the top, and it allows sound before the first touch.
 - **Windows, local build:** double-click `kiosk\start-kiosk.bat`. It starts the server in a minimized window, waits for it, then opens Chrome in kiosk mode with its own profile, so it works even if Chrome is already open.
 - **Linux:** `sh kiosk/start-kiosk.sh`.
 
@@ -38,7 +38,7 @@ To quit kiosk Chrome, press Alt+F4. Then close the "Dream Pattern server" window
 
 | Key | Action |
 |---|---|
-| `D` | debug overlay: state, strikes, timers, FPS, canvas and screen size in real pixels, render scale, and hit radii over the scene |
+| `D` | debug overlay: state, strikes, timers, FPS, canvas and screen size in real pixels, render scale, the offline copy (*saving 20/32 files…* → *ready ✓*), and hit radii over the scene |
 | `P` | switch to the plain debug primitives (Phase 1 look) and back |
 | `T` | turn the picture and touch 90° clockwise, until the next reload; also a button in the `M` menu, and `?rotate=` in the URL |
 | `Z` | depth (on by default): eyes at different distances, with orbiting particles and clouds passing between them; also in the `M` menu, and `?depth=0` in the URL turns it off |

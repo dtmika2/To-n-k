@@ -16,6 +16,7 @@ import { noteToFreq } from '../pattern/notes.ts';
 import type { Pattern, Vec } from '../pattern/types.ts';
 import { DebugRenderer } from '../render/debugRenderer.ts';
 import { SceneRenderer, type Look } from '../render/scene.ts';
+import { OfflineStatus } from './offlineStatus.ts';
 import { Viewport } from './viewport.ts';
 import { keepScreenAwake } from './wakeLock.ts';
 
@@ -68,6 +69,7 @@ export async function startApp(): Promise<void> {
 
   const audio = new AudioEngine(freqsOf(pattern), ctx, settings.audio);
   const overlay = new DebugOverlay();
+  const offlineStatus = new OfflineStatus();
   // INTRO attract demo. The kiosk Chrome allows audio without a gesture, so try to start it right away;
   // in a normal browser the context stays suspended until the first tap.
   let attract = new AttractPlayer(ctx, settings.timing.attract, Math.random);
@@ -152,7 +154,7 @@ export async function startApp(): Promise<void> {
   const menu = new Menu(
     [
       { keys: 'M / Esc', what: 'open / close this menu' },
-      { keys: 'D', what: 'debug overlay: state, timers and fps; hit radii drawn over the scene' },
+      { keys: 'D', what: 'debug overlay: state, timers, fps and the offline copy; hit radii drawn over the scene' },
       { keys: 'P', what: 'primitives only (the Phase 1 debug drawing)' },
       { keys: 'L', what: 'switch the look: vfx ⇄ classic (also ?look=)' },
       { keys: 'T', what: 'turn the picture and touch 90° clockwise (also ?rotate=)' },
@@ -422,12 +424,14 @@ export async function startApp(): Promise<void> {
     }
     const pixelRatio = window.devicePixelRatio || 1;
     const screenPx = `${Math.round(screen.width * pixelRatio)}×${Math.round(screen.height * pixelRatio)}`;
+    if (overlay.visible) offlineStatus.tick(now);
     overlay.update(
       state,
       ctx,
       now,
       app.ticker.FPS,
       `canvas ${app.canvas.width}×${app.canvas.height}  screen ${screenPx}  look ${look}  scale ${renderScale}${perfNote}  octaves ${scene.octaves}  audio ${audio.contextState}`,
+      offlineStatus.text,
     );
   });
 
