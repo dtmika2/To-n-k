@@ -134,7 +134,7 @@ test('volume, visual mode, FPS and timings persist across reloads', async ({ pag
   await expect(page.getByTestId('fps')).toBeVisible();
   // config.json itself is untouched
   const served = await (await page.request.get('/config.json')).json();
-  expect(served.timings.resetAfterSuccessMs).toBe(20000);
+  expect(served.timings.resetAfterSuccessMs).toBe(92000);
 });
 
 test('menu auto-closes after 60 s without input', async ({ page }) => {

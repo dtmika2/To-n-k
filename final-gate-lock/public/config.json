@@ -12,7 +12,7 @@
     { "id": 10, "row": "bottom", "slots": [0, 1, 8],  "correct": 2, "start": 1 }
   ],
   "timings": {
-    "resetAfterSuccessMs": 20000,
+    "resetAfterSuccessMs": 92000,
     "resetAfterIdleMs": 30000,
     "blinkIntervalMs": [4000, 9000],
     "glanceIntervalMs": [6000, 14000],

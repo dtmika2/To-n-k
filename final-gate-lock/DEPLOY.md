@@ -82,8 +82,8 @@ default. The menu closes itself after 60 s without input.
 
 - Morning: unlock the screen pin if needed, launch the app, check it shows mist; run the operator
   **Sound test** once.
-- Between groups: nothing. The lock resets itself 20 s after it opens (mist rolls back, wheels are
-  reset unseen), and also after 30 s with nobody touching it mid-game.
+- Between groups: nothing. The lock resets itself 92 s after it opens, just after the TV video ends
+  (mist rolls back, wheels are reset unseen), and also after 30 s with nobody touching it mid-game.
 - If anything looks wrong: operator menu → **Reset to Shrouded**. As a last resort, swipe the app
   away and relaunch it; it boots offline in a few seconds.
 

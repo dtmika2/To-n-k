@@ -20,6 +20,7 @@ Setup and test steps are in `docs/SIGNAL-TEST.md`.
 - **Delivery:** `src/signal/passSignal.ts` saves each pass, retries until confirmed and drops it after 10 minutes. The server ignores repeated ids.
 - **PC side:** `scripts/signal-server.cjs` (server), `scripts/signal-tv.html` (TV page), `scripts/build-server-exe.mjs` (packs them with `dist/`, `TrueVideo.mp4` and `TrueStoneCoverBetterLineup.png`). Without `TrueVideo.mp4` (gitignored), the build and the server fall back to `TrueVideoOptimized.mp4`, and the build prints a note. `TrueStoneCoverBetterLineup.png` is 1080×1920, the video's own size.
 - **TV show:** stone cover over a still of the video's first frame → core rises in from the bottom (same `core.png`), erasing the stone around its path → collapses at the video's centre while the rest of the stone fades over the last second → flash + video starts with sound → stone back whole when it ends. Tunables: `FX` in `signal-tv.html`. Sound needs one click on the page; without it the video plays muted.
+- **Unlocked time matches the video:** `resetAfterSuccessMs` in `public/config.json` is 92 s. The tablet's open state starts 0.3 s after the pass is sent; the TV then needs 4.35 s for the core (`FX.travelMs + FX.shrinkMs`) plus the 87.0 s video, so the TV ends at about 91 s. Recompute this if the video or either sequence changes.
 - **`?signal` / `?signal=URL`:** testing only. These also show the corner status label; players never see it in the installed app.
 
 ## Signal status (2026-11-05)
