@@ -41,4 +41,5 @@ A memory game for a 75" portrait touch table: a PixiJS 8 + Web Audio PWA, run in
 ## Gotchas
 - Pixi tessellates circles by their local radius, which is tiny in world units. Use the `circle()` / `wobblyCircle()` helpers in `render/draw.ts`.
 - Recreate RenderTextures on resize; don't resize them.
+- Edge's `--kiosk` always runs InPrivate and deletes the service worker's offline copy on closing (seen on a real kiosk PC: 32/32 saved, then `ERR_INTERNET_DISCONNECTED` offline). `kiosk/start-kiosk-online.bat` uses `--kiosk` only for Chrome, and `--start-fullscreen` for Edge. Headless Edge doesn't reproduce this.
 - Windows/Git Bash: `node -e` with backticks breaks. Write a script file instead, and run `.ts` files directly with `node`.
